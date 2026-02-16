@@ -10,6 +10,8 @@ crossterm = "0.29.0"
 ratatui = "0.30.0"
 regex = "1.12.3"
 thiserror = "2.0.18"
+pest = "2.7"
+pest_derive = "2.7"
 
 [dev-dependencies]
 criterion = "0.5"

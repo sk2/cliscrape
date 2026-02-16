@@ -3,8 +3,10 @@ use std::path::Path;
 use thiserror::Error;
 
 pub mod engine;
+pub mod template;
 
 use crate::engine::Template;
+use crate::template::loader::TextFsmLoader;
 
 #[derive(Error, Debug)]
 pub enum ScraperError {
@@ -23,9 +25,18 @@ impl FsmParser {
         Self { template }
     }
 
-    pub fn from_file<P: AsRef<Path>>(_path: P) -> Result<Self, ScraperError> {
-        // This will eventually call the TextFSM or YAML/TOML loader
-        Err(ScraperError::Parse("Loader not implemented yet".to_string()))
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, ScraperError> {
+        let content = std::fs::read_to_string(&path)?;
+        let path_ref = path.as_ref();
+        
+        let ir = if path_ref.extension().and_then(|s| s.to_str()) == Some("textfsm") {
+            TextFsmLoader::parse_str(&content)?
+        } else {
+            return Err(ScraperError::Parse("Unsupported template format".to_string()));
+        };
+        
+        let template = Template::from_ir(ir)?;
+        Ok(Self { template })
     }
 
     pub fn parse(&self, input: &str) -> Result<Vec<HashMap<String, String>>, ScraperError> {
