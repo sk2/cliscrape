@@ -4,36 +4,39 @@ use crate::engine::types::Value;
 #[derive(Debug, Default)]
 pub struct RecordBuffer {
     buffer: HashMap<String, String>,
+    dirty: bool,
 }
 
 impl RecordBuffer {
     pub fn new() -> Self {
         Self {
             buffer: HashMap::new(),
+            dirty: false,
         }
     }
 
     pub fn insert(&mut self, name: String, value: String) {
         self.buffer.insert(name, value);
+        self.dirty = true;
     }
 
     pub fn clear(&mut self) {
         self.buffer.clear();
+        self.dirty = false;
     }
 
     /// Validates and extracts the record.
     /// If valid, returns the record and updates the buffer based on filldown rules.
     pub fn emit(&mut self, values: &HashMap<String, Value>) -> Option<HashMap<String, String>> {
+        if !self.dirty {
+            return None;
+        }
+        
         // Check required fields
         for (name, val) in values {
             if val.required {
                 if !self.buffer.contains_key(name) || self.buffer[name].is_empty() {
                     // Required field missing, drop record
-                    // Note: In TextFSM, if a required value is missing, the record is not added.
-                    // We also clear non-filldown values even if record is dropped?
-                    // TextFSM docs say: "If any of the Values with 'Required' or 'Required, Filldown' 
-                    // are not assigned a value during the parsing of the current record, then the 
-                    // record is not added to the results table."
                     self.reset_after_emit(values);
                     return None;
                 }
@@ -55,6 +58,7 @@ impl RecordBuffer {
             }
         }
         self.buffer = next_buffer;
+        self.dirty = false;
     }
 
     pub fn get_buffer(&self) -> &HashMap<String, String> {

@@ -134,6 +134,11 @@ impl Template {
             }
         }
         
+        // Implicit Record on EOF
+        if let Some(record) = record_buffer.emit(&self.values) {
+            results.push(record);
+        }
+        
         Ok(results)
     }
 }
@@ -367,5 +372,42 @@ mod tests {
         assert_eq!(results[0]["Interface"], "Eth1");
         assert_eq!(results[0]["IP"], "1.1.1.1");
         // Second record (NO_INTERFACE) should be dropped because Interface is required but missing
+    }
+
+    #[test]
+    fn test_eof_record() {
+        let mut values = HashMap::new();
+        values.insert("Value".to_string(), Value {
+            name: "Value".to_string(),
+            regex: r#"\w+"#.to_string(),
+            filldown: false,
+            required: false,
+        });
+
+        let mut states = HashMap::new();
+        states.insert("Start".to_string(), State {
+            name: "Start".to_string(),
+            rules: vec![
+                Rule {
+                    regex: r#"Set ${Value}"#.to_string(),
+                    line_action: Action::Next,
+                    record_action: Action::Next, // NoRecord
+                    next_state: None,
+                }
+            ],
+        });
+
+        let ir = TemplateIR {
+            values,
+            states,
+            macros: HashMap::new(),
+        };
+
+        let template = Template::from_ir(ir).unwrap();
+        let input = "Set Data";
+        let results = template.parse(input).unwrap();
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0]["Value"], "Data");
     }
 }

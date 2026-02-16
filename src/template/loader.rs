@@ -18,7 +18,7 @@ impl TextFsmLoader {
         let file_pair = pairs.next().unwrap();
         for pair in file_pair.into_inner() {
             match pair.as_rule() {
-                PestRule::definition => {
+                PestRule::val_def => {
                     let value = self::parse_definition(pair)?;
                     values.insert(value.name.clone(), value);
                 }
@@ -52,7 +52,7 @@ fn parse_definition(pair: Pair<PestRule>) -> Result<Value, ScraperError> {
                     match flag.as_str() {
                         "Filldown" => filldown = true,
                         "Required" => required = true,
-                        _ => {} // Handle others if needed
+                        _ => {}
                     }
                 }
             }
@@ -77,7 +77,7 @@ fn parse_state_block(pair: Pair<PestRule>) -> Result<State, ScraperError> {
     for inner in pair.into_inner() {
         match inner.as_rule() {
             PestRule::state_name => name = inner.as_str().to_string(),
-            PestRule::rule => {
+            PestRule::fsm_rule => {
                 rules.push(parse_rule(inner)?);
             }
             _ => {}
@@ -95,7 +95,7 @@ fn parse_rule(pair: Pair<PestRule>) -> Result<Rule, ScraperError> {
 
     for inner in pair.into_inner() {
         match inner.as_rule() {
-            PestRule::regex_rule => regex = inner.as_str().trim_end().to_string(),
+            PestRule::rule_regex => regex = inner.as_str().trim_end().to_string(),
             PestRule::action => {
                 let (la, ra, ns) = parse_action(inner)?;
                 line_action = la;

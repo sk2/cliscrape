@@ -1,39 +1,27 @@
-WHITESPACE = _{ " " | "	" }
-COMMENT = _{ "#" ~ (!NEWLINE ~ ANY)* }
+file = { SOI ~ (val_def | state_block | NEWLINE)* ~ EOI }
 
-file = {
-    SOI ~
-    (NEWLINE | definition | state_block)* ~
-    EOI
-}
-
-definition = { "Value" ~ WHITESPACE+ ~ flags? ~ name ~ WHITESPACE+ ~ "(" ~ regex ~ ")" ~ NEWLINE }
-flags = { ( flag ~ WHITESPACE+ )+ }
+val_def = { "Value" ~ flags? ~ name ~ "(" ~ regex ~ ")" ~ NEWLINE }
+flags = { (flag ~ WHITESPACE*)+ }
 flag = { "Filldown" | "Fillup" | "Required" | "List" | "Key" }
-name = { (ASCII_ALPHANUMERIC | "_")+ }
-regex = { ( !(")" ~ (NEWLINE | EOI)) ~ ANY )+ }
+name = @{ (ASCII_ALPHANUMERIC | "_")+ }
+regex = @{ ( !(")" ~ (NEWLINE | EOI)) ~ ANY )+ }
 
-state_block = {
-    state_name ~ NEWLINE ~
-    rule*
-}
-state_name = { (ASCII_ALPHANUMERIC | "_")+ }
+state_block = { state_name ~ NEWLINE ~ fsm_rule+ }
+state_name = @{ (ASCII_ALPHANUMERIC | "_")+ }
 
-rule = {
-    " "* ~ "^" ~ regex_rule ~ ( WHITESPACE+ ~ "->" ~ WHITESPACE+ ~ action )? ~ NEWLINE
-}
-
-regex_rule = { ( !((WHITESPACE+ ~ "->") | NEWLINE) ~ ANY )+ }
+fsm_rule = { "^" ~ rule_regex ~ ("->" ~ action)? ~ NEWLINE }
+rule_regex = @{ ( !((" " | "\t")+ ~ "->") ~ !("\r" | "\n") ~ ANY )+ }
 
 action = {
-    ( (line_action ~ "." ~ record_action) | line_action | record_action ) ~ (WHITESPACE+ ~ next_state)?
+    (line_action ~ "." ~ record_action ~ next_state?)
+    | (line_action ~ next_state?)
+    | (record_action ~ next_state?)
     | next_state
 }
 
-line_action = { "Next" | "Continue" }
-record_action = { "Record" | "NoRecord" | "Clear" | "Clearall" }
+line_action = @{ ("Next" | "Continue") ~ !ASCII_ALPHANUMERIC }
+record_action = @{ ("Record" | "NoRecord" | "Clear" | "Clearall") ~ !ASCII_ALPHANUMERIC }
 next_state = { name }
 
-NEWLINE = _{ "
-" | "
-" }
+WHITESPACE = _{ " " | "\t" }
+COMMENT = _{ "#" ~ (!NEWLINE ~ ANY)* }
