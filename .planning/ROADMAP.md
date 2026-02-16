@@ -12,6 +12,11 @@
     2. Parser correctly handles `{{ipv4}}` and `{{mac_address}}` macros in state definitions.
     3. Unit tests verify deterministic state transitions based on regex matches.
 
+**Plans:** 3 plans
+- [ ] 01-01-PLAN.md — Foundation & Regex Macros
+- [ ] 01-02-PLAN.md — FSM Execution Engine
+- [ ] 01-03-PLAN.md — Record Management & Validation
+
 ## Phase 2: Legacy Compatibility & CLI
 **Goal:** Enable parsing of existing TextFSM templates via a standard Unix-style CLI.
 
