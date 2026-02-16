@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use crate::engine::types::*;
 use crate::engine::macros::expand_macros;
+use crate::engine::records::RecordBuffer;
 use crate::ScraperError;
 use regex::Regex;
 
@@ -57,85 +58,79 @@ impl Template {
     pub fn parse(&self, input: &str) -> Result<Vec<HashMap<String, String>>, ScraperError> {
         let mut current_state = "Start".to_string();
         let mut results = Vec::new();
-        let mut current_record = HashMap::new();
+        let mut record_buffer = RecordBuffer::new();
         
         let lines: Vec<&str> = input.lines().collect();
         let mut line_idx = 0;
         
         while line_idx < lines.len() {
             let line = lines[line_idx];
-            let mut consumed = false;
+            let mut rule_idx = 0;
+            let mut matched_in_this_line = false;
             
-            // TextFSM-like loop for Continue action
             loop {
                 let rules = self.states.get(&current_state)
                     .ok_or_else(|| ScraperError::Parse(format!("Entered invalid state: {}", current_state)))?;
                 
-                let mut matched_in_this_pass = false;
-                for rule in rules {
-                    if let Some(caps) = rule.regex.captures(line) {
-                        matched_in_this_pass = true;
-                        
-                        // Capture named groups into current_record
-                        for name in rule.regex.capture_names().flatten() {
-                            if let Some(m) = caps.name(name) {
-                                current_record.insert(name.to_string(), m.as_str().to_string());
+                if rule_idx >= rules.len() {
+                    break;
+                }
+
+                let rule = &rules[rule_idx];
+                if let Some(caps) = rule.regex.captures(line) {
+                    matched_in_this_line = true;
+                    
+                    // Capture named groups into current_record
+                    for name in rule.regex.capture_names().flatten() {
+                        if let Some(m) = caps.name(name) {
+                            record_buffer.insert(name.to_string(), m.as_str().to_string());
+                        }
+                    }
+                    
+                    // Handle record action
+                    match rule.record_action {
+                        Action::Record => {
+                            if let Some(record) = record_buffer.emit(&self.values) {
+                                results.push(record);
                             }
                         }
-                        
-                        // Handle record action
-                        match rule.record_action {
-                            Action::Record => {
-                                results.push(current_record.clone());
-                                // Clear non-filldown values
-                                let mut next_record = HashMap::new();
-                                for (name, val) in &self.values {
-                                    if val.filldown {
-                                        if let Some(v) = current_record.get(name) {
-                                            next_record.insert(name.clone(), v.clone());
-                                        }
-                                    }
-                                }
-                                current_record = next_record;
-                            }
-                            Action::Clear => {
-                                current_record.clear();
-                            }
-                            _ => {}
+                        Action::Clear => {
+                            record_buffer.clear();
                         }
-                        
-                        // Handle next state
-                        if let Some(ref next) = rule.next_state {
-                            if next == "End" {
-                                return Ok(results);
-                            }
-                            current_state = next.clone();
+                        _ => {}
+                    }
+                    
+                    let prev_state = current_state.clone();
+                    // Handle next state
+                    if let Some(ref next) = rule.next_state {
+                        if next == "End" {
+                            return Ok(results);
                         }
-                        
-                        // Handle line action
-                        if rule.line_action == Action::Continue {
-                            // Try rules again (possibly in new state) on same line
-                            // But we need to break the inner rule loop to re-fetch rules for current_state
-                            break; 
+                        current_state = next.clone();
+                    }
+                    
+                    // Handle line action
+                    if rule.line_action == Action::Continue {
+                        // Move to next rule. If state changed, restart from 0
+                        if current_state != prev_state {
+                            rule_idx = 0;
                         } else {
-                            // Default is Next: move to next line
-                            line_idx += 1;
-                            consumed = true;
-                            break;
+                            rule_idx += 1;
                         }
-                    }
-                }
-                
-                if !matched_in_this_pass {
-                    // No more rules matched on this line
-                    if !consumed {
+                        continue;
+                    } else {
+                        // Default is Next: move to next line
                         line_idx += 1;
+                        break;
                     }
-                    break; // break the loop for this line
-                } else if consumed {
-                    break; // break the loop for this line if it was consumed
+                } else {
+                    // No match, try next rule
+                    rule_idx += 1;
                 }
-                // If it matched but wasn't consumed (Action::Continue), it continues to the next iteration of the inner loop
+            }
+
+            if !matched_in_this_line {
+                line_idx += 1;
             }
         }
         
@@ -263,5 +258,114 @@ mod tests {
 
         let result = Template::from_ir(ir);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_filldown() {
+        let mut values = HashMap::new();
+        values.insert("Chassis".to_string(), Value {
+            name: "Chassis".to_string(),
+            regex: r#"\S+"#.to_string(),
+            filldown: true,
+            required: false,
+        });
+        values.insert("Slot".to_string(), Value {
+            name: "Slot".to_string(),
+            regex: r#"\d+"#.to_string(),
+            filldown: false,
+            required: false,
+        });
+
+        let mut states = HashMap::new();
+        states.insert("Start".to_string(), State {
+            name: "Start".to_string(),
+            rules: vec![
+                Rule {
+                    regex: r#"Chassis ${Chassis}"#.to_string(),
+                    line_action: Action::Next,
+                    record_action: Action::Next,
+                    next_state: None,
+                },
+                Rule {
+                    regex: r#"Slot ${Slot}"#.to_string(),
+                    line_action: Action::Next,
+                    record_action: Action::Record,
+                    next_state: None,
+                },
+            ],
+        });
+
+        let ir = TemplateIR {
+            values,
+            states,
+            macros: HashMap::new(),
+        };
+
+        let template = Template::from_ir(ir).unwrap();
+        let input = "Chassis Router1\nSlot 1\nSlot 2";
+        let results = template.parse(input).unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0]["Chassis"], "Router1");
+        assert_eq!(results[0]["Slot"], "1");
+        assert_eq!(results[1]["Chassis"], "Router1");
+        assert_eq!(results[1]["Slot"], "2");
+    }
+
+    #[test]
+    fn test_required() {
+        let mut values = HashMap::new();
+        values.insert("Interface".to_string(), Value {
+            name: "Interface".to_string(),
+            regex: r#"\S+"#.to_string(),
+            filldown: false,
+            required: true,
+        });
+        values.insert("IP".to_string(), Value {
+            name: "IP".to_string(),
+            regex: r#"\S+"#.to_string(),
+            filldown: false,
+            required: false,
+        });
+
+        let mut states = HashMap::new();
+        states.insert("Start".to_string(), State {
+            name: "Start".to_string(),
+            rules: vec![
+                Rule {
+                    regex: r#"Interface ${Interface}"#.to_string(),
+                    line_action: Action::Continue,
+                    record_action: Action::Next,
+                    next_state: None,
+                },
+                Rule {
+                    regex: r#"IP ${IP}"#.to_string(),
+                    line_action: Action::Next,
+                    record_action: Action::Record,
+                    next_state: None,
+                },
+                Rule {
+                    regex: r#"NO_INTERFACE"#.to_string(),
+                    line_action: Action::Next,
+                    record_action: Action::Record,
+                    next_state: None,
+                }
+            ],
+        });
+
+        let ir = TemplateIR {
+            values,
+            states,
+            macros: HashMap::new(),
+        };
+
+        let template = Template::from_ir(ir).unwrap();
+        let input = "Interface Eth1 IP 1.1.1.1\nNO_INTERFACE";
+        let results = template.parse(input).unwrap();
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0]["Interface"], "Eth1");
+        assert_eq!(results[0]["IP"], "1.1.1.1");
+        // Second record (NO_INTERFACE) should be dropped because Interface is required but missing
     }
 }

@@ -4,7 +4,7 @@ use thiserror::Error;
 
 pub mod engine;
 
-use crate::engine::{Template, Value, Action, Rule, State};
+use crate::engine::Template;
 
 #[derive(Error, Debug)]
 pub enum ScraperError {
@@ -28,8 +28,7 @@ impl FsmParser {
         Err(ScraperError::Parse("Loader not implemented yet".to_string()))
     }
 
-    pub fn parse(&self, _input: &str) -> Result<Vec<HashMap<String, String>>, ScraperError> {
-        // Implementation of the FSM loop
-        Ok(vec![])
+    pub fn parse(&self, input: &str) -> Result<Vec<HashMap<String, String>>, ScraperError> {
+        self.template.parse(input)
     }
 }
