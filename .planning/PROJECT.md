@@ -15,6 +15,17 @@ The networking industry relies heavily on CLI-based management, and parsing this
 
 The one thing that must work perfectly: **Extremely fast, reliable parsing of semi-structured CLI output into structured data, regardless of whether the template is legacy TextFSM or the new ergonomic format.**
 
+## Current Milestone: v0.1 Alpha
+
+**Goal:** Build a complete, high-performance CLI parsing tool with TextFSM compatibility, modern YAML/TOML templates, and an interactive TUI debugger.
+
+**Target capabilities:**
+- High-throughput FSM engine for parsing CLI output
+- Full TextFSM grammar support for backward compatibility
+- Modern YAML/TOML template format as ergonomic alternative
+- Interactive TUI for template development and debugging
+- Vendor-agnostic design (Cisco, Juniper, Arista, etc.)
+
 ## Requirements
 
 ### Validated
@@ -32,8 +43,8 @@ The one thing that must work perfectly: **Extremely fast, reliable parsing of se
 
 ### Out of Scope
 
-- **Massive File Optimization (v1)** — While fast, the primary focus is throughput across many small outputs rather than gigabyte-scale single files.
-- **Direct Device Interaction** — `cliscrape` is a *parser*; it doesn't handle SSH/Telnet connections itself (that's for `netmiko` or similar).
+- **Massive File Optimization (v0.1)** — While fast, the primary focus is throughput across many small outputs rather than gigabyte-scale single files.
+- **Direct Device Interaction (v0.1)** — SSH/Telnet connectivity is deferred. Other tools like `netmiko` can handle device connections; `cliscrape` focuses on parsing excellence. May be added as optional transport layer in future versions.
 
 ## Key Decisions
 
@@ -45,4 +56,4 @@ The one thing that must work perfectly: **Extremely fast, reliable parsing of se
 | **TUI Mode: Dual-Purpose** | Support both "Live Lab" (editing) and "State Tracer" (debugging) workflows. | — Finalized |
 
 ---
-*Last updated: 2024-05-22 after initialization*
+*Last updated: 2026-02-17 after v0.1 milestone initialization*
