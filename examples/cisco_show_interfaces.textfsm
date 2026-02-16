@@ -1,0 +1,8 @@
+Value INTERFACE (\S+)
+Value IP_ADDRESS (\S+)
+Value STATUS (up|down)
+Value PROTOCOL (up|down)
+
+Start
+  ^Interface ${INTERFACE} is ${STATUS}, line protocol is ${PROTOCOL}
+  ^\s+Internet address is ${IP_ADDRESS} -> Record

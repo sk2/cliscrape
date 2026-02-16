@@ -1,0 +1,7 @@
+Interface GigabitEthernet1 is up, line protocol is up
+  Hardware is i82543 (Livengood), address is 0000.0000.0001 (bia 0000.0000.0001)
+  Internet address is 10.1.1.1/24
+
+Interface GigabitEthernet2 is down, line protocol is down
+  Hardware is i82543 (Livengood), address is 0000.0000.0002 (bia 0000.0000.0002)
+  Internet address is 10.1.1.2/24
