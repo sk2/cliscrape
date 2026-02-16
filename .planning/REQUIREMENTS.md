@@ -43,17 +43,17 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01     | TBD   | Pending |
-| CORE-02     | TBD   | Pending |
-| CORE-03     | TBD   | Pending |
-| FORM-01     | TBD   | Pending |
-| FORM-02     | TBD   | Pending |
-| FORM-03     | TBD   | Pending |
-| TUI-01      | TBD   | Pending |
-| TUI-02      | TBD   | Pending |
-| TUI-03      | TBD   | Pending |
-| CLI-01      | TBD   | Pending |
-| CLI-02      | TBD   | Pending |
+| CORE-01     | Phase 1 | Pending |
+| CORE-02     | Phase 2 | Pending |
+| CORE-03     | Phase 1 | Pending |
+| FORM-01     | Phase 2 | Pending |
+| FORM-02     | Phase 3 | Pending |
+| FORM-03     | Phase 3 | Pending |
+| TUI-01      | Phase 4 | Pending |
+| TUI-02      | Phase 5 | Pending |
+| TUI-03      | Phase 5 | Pending |
+| CLI-01      | Phase 2 | Pending |
+| CLI-02      | Phase 3 | Pending |
 
 ---
-*Last updated: 2024-05-22 after initialization*
+*Last updated: 2024-05-22 after roadmap creation*
