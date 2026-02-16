@@ -9,17 +9,17 @@
 ## Current Position
 
 **Active Phase:** Phase 1: Core Parsing Engine
-**Active Plan:** Not started
-**Status:** ⚪ Pending
+**Active Plan:** 01-01-PLAN.md
+**Status:** █ In progress (33% of Phase 1)
 
 **Progress:**
-`[--------------------] 0%`
+`[█░░░░░░░░░░░░░░░░░░░] 7%` (1/15 plans estimated)
 
 ## Performance Metrics
 
 - **Parsing Throughput:** 0 lines/sec (Target: >100k)
 - **TextFSM Compatibility:** 0% (Target: 100% of standard ntc-templates)
-- **Code Coverage:** 0%
+- **Code Coverage:** 5% (Initial macros unit tests)
 
 ## Accumulated Context
 
@@ -27,19 +27,20 @@
 - **Language:** Rust for performance and safety.
 - **TUI Framework:** Ratatui for the visual debugger.
 - **SSH Library:** Russh for async-native connectivity (v2).
+- **Macro Priority:** Local template-defined macros shadow built-ins (01-01).
+- **IR Design:** FSM IR uses raw strings for regex to support pre-compilation macro expansion (01-01).
 
 ### Todos
-- [ ] Initialize Phase 1 plan
-- [ ] Design internal State Machine IR
+- [x] Create engine module structure
+- [x] Implement regex macro library
+- [ ] Implement FSM execution loop (01-02)
+- [ ] Add record management & validation (01-03)
 
 ### Blockers
 - None
 
 ## Session Continuity
 
-**Last Session:**
-- Completed project initialization and research.
-- Created ROADMAP.md and STATE.md.
-
-**Next Steps:**
-- Run `/gsd:plan-phase 1` to begin core engine development.
+**Last Session:** 2026-02-16
+**Stopped at:** Completed 01-01-PLAN.md
+**Resume file:** .planning/phases/01-core-parsing-engine/01-02-PLAN.md
