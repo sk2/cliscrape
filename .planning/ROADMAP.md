@@ -3,7 +3,7 @@
 `cliscrape` is a high-performance CLI scraping and parsing tool for network devices. This roadmap outlines the path from core engine development to a full-featured TUI debugger and modern template support.
 
 ## Phase 1: Core Parsing Engine
-**Goal:** Build a high-throughput, deterministic FSM engine that supports modular regex patterns.
+**Goal:** Build a high-throughput, deterministic FSM engine that supports modular regex patterns. [COMPLETED]
 
 - **Requirements:** CORE-01, CORE-03
 - **Dependencies:** None
@@ -12,10 +12,12 @@
     2. Parser correctly handles `{{ipv4}}` and `{{mac_address}}` macros in state definitions.
     3. Unit tests verify deterministic state transitions based on regex matches.
 
-**Plans:** 3 plans
-- [ ] 01-01-PLAN.md — Foundation & Regex Macros
-- [ ] 01-02-PLAN.md — FSM Execution Engine
-- [ ] 01-03-PLAN.md — Record Management & Validation
+**Plans:** 5 plans
+- [x] 01-01-PLAN.md — Foundation & Regex Macros
+- [x] 01-02-PLAN.md — FSM Execution Engine
+- [x] 01-03-PLAN.md — Record Management & Validation
+- [x] 01-04-PLAN.md — Gap closure: deterministic state transitions + End termination tests
+- [x] 01-05-PLAN.md — Gap closure: mac_address unit test + macro-through-compilation integration test
 
 ## Phase 2: Legacy Compatibility & CLI
 **Goal:** Enable parsing of existing TextFSM templates via a standard Unix-style CLI.
@@ -26,6 +28,11 @@
     1. User can run `cliscrape parse --template example.textfsm output.txt` and receive JSON output.
     2. Parser correctly handles `Filldown` and `Required` values from standard `ntc-templates`.
     3. Piped input (e.g., `cat output.txt | cliscrape parse`) produces correct structured data.
+
+**Plans:** 3 plans
+- [ ] 02-01-PLAN.md — TextFSM DSL Parser (Pest)
+- [ ] 02-02-PLAN.md — CLI & Input Stream Handling
+- [ ] 02-03-PLAN.md — Serialization & EOF Nuances
 
 ## Phase 3: Modern Ergonomic Templates
 **Goal:** Support YAML/TOML template formats with automatic type conversion and basic prompt handling.
@@ -61,8 +68,8 @@
 
 | Phase | Description | Status | Progress |
 |-------|-------------|--------|----------|
-| 1 | Core Parsing Engine | Pending | 0% |
-| 2 | Legacy Compatibility & CLI | Pending | 0% |
+| 1 | Core Parsing Engine | Complete | 100% |
+| 2 | Legacy Compatibility & CLI | Active | 0% |
 | 3 | Modern Ergonomic Templates | Pending | 0% |
 | 4 | TUI Debugger Foundation | Pending | 0% |
 | 5 | TUI Advanced Debugging | Pending | 0% |
