@@ -3,9 +3,9 @@
 ## v1 Requirements (MVP)
 
 ### Core Engine
-- [ ] **CORE-01**: High-throughput Rust-based FSM engine for line-by-line parsing.
+- [x] **CORE-01**: High-throughput Rust-based FSM engine for line-by-line parsing.
 - [ ] **CORE-02**: Support for full TextFSM grammar, including `Filldown`, `Required`, and all actions (`Next`, `Continue`, `Record`, `Clear`).
-- [ ] **CORE-03**: Shared regex pattern library (e.g., `{{ipv4}}`, `{{mac_address}}`, `{{interface_name}}`).
+- [x] **CORE-03**: Shared regex pattern library (e.g., `{{ipv4}}`, `{{mac_address}}`, `{{interface_name}}`).
 
 ### Template Formats
 - [ ] **FORM-01**: 100% compatibility with existing `.textfsm` files (e.g., from `ntc-templates`).
