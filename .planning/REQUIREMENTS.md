@@ -4,11 +4,11 @@
 
 ### Core Engine
 - [x] **CORE-01**: High-throughput Rust-based FSM engine for line-by-line parsing.
-- [ ] **CORE-02**: Support for full TextFSM grammar, including `Filldown`, `Required`, and all actions (`Next`, `Continue`, `Record`, `Clear`).
+- [x] **CORE-02**: Support for full TextFSM grammar, including `Filldown`, `Required`, and all actions (`Next`, `Continue`, `Record`, `Clear`).
 - [x] **CORE-03**: Shared regex pattern library (e.g., `{{ipv4}}`, `{{mac_address}}`, `{{interface_name}}`).
 
 ### Template Formats
-- [ ] **FORM-01**: 100% compatibility with existing `.textfsm` files (e.g., from `ntc-templates`).
+- [x] **FORM-01**: 100% compatibility with existing `.textfsm` files (e.g., from `ntc-templates`).
 - [ ] **FORM-02**: Modern hybrid YAML/TOML ergonomic format with structured state blocks.
 - [ ] **FORM-03**: Typed captures (e.g., `IP`, `Integer`, `Date`) with automatic string-to-type conversion.
 
@@ -18,7 +18,7 @@
 - [ ] **TUI-03**: Trace history buffer for debugging complex multi-state templates.
 
 ### CLI & Connectivity
-- [ ] **CLI-01**: Standalone CLI for parsing local files or piped input (Unix-style pipe support).
+- [x] **CLI-01**: Standalone CLI for parsing local files or piped input (Unix-style pipe support).
 - [ ] **CLI-02**: Basic Cisco IOS/NX-OS prompt support for initial scraping workflows.
 
 ---
