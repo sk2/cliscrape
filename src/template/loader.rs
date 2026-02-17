@@ -44,6 +44,7 @@ fn parse_definition(pair: Pair<PestRule>) -> Result<Value, ScraperError> {
     let mut regex = String::new();
     let mut filldown = false;
     let mut required = false;
+    let mut list = false;
 
     for inner in pair.into_inner() {
         match inner.as_rule() {
@@ -52,6 +53,7 @@ fn parse_definition(pair: Pair<PestRule>) -> Result<Value, ScraperError> {
                     match flag.as_str() {
                         "Filldown" => filldown = true,
                         "Required" => required = true,
+                        "List" => list = true,
                         _ => {}
                     }
                 }
@@ -67,6 +69,7 @@ fn parse_definition(pair: Pair<PestRule>) -> Result<Value, ScraperError> {
         regex,
         filldown,
         required,
+        list,
     })
 }
 

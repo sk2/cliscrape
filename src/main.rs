@@ -1,4 +1,5 @@
 mod cli;
+mod output;
 
 use anyhow::Context;
 use clap::Parser;
@@ -28,19 +29,8 @@ fn main() -> anyhow::Result<()> {
             let results = parser.parse(&input_content)
                 .context("Failed to parse input")?;
 
-            match format {
-                cli::OutputFormat::Json => {
-                    let json = serde_json::to_string_pretty(&results)
-                        .context("Failed to serialize results to JSON")?;
-                    println!("{}", json);
-                }
-                cli::OutputFormat::Csv => {
-                    anyhow::bail!("CSV format not yet implemented");
-                }
-                cli::OutputFormat::Table => {
-                    anyhow::bail!("Table format not yet implemented");
-                }
-            }
+            let output = output::serialize(&results, format)?;
+            println!("{}", output);
         }
         Commands::Debug { template } => {
             if let Some(t) = template {

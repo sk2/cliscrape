@@ -15,6 +15,7 @@ pub struct Value {
     pub regex: String,
     pub filldown: bool,
     pub required: bool,
+    pub list: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]

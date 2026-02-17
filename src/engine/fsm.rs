@@ -55,7 +55,7 @@ impl Template {
         })
     }
 
-    pub fn parse(&self, input: &str) -> Result<Vec<HashMap<String, String>>, ScraperError> {
+    pub fn parse(&self, input: &str) -> Result<Vec<HashMap<String, serde_json::Value>>, ScraperError> {
         let mut current_state = "Start".to_string();
         let mut results = Vec::new();
         let mut record_buffer = RecordBuffer::new();
@@ -66,24 +66,24 @@ impl Template {
         while line_idx < lines.len() {
             let line = lines[line_idx];
             let mut rule_idx = 0;
-            let mut matched_in_this_line = false;
             
             loop {
                 let rules = self.states.get(&current_state)
                     .ok_or_else(|| ScraperError::Parse(format!("Entered invalid state: {}", current_state)))?;
                 
                 if rule_idx >= rules.len() {
+                    line_idx += 1;
                     break;
                 }
 
                 let rule = &rules[rule_idx];
                 if let Some(caps) = rule.regex.captures(line) {
-                    matched_in_this_line = true;
                     
                     // Capture named groups into current_record
                     for name in rule.regex.capture_names().flatten() {
                         if let Some(m) = caps.name(name) {
-                            record_buffer.insert(name.to_string(), m.as_str().to_string());
+                            let is_list = self.values.get(name).map(|v| v.list).unwrap_or(false);
+                            record_buffer.insert(name.to_string(), m.as_str().to_string(), is_list);
                         }
                     }
                     
@@ -128,10 +128,6 @@ impl Template {
                     rule_idx += 1;
                 }
             }
-
-            if !matched_in_this_line {
-                line_idx += 1;
-            }
         }
         
         // Implicit Record on EOF
@@ -155,6 +151,7 @@ mod tests {
             regex: r#"\S+"#.to_string(),
             filldown: false,
             required: false,
+            list: false,
         });
 
         let mut states = HashMap::new();
@@ -194,12 +191,14 @@ mod tests {
             regex: r#"\d+"#.to_string(),
             filldown: false,
             required: false,
+            list: false,
         });
         values.insert("Status".to_string(), Value {
             name: "Status".to_string(),
             regex: r#"\w+"#.to_string(),
             filldown: false,
             required: false,
+            list: false,
         });
 
         let mut states = HashMap::new();
@@ -220,12 +219,6 @@ mod tests {
                 }
             ],
         });
-
-        // Use Action::Next as dummy for NoRecord if needed, but in our logic we only Record if it's Action::Record
-        // Let's add NoRecord to Action enum? Plan didn't say so.
-        // Actually, current RecordAction handling:
-        // match rule.record_action { Action::Record => ..., Action::Clear => ..., _ => {} }
-        // So any other Action (Next, Continue) acts as "NoRecord".
 
         let ir = TemplateIR {
             values,
@@ -273,12 +266,14 @@ mod tests {
             regex: r#"\S+"#.to_string(),
             filldown: true,
             required: false,
+            list: false,
         });
         values.insert("Slot".to_string(), Value {
             name: "Slot".to_string(),
             regex: r#"\d+"#.to_string(),
             filldown: false,
             required: false,
+            list: false,
         });
 
         let mut states = HashMap::new();
@@ -325,12 +320,14 @@ mod tests {
             regex: r#"\S+"#.to_string(),
             filldown: false,
             required: true,
+            list: false,
         });
         values.insert("IP".to_string(), Value {
             name: "IP".to_string(),
             regex: r#"\S+"#.to_string(),
             filldown: false,
             required: false,
+            list: false,
         });
 
         let mut states = HashMap::new();
@@ -371,7 +368,6 @@ mod tests {
         assert_eq!(results.len(), 1);
         assert_eq!(results[0]["Interface"], "Eth1");
         assert_eq!(results[0]["IP"], "1.1.1.1");
-        // Second record (NO_INTERFACE) should be dropped because Interface is required but missing
     }
 
     #[test]
@@ -382,6 +378,7 @@ mod tests {
             regex: r#"\w+"#.to_string(),
             filldown: false,
             required: false,
+            list: false,
         });
 
         let mut states = HashMap::new();
@@ -409,5 +406,47 @@ mod tests {
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0]["Value"], "Data");
+    }
+
+    #[test]
+    fn test_list_support() {
+        let mut values = HashMap::new();
+        values.insert("Inter".to_string(), Value {
+            name: "Inter".to_string(),
+            regex: r#"\S+"#.to_string(),
+            filldown: false,
+            required: false,
+            list: true,
+        });
+
+        let mut states = HashMap::new();
+        states.insert("Start".to_string(), State {
+            name: "Start".to_string(),
+            rules: vec![
+                Rule {
+                    regex: r#"Interface ${Inter}"#.to_string(),
+                    line_action: Action::Next,
+                    record_action: Action::Next,
+                    next_state: None,
+                }
+            ],
+        });
+
+        let ir = TemplateIR {
+            values,
+            states,
+            macros: HashMap::new(),
+        };
+
+        let template = Template::from_ir(ir).unwrap();
+        let input = "Interface Eth1\nInterface Eth2";
+        let results = template.parse(input).unwrap();
+
+        assert_eq!(results.len(), 1);
+        assert!(results[0]["Inter"].is_array());
+        let arr = results[0]["Inter"].as_array().unwrap();
+        assert_eq!(arr.len(), 2);
+        assert_eq!(arr[0], "Eth1");
+        assert_eq!(arr[1], "Eth2");
     }
 }
