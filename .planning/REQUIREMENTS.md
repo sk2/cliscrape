@@ -9,8 +9,8 @@
 
 ### Template Formats
 - [x] **FORM-01**: 100% compatibility with existing `.textfsm` files (e.g., from `ntc-templates`).
-- [ ] **FORM-02**: Modern hybrid YAML/TOML ergonomic format with structured state blocks.
-- [ ] **FORM-03**: Typed captures (e.g., `IP`, `Integer`, `Date`) with automatic string-to-type conversion.
+- [x] **FORM-02**: Modern hybrid YAML/TOML ergonomic format with structured state blocks.
+- [x] **FORM-03**: Typed captures (e.g., `IP`, `Integer`, `Date`) with automatic string-to-type conversion.
 
 ### TUI Debugger
 - [ ] **TUI-01**: "Live Lab" split-pane view with real-time regex matching and field highlighting.
@@ -19,7 +19,7 @@
 
 ### CLI & Connectivity
 - [x] **CLI-01**: Standalone CLI for parsing local files or piped input (Unix-style pipe support).
-- [ ] **CLI-02**: Basic Cisco IOS/NX-OS prompt support for initial scraping workflows.
+- [x] **CLI-02**: Basic Cisco IOS/NX-OS prompt support for initial scraping workflows.
 
 ---
 
@@ -43,17 +43,17 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01     | Phase 1 | Pending |
-| CORE-02     | Phase 2 | Pending |
-| CORE-03     | Phase 1 | Pending |
-| FORM-01     | Phase 2 | Pending |
-| FORM-02     | Phase 3 | Pending |
-| FORM-03     | Phase 3 | Pending |
+| CORE-01     | Phase 1 | Complete |
+| CORE-02     | Phase 2 | Complete |
+| CORE-03     | Phase 1 | Complete |
+| FORM-01     | Phase 2 | Complete |
+| FORM-02     | Phase 3 | Complete |
+| FORM-03     | Phase 3 | Complete |
 | TUI-01      | Phase 4 | Pending |
 | TUI-02      | Phase 5 | Pending |
 | TUI-03      | Phase 5 | Pending |
-| CLI-01      | Phase 2 | Pending |
-| CLI-02      | Phase 3 | Pending |
+| CLI-01      | Phase 2 | Complete |
+| CLI-02      | Phase 3 | Complete |
 
 ---
-*Last updated: 2024-05-22 after roadmap creation*
+*Last updated: 2026-02-20 after Phase 3 execution*

@@ -38,7 +38,7 @@
 - [ ] 02-02-PLAN.md — CLI & Input Stream Handling
 - [ ] 02-03-PLAN.md — Serialization & EOF Nuances
 
-## Phase 3: Modern Ergonomic Templates
+## Phase 3: Modern Ergonomic Templates [COMPLETED]
 **Goal:** Support YAML/TOML template formats with automatic type conversion and basic prompt handling.
 
 - **Requirements:** FORM-02, FORM-03, CLI-02
@@ -48,12 +48,13 @@
     2. Numeric captures (e.g., interface speed) are automatically converted to integers in the JSON output.
     3. CLI correctly identifies and handles Cisco IOS style prompts in raw input streams.
 
-**Plans:** 5 plans
-- [ ] 03-01-PLAN.md — Typed record emission (explicit + heuristic conversion)
-- [ ] 03-02-PLAN.md — IOS prompt/echo handling + transcript segmentation
-- [ ] 03-03-PLAN.md — Modern YAML/TOML schema + TemplateIR lowering
-- [ ] 03-04-PLAN.md — CLI format override + starter templates + e2e tests
-- [ ] 03-05-PLAN.md — Interactive TextFSM -> modern conversion tool
+**Plans:** 6 plans
+- [x] 03-01-PLAN.md — Typed record emission (explicit + heuristic conversion)
+- [x] 03-02-PLAN.md — IOS prompt/echo handling + transcript segmentation
+- [x] 03-03-PLAN.md — Modern YAML/TOML schema + TemplateIR lowering
+- [x] 03-04-PLAN.md — CLI format override + starter templates + e2e tests
+- [x] 03-05-PLAN.md — Interactive TextFSM -> modern conversion tool
+- [x] 03-06-PLAN.md — Modern wiring tests + recursive macros gap closure
 
 ## Phase 4: TUI Debugger Foundation (Live Lab)
 **Goal:** Provide a real-time visual environment for template development and regex matching.
@@ -81,6 +82,6 @@
 |-------|-------------|--------|----------|
 | 1 | Core Parsing Engine | Complete | 100% |
 | 2 | Legacy Compatibility & CLI | Active | 0% |
-| 3 | Modern Ergonomic Templates | Pending | 0% |
+| 3 | Modern Ergonomic Templates | Complete | 100% |
 | 4 | TUI Debugger Foundation | Pending | 0% |
 | 5 | TUI Advanced Debugging | Pending | 0% |
