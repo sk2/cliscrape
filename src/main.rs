@@ -1,5 +1,6 @@
 mod cli;
 mod output;
+mod transcript;
 
 use anyhow::Context;
 use clap::Parser;
