@@ -1,4 +1,4 @@
-use crate::tui::app::AppState;
+use crate::tui::app::{AppState, ViewMode};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     prelude::*,
@@ -6,6 +6,45 @@ use ratatui::{
     text::{Line, Span, Text},
     widgets::{Block, Borders, Paragraph, Wrap},
 };
+use std::collections::HashMap;
+
+fn display_value_compact(v: &serde_json::Value) -> String {
+    match v {
+        serde_json::Value::String(s) => s.clone(),
+        other => other.to_string(),
+    }
+}
+
+fn record_preview(record: &HashMap<String, serde_json::Value>, max_len: usize) -> String {
+    if record.is_empty() {
+        return "(empty)".to_string();
+    }
+
+    let mut keys: Vec<&String> = record.keys().collect();
+    keys.sort();
+
+    let mut out = String::new();
+    for (i, k) in keys.iter().enumerate() {
+        let v = record.get(*k).unwrap();
+        let part = format!("{}={}", k, display_value_compact(v));
+        if i > 0 {
+            if out.len() + 1 > max_len {
+                break;
+            }
+            out.push(' ');
+        }
+        if out.len() + part.len() > max_len {
+            break;
+        }
+        out.push_str(&part);
+    }
+
+    if out.is_empty() {
+        "...".to_string()
+    } else {
+        out
+    }
+}
 
 fn build_highlight_spans<'a>(
     s: &'a str,
@@ -130,7 +169,7 @@ fn render_lines_pane(frame: &mut Frame, area: Rect, app: &AppState) {
                 .is_some_and(|m| !m.is_empty());
 
             // Highlight capture spans for the selected match on the cursor line.
-            let ranges = if idx == cursor {
+            let ranges = if idx == cursor && app.view_mode == ViewMode::Matches {
                 report
                     .matches_by_line
                     .get(idx)
@@ -213,51 +252,88 @@ fn render_lines_pane(frame: &mut Frame, area: Rect, app: &AppState) {
 }
 
 fn render_matches_pane(frame: &mut Frame, area: Rect, app: &AppState) {
-    let block = Block::default().borders(Borders::ALL).title("Matches");
+    let title = match app.view_mode {
+        ViewMode::Matches => "Matches",
+        ViewMode::Records => "Records",
+    };
+    let block = Block::default().borders(Borders::ALL).title(title);
     let cursor = app.cursor_line_idx;
-    let selected = app.selected_match_idx;
 
     let mut lines: Vec<Line> = Vec::new();
     if let Some(report) = &app.last_good {
-        if let Some(matches) = report.matches_by_line.get(cursor) {
-            if matches.is_empty() {
-                lines.push(Line::from("(no matches on this line)"));
-            } else {
-                for (i, m) in matches.iter().enumerate() {
-                    let is_sel = i == selected;
-                    let prefix = if is_sel { ">" } else { " " };
-                    let mut style = Style::default();
-                    if is_sel {
-                        style = style
-                            .bg(Color::Rgb(50, 50, 50))
-                            .fg(Color::White)
-                            .add_modifier(Modifier::BOLD);
+        match app.view_mode {
+            ViewMode::Matches => {
+                let selected = app.selected_match_idx;
+                if let Some(matches) = report.matches_by_line.get(cursor) {
+                    if matches.is_empty() {
+                        lines.push(Line::from("(no matches on this line)"));
+                    } else {
+                        for (i, m) in matches.iter().enumerate() {
+                            let is_sel = i == selected;
+                            let prefix = if is_sel { ">" } else { " " };
+                            let mut style = Style::default();
+                            if is_sel {
+                                style = style
+                                    .bg(Color::Rgb(50, 50, 50))
+                                    .fg(Color::White)
+                                    .add_modifier(Modifier::BOLD);
+                            }
+
+                            let next = m
+                                .next_state
+                                .as_ref()
+                                .map(|s| format!(" next={}", s))
+                                .unwrap_or_default();
+
+                            lines.push(Line::from(Span::styled(
+                                format!(
+                                    "{} [{}] r#{} | {} / {} | {} -> {}{}",
+                                    prefix,
+                                    i + 1,
+                                    m.rule_idx,
+                                    m.line_action,
+                                    m.record_action,
+                                    m.state_before,
+                                    m.state_after,
+                                    next
+                                ),
+                                style,
+                            )));
+                        }
                     }
-
-                    let next = m
-                        .next_state
-                        .as_ref()
-                        .map(|s| format!(" next={}", s))
-                        .unwrap_or_default();
-
-                    lines.push(Line::from(Span::styled(
-                        format!(
-                            "{} [{}] r#{} | {} / {} | {} -> {}{}",
-                            prefix,
-                            i + 1,
-                            m.rule_idx,
-                            m.line_action,
-                            m.record_action,
-                            m.state_before,
-                            m.state_after,
-                            next
-                        ),
-                        style,
-                    )));
+                } else {
+                    lines.push(Line::from("(cursor out of range)"));
                 }
             }
-        } else {
-            lines.push(Line::from("(cursor out of range)"));
+            ViewMode::Records => {
+                let selected = app.selected_record_idx;
+                if report.records.is_empty() {
+                    lines.push(Line::from("(no records emitted)"));
+                } else {
+                    for (i, rec) in report.records.iter().enumerate() {
+                        let is_sel = i == selected;
+                        let prefix = if is_sel { ">" } else { " " };
+                        let mut style = Style::default();
+                        if is_sel {
+                            style = style
+                                .bg(Color::Rgb(50, 50, 50))
+                                .fg(Color::White)
+                                .add_modifier(Modifier::BOLD);
+                        }
+                        let preview = record_preview(&rec.record, 70);
+                        lines.push(Line::from(Span::styled(
+                            format!(
+                                "{} [{}] line={} {}",
+                                prefix,
+                                i + 1,
+                                rec.line_idx + 1,
+                                preview
+                            ),
+                            style,
+                        )));
+                    }
+                }
+            }
         }
     } else {
         lines.push(Line::from("(no debug report loaded)"));
@@ -270,65 +346,111 @@ fn render_matches_pane(frame: &mut Frame, area: Rect, app: &AppState) {
 }
 
 fn render_details_pane(frame: &mut Frame, area: Rect, app: &AppState) {
-    let block = Block::default().borders(Borders::ALL).title("Details");
+    let title = match app.view_mode {
+        ViewMode::Matches => "Details",
+        ViewMode::Records => "Record Details",
+    };
+    let block = Block::default().borders(Borders::ALL).title(title);
     let cursor = app.cursor_line_idx;
-    let selected = app.selected_match_idx;
 
     let mut lines: Vec<Line> = Vec::new();
     if let Some(report) = &app.last_good {
-        let match_count = report
-            .matches_by_line
-            .get(cursor)
-            .map(|m| m.len())
-            .unwrap_or(0);
-        let record_count = report
-            .records
-            .iter()
-            .filter(|r| r.line_idx == cursor)
-            .count();
+        match app.view_mode {
+            ViewMode::Matches => {
+                let selected = app.selected_match_idx;
+                let match_count = report
+                    .matches_by_line
+                    .get(cursor)
+                    .map(|m| m.len())
+                    .unwrap_or(0);
+                let record_count = report
+                    .records
+                    .iter()
+                    .filter(|r| r.line_idx == cursor)
+                    .count();
 
-        lines.push(Line::from(format!(
-            "matches={} records_emitted_here={}",
-            match_count, record_count
-        )));
+                lines.push(Line::from(format!(
+                    "matches={} records_emitted_here={}",
+                    match_count, record_count
+                )));
 
-        if let Some(sel_match) = report
-            .matches_by_line
-            .get(cursor)
-            .and_then(|m| m.get(selected))
-        {
-            lines.push(Line::from(""));
-            lines.push(Line::from(format!(
-                "match {}/{}",
-                selected + 1,
-                match_count.max(1)
-            )));
-            lines.push(Line::from(format!(
-                "rule: #{} | {} -> {} | line={} record={}",
-                sel_match.rule_idx,
-                sel_match.state_before,
-                sel_match.state_after,
-                sel_match.line_action,
-                sel_match.record_action
-            )));
-            if let Some(ns) = &sel_match.next_state {
-                lines.push(Line::from(format!("next_state: {}", ns)));
-            }
-
-            lines.push(Line::from(""));
-            lines.push(Line::from("captures:"));
-            if sel_match.captures.is_empty() {
-                lines.push(Line::from("(no captures)"));
-            } else {
-                for c in &sel_match.captures {
-                    let typed = match &c.typed {
-                        serde_json::Value::String(s) => s.clone(),
-                        v => v.to_string(),
-                    };
+                if let Some(sel_match) = report
+                    .matches_by_line
+                    .get(cursor)
+                    .and_then(|m| m.get(selected))
+                {
+                    lines.push(Line::from(""));
                     lines.push(Line::from(format!(
-                        "- {} = {} (raw: {})",
-                        c.name, typed, c.raw
+                        "match {}/{}",
+                        selected + 1,
+                        match_count.max(1)
                     )));
+                    lines.push(Line::from(format!(
+                        "rule: #{} | {} -> {} | line={} record={}",
+                        sel_match.rule_idx,
+                        sel_match.state_before,
+                        sel_match.state_after,
+                        sel_match.line_action,
+                        sel_match.record_action
+                    )));
+                    if let Some(ns) = &sel_match.next_state {
+                        lines.push(Line::from(format!("next_state: {}", ns)));
+                    }
+
+                    lines.push(Line::from(""));
+                    lines.push(Line::from("captures:"));
+                    if sel_match.captures.is_empty() {
+                        lines.push(Line::from("(no captures)"));
+                    } else {
+                        for c in &sel_match.captures {
+                            lines.push(Line::from(format!(
+                                "- {} = {} (raw: {})",
+                                c.name,
+                                display_value_compact(&c.typed),
+                                c.raw
+                            )));
+                        }
+                    }
+                } else {
+                    lines.push(Line::from(""));
+                    lines.push(Line::from("(no selected match)"));
+                }
+            }
+            ViewMode::Records => {
+                let selected = app.selected_record_idx;
+                lines.push(Line::from(format!(
+                    "records_total={}",
+                    report.records.len()
+                )));
+
+                if let Some(rec) = report.records.get(selected) {
+                    lines.push(Line::from(""));
+                    lines.push(Line::from(format!(
+                        "record {}/{} (line {})",
+                        selected + 1,
+                        report.records.len().max(1),
+                        rec.line_idx + 1
+                    )));
+                    lines.push(Line::from(""));
+                    lines.push(Line::from("fields:"));
+
+                    let mut keys: Vec<&String> = rec.record.keys().collect();
+                    keys.sort();
+                    if keys.is_empty() {
+                        lines.push(Line::from("(empty record)"));
+                    } else {
+                        for k in keys {
+                            let v = rec.record.get(k).unwrap();
+                            lines.push(Line::from(format!(
+                                "- {} = {}",
+                                k,
+                                display_value_compact(v)
+                            )));
+                        }
+                    }
+                } else {
+                    lines.push(Line::from(""));
+                    lines.push(Line::from("(no selected record)"));
                 }
             }
         }
@@ -356,6 +478,12 @@ fn render_status_pane(frame: &mut Frame, area: Rect, app: &AppState) {
         Span::raw(status_str),
     ]));
 
+    let view_str = match app.view_mode {
+        ViewMode::Matches => "matches",
+        ViewMode::Records => "records",
+    };
+    lines.push(Line::from(format!("view:     {}", view_str)));
+
     lines.push(Line::from(format!(
         "template: {}",
         app.template_path
@@ -375,31 +503,33 @@ fn render_status_pane(frame: &mut Frame, area: Rect, app: &AppState) {
         let cursor = app
             .cursor_line_idx
             .min(report.lines.len().saturating_sub(1));
-        if let Some(sel_match) = report
-            .matches_by_line
-            .get(cursor)
-            .and_then(|m| m.get(app.selected_match_idx))
-        {
-            let line = report.lines.get(cursor).map(|s| s.as_str()).unwrap_or("");
-            let mut bad = 0usize;
-            for c in &sel_match.captures {
-                let ok = c.start_byte < c.end_byte
-                    && c.end_byte <= line.len()
-                    && line.is_char_boundary(c.start_byte)
-                    && line.is_char_boundary(c.end_byte);
-                if !ok {
-                    bad += 1;
+        if app.view_mode == ViewMode::Matches {
+            if let Some(sel_match) = report
+                .matches_by_line
+                .get(cursor)
+                .and_then(|m| m.get(app.selected_match_idx))
+            {
+                let line = report.lines.get(cursor).map(|s| s.as_str()).unwrap_or("");
+                let mut bad = 0usize;
+                for c in &sel_match.captures {
+                    let ok = c.start_byte < c.end_byte
+                        && c.end_byte <= line.len()
+                        && line.is_char_boundary(c.start_byte)
+                        && line.is_char_boundary(c.end_byte);
+                    if !ok {
+                        bad += 1;
+                    }
                 }
-            }
-            if bad > 0 {
-                lines.push(Line::from(""));
-                lines.push(Line::from(Span::styled(
-                    format!(
-                        "warning: {} capture span(s) had invalid byte offsets (skipped)",
-                        bad
-                    ),
-                    Style::default().fg(Color::Yellow),
-                )));
+                if bad > 0 {
+                    lines.push(Line::from(""));
+                    lines.push(Line::from(Span::styled(
+                        format!(
+                            "warning: {} capture span(s) had invalid byte offsets (skipped)",
+                            bad
+                        ),
+                        Style::default().fg(Color::Yellow),
+                    )));
+                }
             }
         }
     }

@@ -26,6 +26,7 @@ pub enum Message {
     Quit,
     CursorUp,
     CursorDown,
+    ToggleView,
     MatchPrev,
     MatchNext,
     FsChanged { which: FsWhich },
@@ -118,6 +119,10 @@ fn handle_message(app: &mut AppState, msg: Message, worker: &worker::ParseWorker
         }
         Message::CursorDown => {
             app.cursor_down();
+            false
+        }
+        Message::ToggleView => {
+            app.toggle_view_mode();
             false
         }
         Message::MatchPrev => {
