@@ -153,8 +153,26 @@ fn render_details_pane(frame: &mut Frame, area: Rect, app: &AppState) {
             }
         }
     } else {
+        lines.push(Line::from("No debug report loaded."));
+        lines.push(Line::from(""));
+        lines.push(Line::from(format!(
+            "template: {}",
+            app.template_path
+                .as_ref()
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| "<missing>".to_string())
+        )));
+        lines.push(Line::from(format!(
+            "input:    {}",
+            app.input_path
+                .as_ref()
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| "<missing>".to_string())
+        )));
+        lines.push(Line::from(""));
+        lines.push(Line::from("Usage:"));
         lines.push(Line::from(
-            "Provide --template and --input to load a debug report.",
+            "  cliscrape debug --template <PATH> --input <PATH>",
         ));
     }
 
