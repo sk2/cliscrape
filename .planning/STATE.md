@@ -9,11 +9,11 @@
 ## Current Position
 
 **Active Phase:** Phase 4: TUI Debugger Foundation (Live Lab)
-**Active Plan:** 04-02 complete (2/5)
+**Active Plan:** 04-03 complete (3/5)
 **Status:** 🟢 In progress
 
 **Progress:**
-`[█████████████████░░░] 84%` (04-02 complete; carryover: interactive converter smoke pending)
+`[██████████████████░░] 89%` (04-03 complete; carryover: interactive converter smoke pending)
 
 ## Performance Metrics
 
@@ -36,6 +36,7 @@
 - **Template Migration Tooling:** `cliscrape convert` converts `.textfsm` to strict-schema modern YAML/TOML via a shared `ModernTemplateDoc` + serialization helpers.
 - **Debug Trace Actions:** DebugReport stores action/record semantics as strings to stay serde-friendly without changing engine Action types.
 - **EOF Record Attribution:** DebugReport uses `line_idx = lines.len()` as an explicit EOF sentinel for implicit record emission.
+- **Live Reload Architecture:** Debounced notify watcher (watch parent dirs) emits `Message::FsChanged`; background parse worker coalesces requests and retains last-good results while showing current parse errors.
 
 ### Todos
 - [x] Create engine module structure
@@ -49,12 +50,13 @@
 - [x] Add Automatic Type Conversion
 - [ ] Run interactive converter smoke test (Phase 3 verification)
 - [x] Phase 4: Implement TUI scaffolding + `cliscrape debug` wiring (04-02)
+- [x] Phase 4: Add live reload watcher + background parsing with last-good retention (04-03)
 
 ### Blockers
 - None
 
 ## Session Continuity
 
-**Last Session:** 2026-02-20T23:34:03Z
-**Stopped at:** Completed 04-tui-debugger-foundation-(live-lab) 04-02-PLAN.md
+**Last Session:** 2026-02-20T23:45:10Z
+**Stopped at:** Completed 04-tui-debugger-foundation-(live-lab) 04-03-PLAN.md
 **Resume file:** None
