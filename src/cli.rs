@@ -49,6 +49,10 @@ pub enum Commands {
         /// Output format for the converted template (if omitted, you'll be prompted)
         #[arg(long, value_enum)]
         format: Option<ConvertFormat>,
+
+        /// Run without prompts (choose defaults for missing values)
+        #[arg(long)]
+        defaults: bool,
     },
 }
 
