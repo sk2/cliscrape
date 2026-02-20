@@ -1,29 +1,59 @@
 use cliscrape::DebugReport;
 use std::path::PathBuf;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParseStatus {
+    Parsing,
+    Ok,
+    Error,
+    Idle,
+}
+
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub template_path: Option<PathBuf>,
     pub input_path: Option<PathBuf>,
     pub lines: Vec<String>,
     pub cursor_line_idx: usize,
-    pub debug_report: Option<DebugReport>,
+    pub last_good: Option<DebugReport>,
+    pub current_error: Option<String>,
+    pub status: ParseStatus,
 }
 
 impl AppState {
     pub fn new(template_path: Option<PathBuf>, input_path: Option<PathBuf>) -> Self {
+        let mut lines: Vec<String> = Vec::new();
+        lines.push("cliscrape debug".to_string());
+        lines.push("".to_string());
+        lines.push("Usage:".to_string());
+        lines.push("  cliscrape debug --template <PATH> --input <PATH>".to_string());
+
         Self {
             template_path,
             input_path,
-            lines: Vec::new(),
+            lines,
             cursor_line_idx: 0,
-            debug_report: None,
+            last_good: None,
+            current_error: None,
+            status: ParseStatus::Idle,
         }
     }
 
-    pub fn set_debug_report(&mut self, report: DebugReport) {
+    pub fn on_parse_started(&mut self) {
+        self.status = ParseStatus::Parsing;
+    }
+
+    pub fn on_parse_done(&mut self, report: DebugReport) {
         self.lines = report.lines.clone();
-        self.debug_report = Some(report);
+        self.last_good = Some(report);
+        self.current_error = None;
+        self.status = ParseStatus::Ok;
+        self.clamp_cursor();
+    }
+
+    pub fn on_parse_error(&mut self, error: String) {
+        self.current_error = Some(error);
+        self.status = ParseStatus::Error;
         self.clamp_cursor();
     }
 

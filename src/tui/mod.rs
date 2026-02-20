@@ -1,6 +1,4 @@
 use crate::tui::app::AppState;
-use anyhow::Context;
-use cliscrape::FsmParser;
 use crossterm::{
     cursor, event as crossterm_event, execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -8,10 +6,12 @@ use crossterm::{
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 use std::path::PathBuf;
+use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 pub mod app;
 pub mod event;
+pub mod worker;
 pub mod watch;
 pub mod ui;
 
@@ -21,60 +21,37 @@ pub enum FsWhich {
     Input,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Message {
+    Quit,
+    CursorUp,
+    CursorDown,
     FsChanged { which: FsWhich },
+    ParseDone(cliscrape::DebugReport),
+    ParseError(String),
 }
 
 pub fn run_debugger(template: Option<PathBuf>, input: Option<PathBuf>) -> anyhow::Result<()> {
-    let mut app = AppState::new(template.clone(), input.clone());
-
-    match (template, input) {
-        (Some(template_path), Some(input_path)) => {
-            let parser = FsmParser::from_file(&template_path)
-                .with_context(|| format!("Failed to load template from {:?}", template_path))?;
-
-            let input_content = std::fs::read_to_string(&input_path)
-                .with_context(|| format!("Failed to read input from {:?}", input_path))?;
-            let blocks = crate::transcript::preprocess_ios_transcript(&input_content);
-            let block = blocks.first().map(|s| s.as_str()).unwrap_or(&input_content);
-
-            let report = parser
-                .debug_parse(block)
-                .with_context(|| "Failed to debug-parse input")?;
-            app.set_debug_report(report);
-        }
-        _ => {
-            let mut msg: Vec<String> = Vec::new();
-            msg.push("cliscrape debug".to_string());
-            msg.push("".to_string());
-            msg.push("Missing required paths (picker will be added in a later plan).".to_string());
-            msg.push(format!(
-                "template: {}",
-                app.template_path
-                    .as_ref()
-                    .map(|p| p.display().to_string())
-                    .unwrap_or_else(|| "<missing>".to_string())
-            ));
-            msg.push(format!(
-                "input:    {}",
-                app.input_path
-                    .as_ref()
-                    .map(|p| p.display().to_string())
-                    .unwrap_or_else(|| "<missing>".to_string())
-            ));
-            msg.push("".to_string());
-            msg.push("Usage:".to_string());
-            msg.push("  cliscrape debug --template <PATH> --input <PATH>".to_string());
-            app.lines = msg;
-        }
-    }
-
+    let app = AppState::new(template, input);
     run(app)
 }
 
 pub fn run(mut app: AppState) -> anyhow::Result<()> {
     let _cleanup = TerminalCleanup;
+
+    let (msg_tx, msg_rx) = mpsc::channel::<Message>();
+    let worker = worker::ParseWorker::start(msg_tx.clone());
+
+    let mut watcher: Option<watch::WatcherHandle> = None;
+    if let (Some(tpl), Some(inp)) = (app.template_path.clone(), app.input_path.clone()) {
+        watcher = Some(watch::start_watcher(tpl.clone(), inp.clone(), msg_tx.clone())?);
+        app.on_parse_started();
+        worker.request(worker::ParseRequest {
+            template_path: tpl,
+            input_path: inp,
+            block_idx: 0,
+        });
+    }
 
     enable_raw_mode()?;
     execute!(io::stdout(), EnterAlternateScreen, cursor::Hide)?;
@@ -83,7 +60,7 @@ pub fn run(mut app: AppState) -> anyhow::Result<()> {
     let mut terminal = Terminal::new(backend)?;
     terminal.clear()?;
 
-    let tick_rate = Duration::from_millis(100);
+    let tick_rate = Duration::from_millis(50);
     let exit_after = std::env::var("CLISCRAPE_TUI_EXIT_AFTER_MS")
         .ok()
         .and_then(|v| v.parse::<u64>().ok())
@@ -92,6 +69,12 @@ pub fn run(mut app: AppState) -> anyhow::Result<()> {
 
     let res = (|| -> anyhow::Result<()> {
         loop {
+            while let Ok(msg) = msg_rx.try_recv() {
+                if handle_message(&mut app, msg, &worker) {
+                    return Ok(());
+                }
+            }
+
             terminal.draw(|f| ui::draw(f, &app))?;
 
             if let Some(d) = exit_after {
@@ -102,11 +85,9 @@ pub fn run(mut app: AppState) -> anyhow::Result<()> {
 
             if crossterm_event::poll(tick_rate)? {
                 let ev = crossterm_event::read()?;
-                if let Some(action) = crate::tui::event::action_from_event(ev) {
-                    match action {
-                        crate::tui::event::Action::Quit => break,
-                        crate::tui::event::Action::CursorUp => app.cursor_up(),
-                        crate::tui::event::Action::CursorDown => app.cursor_down(),
+                if let Some(msg) = crate::tui::event::message_from_event(ev) {
+                    if handle_message(&mut app, msg, &worker) {
+                        break;
                     }
                 }
             }
@@ -116,7 +97,44 @@ pub fn run(mut app: AppState) -> anyhow::Result<()> {
     })();
 
     let _ = terminal.show_cursor();
+
+    drop(watcher);
+    drop(worker);
     res
+}
+
+fn handle_message(app: &mut AppState, msg: Message, worker: &worker::ParseWorker) -> bool {
+    match msg {
+        Message::Quit => true,
+        Message::CursorUp => {
+            app.cursor_up();
+            false
+        }
+        Message::CursorDown => {
+            app.cursor_down();
+            false
+        }
+        Message::FsChanged { .. } => {
+            let (Some(tpl), Some(inp)) = (app.template_path.clone(), app.input_path.clone()) else {
+                return false;
+            };
+            app.on_parse_started();
+            worker.request(worker::ParseRequest {
+                template_path: tpl,
+                input_path: inp,
+                block_idx: 0,
+            });
+            false
+        }
+        Message::ParseDone(report) => {
+            app.on_parse_done(report);
+            false
+        }
+        Message::ParseError(err) => {
+            app.on_parse_error(err);
+            false
+        }
+    }
 }
 
 struct TerminalCleanup;

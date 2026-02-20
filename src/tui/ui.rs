@@ -10,10 +10,18 @@ use ratatui::{
 pub fn draw(frame: &mut Frame, app: &AppState) {
     let root = frame.area();
 
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(7)])
+        .split(root);
+
+    let main = rows[0];
+    let status = rows[1];
+
     let cols = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
-        .split(root);
+        .split(main);
 
     let left = cols[0];
     let right = cols[1];
@@ -26,6 +34,7 @@ pub fn draw(frame: &mut Frame, app: &AppState) {
     render_lines_pane(frame, left, app);
     render_matches_pane(frame, right_rows[0], app);
     render_details_pane(frame, right_rows[1], app);
+    render_status_pane(frame, status, app);
 }
 
 fn render_lines_pane(frame: &mut Frame, area: Rect, app: &AppState) {
@@ -54,7 +63,7 @@ fn render_lines_pane(frame: &mut Frame, area: Rect, app: &AppState) {
     let mut lines: Vec<Line> = Vec::new();
     for (idx, line) in app.lines.iter().enumerate().take(end).skip(start) {
         let has_matches = app
-            .debug_report
+            .last_good
             .as_ref()
             .and_then(|r| r.matches_by_line.get(idx))
             .is_some_and(|m| !m.is_empty());
@@ -91,7 +100,7 @@ fn render_matches_pane(frame: &mut Frame, area: Rect, app: &AppState) {
     let cursor = app.cursor_line_idx;
 
     let mut lines: Vec<Line> = Vec::new();
-    if let Some(report) = &app.debug_report {
+    if let Some(report) = &app.last_good {
         if let Some(matches) = report.matches_by_line.get(cursor) {
             if matches.is_empty() {
                 lines.push(Line::from("(no matches on this line)"));
@@ -121,7 +130,7 @@ fn render_details_pane(frame: &mut Frame, area: Rect, app: &AppState) {
     let cursor = app.cursor_line_idx;
 
     let mut lines: Vec<Line> = Vec::new();
-    if let Some(report) = &app.debug_report {
+    if let Some(report) = &app.last_good {
         let match_count = report
             .matches_by_line
             .get(cursor)
@@ -153,29 +162,67 @@ fn render_details_pane(frame: &mut Frame, area: Rect, app: &AppState) {
             }
         }
     } else {
-        lines.push(Line::from("No debug report loaded."));
-        lines.push(Line::from(""));
-        lines.push(Line::from(format!(
-            "template: {}",
-            app.template_path
-                .as_ref()
-                .map(|p| p.display().to_string())
-                .unwrap_or_else(|| "<missing>".to_string())
-        )));
-        lines.push(Line::from(format!(
-            "input:    {}",
-            app.input_path
-                .as_ref()
-                .map(|p| p.display().to_string())
-                .unwrap_or_else(|| "<missing>".to_string())
-        )));
-        lines.push(Line::from(""));
-        lines.push(Line::from("Usage:"));
-        lines.push(Line::from(
-            "  cliscrape debug --template <PATH> --input <PATH>",
-        ));
+        lines.push(Line::from("No parse results yet."));
     }
 
+    let p = Paragraph::new(Text::from(lines))
+        .block(block)
+        .wrap(Wrap { trim: false });
+    frame.render_widget(p, area);
+}
+
+fn render_status_pane(frame: &mut Frame, area: Rect, app: &AppState) {
+    let status_str = match app.status {
+        crate::tui::app::ParseStatus::Idle => "idle",
+        crate::tui::app::ParseStatus::Parsing => "parsing",
+        crate::tui::app::ParseStatus::Ok => "ok",
+        crate::tui::app::ParseStatus::Error => "error",
+    };
+
+    let mut lines: Vec<Line> = Vec::new();
+    lines.push(Line::from(vec![
+        Span::styled("status: ", Style::default().add_modifier(Modifier::BOLD)),
+        Span::raw(status_str),
+    ]));
+
+    lines.push(Line::from(format!(
+        "template: {}",
+        app.template_path
+            .as_ref()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|| "<missing>".to_string())
+    )));
+    lines.push(Line::from(format!(
+        "input:    {}",
+        app.input_path
+            .as_ref()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|| "<missing>".to_string())
+    )));
+
+    if let Some(err) = &app.current_error {
+        lines.push(Line::from(""));
+        lines.push(Line::from(Span::styled(
+            "last parse error:",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        )));
+        for l in err.lines().take(3) {
+            lines.push(Line::from(Span::styled(l, Style::default().fg(Color::Red))));
+        }
+        if err.lines().count() > 3 {
+            lines.push(Line::from(Span::styled(
+                "(truncated)",
+                Style::default().fg(Color::Red),
+            )));
+        }
+    }
+
+    let title = if app.current_error.is_some() {
+        "Status + Error"
+    } else {
+        "Status"
+    };
+    let block = Block::default().borders(Borders::ALL).title(title);
     let p = Paragraph::new(Text::from(lines))
         .block(block)
         .wrap(Wrap { trim: false });
