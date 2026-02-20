@@ -187,4 +187,89 @@ mod tests {
             serde_json::Value::String("12x".to_string())
         );
     }
+
+    #[test]
+    fn test_string_hint_preserves_raw_value() {
+        let mut rb = RecordBuffer::new();
+
+        let mut values = HashMap::new();
+        values.insert(
+            "Raw".to_string(),
+            Value {
+                name: "Raw".to_string(),
+                regex: r#"\S+"#.to_string(),
+                filldown: false,
+                required: false,
+                list: false,
+                type_hint: Some(FieldType::String),
+            },
+        );
+
+        rb.insert("Raw".to_string(), "1,234".to_string(), false);
+        let record = rb.emit(&values).unwrap();
+
+        assert_eq!(
+            record["Raw"],
+            serde_json::Value::String("1,234".to_string())
+        );
+    }
+
+    #[test]
+    fn test_typed_int_list_conversion_emits_number_array() {
+        let mut rb = RecordBuffer::new();
+
+        let mut values = HashMap::new();
+        values.insert(
+            "Counts".to_string(),
+            Value {
+                name: "Counts".to_string(),
+                regex: r#"\S+"#.to_string(),
+                filldown: false,
+                required: false,
+                list: true,
+                type_hint: Some(FieldType::Int),
+            },
+        );
+
+        rb.insert("Counts".to_string(), "1".to_string(), true);
+        rb.insert("Counts".to_string(), "2,000".to_string(), true);
+        let record = rb.emit(&values).unwrap();
+
+        let arr = record["Counts"].as_array().unwrap();
+        assert_eq!(arr.len(), 2);
+        assert_eq!(
+            arr[0],
+            serde_json::Value::Number(serde_json::Number::from(1_i64))
+        );
+        assert_eq!(
+            arr[1],
+            serde_json::Value::Number(serde_json::Number::from(2000_i64))
+        );
+    }
+
+    #[test]
+    fn test_heuristic_numeric_conversion_for_untyped_field() {
+        let mut rb = RecordBuffer::new();
+
+        let mut values = HashMap::new();
+        values.insert(
+            "MaybeNum".to_string(),
+            Value {
+                name: "MaybeNum".to_string(),
+                regex: r#"\S+"#.to_string(),
+                filldown: false,
+                required: false,
+                list: false,
+                type_hint: None,
+            },
+        );
+
+        rb.insert("MaybeNum".to_string(), "+1_234".to_string(), false);
+        let record = rb.emit(&values).unwrap();
+
+        assert_eq!(
+            record["MaybeNum"],
+            serde_json::Value::Number(serde_json::Number::from(1234_i64))
+        );
+    }
 }
