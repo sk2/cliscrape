@@ -1,3 +1,4 @@
+use crate::engine::convert::convert_scalar;
 use crate::engine::types::Value;
 use serde_json;
 use std::collections::HashMap;
@@ -59,14 +60,14 @@ impl RecordBuffer {
                         name.clone(),
                         serde_json::Value::Array(
                             vals.iter()
-                                .map(|s| serde_json::Value::String(s.clone()))
+                                .map(|s| convert_scalar(s, val_def.type_hint))
                                 .collect(),
                         ),
                     );
                 } else {
                     // Should only have one value if it's not a list, but we take the last one just in case
                     if let Some(v) = vals.last() {
-                        record.insert(name.clone(), serde_json::Value::String(v.clone()));
+                        record.insert(name.clone(), convert_scalar(v, val_def.type_hint));
                     }
                 }
             } else {
@@ -105,6 +106,7 @@ impl RecordBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::types::FieldType;
 
     #[test]
     fn test_list_accumulation() {
@@ -132,5 +134,57 @@ mod tests {
         assert_eq!(arr.len(), 2);
         assert_eq!(arr[0], "Eth1");
         assert_eq!(arr[1], "Eth2");
+    }
+
+    #[test]
+    fn test_typed_int_conversion_emits_number() {
+        let mut rb = RecordBuffer::new();
+
+        let mut values = HashMap::new();
+        values.insert(
+            "Count".to_string(),
+            Value {
+                name: "Count".to_string(),
+                regex: r#"\S+"#.to_string(),
+                filldown: false,
+                required: false,
+                list: false,
+                type_hint: Some(FieldType::Int),
+            },
+        );
+
+        rb.insert("Count".to_string(), "1,234".to_string(), false);
+        let record = rb.emit(&values).unwrap();
+
+        assert_eq!(
+            record["Count"],
+            serde_json::Value::Number(serde_json::Number::from(1234_i64))
+        );
+    }
+
+    #[test]
+    fn test_failed_typed_int_conversion_falls_back_to_string() {
+        let mut rb = RecordBuffer::new();
+
+        let mut values = HashMap::new();
+        values.insert(
+            "Count".to_string(),
+            Value {
+                name: "Count".to_string(),
+                regex: r#"\S+"#.to_string(),
+                filldown: false,
+                required: false,
+                list: false,
+                type_hint: Some(FieldType::Int),
+            },
+        );
+
+        rb.insert("Count".to_string(), "12x".to_string(), false);
+        let record = rb.emit(&values).unwrap();
+
+        assert_eq!(
+            record["Count"],
+            serde_json::Value::String("12x".to_string())
+        );
     }
 }

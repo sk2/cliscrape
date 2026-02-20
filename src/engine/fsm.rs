@@ -261,7 +261,10 @@ mod tests {
         let results = template.parse(input).unwrap();
 
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0]["Vlan"], "10");
+        assert_eq!(
+            results[0]["Vlan"],
+            serde_json::Value::Number(serde_json::Number::from(10_i64))
+        );
         assert_eq!(results[0]["Status"], "up");
     }
 
@@ -461,9 +464,15 @@ mod tests {
 
         assert_eq!(results.len(), 2);
         assert_eq!(results[0]["Chassis"], "Router1");
-        assert_eq!(results[0]["Slot"], "1");
+        assert_eq!(
+            results[0]["Slot"],
+            serde_json::Value::Number(serde_json::Number::from(1_i64))
+        );
         assert_eq!(results[1]["Chassis"], "Router1");
-        assert_eq!(results[1]["Slot"], "2");
+        assert_eq!(
+            results[1]["Slot"],
+            serde_json::Value::Number(serde_json::Number::from(2_i64))
+        );
     }
 
     #[test]
