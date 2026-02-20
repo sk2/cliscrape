@@ -1,6 +1,6 @@
 use crate::engine::types::{Action, FieldType, Rule, State, TemplateIR, Value};
 use crate::ScraperError;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -9,43 +9,46 @@ pub enum ModernFormat {
     Toml,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct ModernDoc {
-    version: u32,
+pub struct ModernTemplateDoc {
+    pub version: u32,
 
-    #[serde(default)]
-    macros: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub macros: HashMap<String, String>,
 
-    #[serde(default)]
-    fields: BTreeMap<String, FieldDef>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub fields: BTreeMap<String, FieldDef>,
 
-    states: Option<BTreeMap<String, Vec<StateRuleDef>>>,
-    patterns: Option<Vec<PatternRuleDef>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub states: Option<BTreeMap<String, Vec<StateRuleDef>>>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub patterns: Option<Vec<PatternRuleDef>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct FieldDef {
-    #[serde(default)]
-    r#type: Option<FieldTypeDef>,
+pub struct FieldDef {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub r#type: Option<FieldTypeDef>,
 
-    #[serde(default)]
-    pattern: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pattern: Option<String>,
 
-    #[serde(default)]
-    filldown: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub filldown: bool,
 
-    #[serde(default)]
-    required: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub required: bool,
 
-    #[serde(default)]
-    list: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub list: bool,
 }
 
-#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-enum FieldTypeDef {
+pub enum FieldTypeDef {
     Int,
     String,
 }
@@ -59,54 +62,54 @@ impl From<FieldTypeDef> for FieldType {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct StateRuleDef {
-    regex: String,
+pub struct StateRuleDef {
+    pub regex: String,
 
-    #[serde(default)]
-    action: Option<ActionDef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub action: Option<ActionDef>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct ActionDef {
-    #[serde(default)]
-    line: Option<LineActionDef>,
+pub struct ActionDef {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line: Option<LineActionDef>,
 
-    #[serde(default)]
-    record: Option<RecordActionDef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub record: Option<RecordActionDef>,
 
-    #[serde(default)]
-    next: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-enum LineActionDef {
+pub enum LineActionDef {
     Next,
     Continue,
 }
 
-#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-enum RecordActionDef {
+pub enum RecordActionDef {
     None,
     Record,
     Clear,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct PatternRuleDef {
-    regex: String,
+pub struct PatternRuleDef {
+    pub regex: String,
 
-    #[serde(default)]
-    record: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub record: bool,
 }
 
 pub fn load_str(format: ModernFormat, input: &str) -> Result<TemplateIR, ScraperError> {
-    let doc: ModernDoc = match format {
+    let doc: ModernTemplateDoc = match format {
         ModernFormat::Toml => {
             let de = toml::de::Deserializer::parse(input)
                 .map_err(|e| ScraperError::Parse(format!("TOML parse error: {e}")))?;
@@ -132,7 +135,17 @@ pub fn load_yaml_str(input: &str) -> Result<TemplateIR, ScraperError> {
     load_str(ModernFormat::Yaml, input)
 }
 
-impl ModernDoc {
+pub fn to_yaml_string(doc: &ModernTemplateDoc) -> Result<String, ScraperError> {
+    serde_yaml_ng::to_string(doc)
+        .map_err(|e| ScraperError::Parse(format!("YAML serialize error: {e}")))
+}
+
+pub fn to_toml_string(doc: &ModernTemplateDoc) -> Result<String, ScraperError> {
+    toml::to_string_pretty(doc)
+        .map_err(|e| ScraperError::Parse(format!("TOML serialize error: {e}")))
+}
+
+impl ModernTemplateDoc {
     fn validate(&self) -> Result<(), ScraperError> {
         if self.version != 1 {
             return Err(ScraperError::Parse(format!(
@@ -282,6 +295,10 @@ impl ModernDoc {
             macros: self.macros.clone(),
         })
     }
+}
+
+fn is_false(v: &bool) -> bool {
+    !*v
 }
 
 impl StateRuleDef {
