@@ -1,6 +1,7 @@
 use crate::engine::macros::expand_macros;
 use crate::engine::records::RecordBuffer;
 use crate::engine::types::*;
+use crate::engine::{convert::convert_scalar, debug::*};
 use crate::ScraperError;
 use regex::Regex;
 use std::collections::HashMap;
@@ -73,13 +74,16 @@ impl Template {
         })
     }
 
-    pub fn parse(
+    fn parse_internal(
         &self,
         input: &str,
+        mut debug: Option<&mut DebugReport>,
     ) -> Result<Vec<HashMap<String, serde_json::Value>>, ScraperError> {
         let mut current_state = "Start".to_string();
         let mut results = Vec::new();
         let mut record_buffer = RecordBuffer::new();
+
+        let want_debug = debug.is_some();
 
         let lines: Vec<&str> = input.lines().collect();
         let mut line_idx = 0;
@@ -100,11 +104,29 @@ impl Template {
 
                 let rule = &rules[rule_idx];
                 if let Some(caps) = rule.regex.captures(line) {
-                    // Capture named groups into current_record
+                    let prev_state = current_state.clone();
+
+                    let mut capture_spans: Vec<CaptureSpan> = Vec::new();
+
+                    // Capture named groups into record buffer (and spans in debug mode)
                     for name in rule.regex.capture_names().flatten() {
                         if let Some(m) = caps.name(name) {
-                            let is_list = self.values.get(name).map(|v| v.list).unwrap_or(false);
+                            let def = self.values.get(name);
+                            let is_list = def.map(|v| v.list).unwrap_or(false);
                             record_buffer.insert(name.to_string(), m.as_str().to_string(), is_list);
+
+                            if want_debug {
+                                let typed =
+                                    convert_scalar(m.as_str(), def.and_then(|v| v.type_hint));
+                                capture_spans.push(CaptureSpan {
+                                    name: name.to_string(),
+                                    start_byte: m.start(),
+                                    end_byte: m.end(),
+                                    raw: m.as_str().to_string(),
+                                    typed,
+                                    is_list,
+                                });
+                            }
                         }
                     }
 
@@ -112,6 +134,14 @@ impl Template {
                     match rule.record_action {
                         Action::Record => {
                             if let Some(record) = record_buffer.emit(&self.values) {
+                                if want_debug {
+                                    if let Some(d) = debug.as_mut() {
+                                        d.records.push(EmittedRecord {
+                                            line_idx,
+                                            record: record.clone(),
+                                        });
+                                    }
+                                }
                                 results.push(record);
                             }
                         }
@@ -121,13 +151,37 @@ impl Template {
                         _ => {}
                     }
 
-                    let prev_state = current_state.clone();
                     // Handle next state
+                    let mut state_after = prev_state.clone();
                     if let Some(ref next) = rule.next_state {
                         if next == "End" {
-                            return Ok(results);
+                            state_after = "End".to_string();
+                        } else {
+                            current_state = next.clone();
+                            state_after = current_state.clone();
                         }
-                        current_state = next.clone();
+                    }
+
+                    // Record successful match for this line before advancing
+                    if want_debug {
+                        if let Some(d) = debug.as_mut() {
+                            if let Some(matches) = d.matches_by_line.get_mut(line_idx) {
+                                matches.push(LineMatch {
+                                    line_idx,
+                                    state_before: prev_state.clone(),
+                                    state_after: state_after.clone(),
+                                    rule_idx,
+                                    line_action: format!("{:?}", rule.line_action),
+                                    record_action: format!("{:?}", rule.record_action),
+                                    next_state: rule.next_state.clone(),
+                                    captures: capture_spans,
+                                });
+                            }
+                        }
+                    }
+
+                    if rule.next_state.as_deref() == Some("End") {
+                        return Ok(results);
                     }
 
                     // Handle line action
@@ -153,10 +207,32 @@ impl Template {
 
         // Implicit Record on EOF
         if let Some(record) = record_buffer.emit(&self.values) {
+            if want_debug {
+                if let Some(d) = debug.as_mut() {
+                    d.records.push(EmittedRecord {
+                        line_idx: lines.len(),
+                        record: record.clone(),
+                    });
+                }
+            }
             results.push(record);
         }
 
         Ok(results)
+    }
+
+    pub fn parse(
+        &self,
+        input: &str,
+    ) -> Result<Vec<HashMap<String, serde_json::Value>>, ScraperError> {
+        self.parse_internal(input, None)
+    }
+
+    pub fn debug_parse(&self, input: &str) -> Result<DebugReport, ScraperError> {
+        let lines: Vec<String> = input.lines().map(|s| s.to_string()).collect();
+        let mut report = DebugReport::new(lines);
+        let _ = self.parse_internal(input, Some(&mut report))?;
+        Ok(report)
     }
 }
 
