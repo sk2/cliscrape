@@ -1,6 +1,7 @@
 mod cli;
 mod output;
 mod transcript;
+mod tui;
 
 use crate::cli::{Cli, Commands, TemplateFormat as CliTemplateFormat};
 use anyhow::Context;
