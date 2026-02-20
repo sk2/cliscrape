@@ -129,4 +129,32 @@ Start
             modern_t.parse(sample).unwrap()
         );
     }
+
+    #[test]
+    fn convert_preserves_required_filldown_and_list_semantics() {
+        let textfsm = r#"Value Filldown IFACE (\\S+)
+Value Required STATUS (up|down)
+Value List ADDR (\\S+)
+
+Start
+  ^Interface ${IFACE}
+  ^Status ${STATUS}
+  ^Addr ${ADDR}
+  ^$ -> Record
+"#;
+
+        let ir = TextFsmLoader::parse_str(textfsm).unwrap();
+        let legacy = Template::from_ir(ir.clone()).unwrap();
+
+        let doc = template_ir_to_modern_doc(&ir);
+        let yaml = modern::to_yaml_string(&doc).unwrap();
+        let ir2 = modern::load_yaml_str(&yaml).unwrap();
+        let modern_t = Template::from_ir(ir2).unwrap();
+
+        let sample = "Interface Eth1\nStatus up\nAddr 1.1.1.1\nAddr 2.2.2.2\n\n";
+        assert_eq!(
+            legacy.parse(sample).unwrap(),
+            modern_t.parse(sample).unwrap()
+        );
+    }
 }
