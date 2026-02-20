@@ -66,6 +66,13 @@
     2. Changing a regex in the template file (while TUI is running) instantly updates the matching highlights.
     3. User can navigate through the CLI output and see which lines match which template rules.
 
+**Plans:** 5 plans
+- [ ] 04-01-PLAN.md — Engine debug parse report (per-line trace + spans)
+- [ ] 04-02-PLAN.md — TUI scaffolding + `cliscrape debug` wiring
+- [ ] 04-03-PLAN.md — Live reload (watch + worker) + error retention
+- [ ] 04-04-PLAN.md — Match visualization, details pane, matches vs records toggle
+- [ ] 04-05-PLAN.md — In-TUI picker + inline template editor + verification
+
 ## Phase 5: TUI Advanced Debugging (State Tracer)
 **Goal:** Enable deep inspection of FSM state transitions and variable state during the parsing process.
 
