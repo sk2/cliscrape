@@ -1,4 +1,5 @@
 pub mod convert;
+pub mod debug;
 pub mod fsm;
 pub mod macros;
 pub mod records;
