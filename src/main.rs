@@ -71,6 +71,7 @@ fn main() -> anyhow::Result<()> {
             input,
             output,
             format,
+            defaults,
         } => {
             let ext = input.extension().and_then(|s| s.to_str());
             let ext_display = ext.unwrap_or("<none>");
@@ -89,6 +90,7 @@ fn main() -> anyhow::Result<()> {
 
             let chosen_format = match format {
                 Some(f) => f,
+                None if defaults => crate::cli::ConvertFormat::Yaml,
                 None => {
                     let idx = Select::with_theme(&theme)
                         .with_prompt("Output format")
@@ -106,6 +108,7 @@ fn main() -> anyhow::Result<()> {
             let output_provided = output.is_some();
             let out_path = match output {
                 Some(p) => p,
+                None if defaults => default_out.clone(),
                 None => {
                     let entered: String = Input::with_theme(&theme)
                         .with_prompt("Output path")
@@ -116,6 +119,13 @@ fn main() -> anyhow::Result<()> {
             };
 
             if out_path.exists() {
+                if defaults {
+                    anyhow::bail!(
+                        "Output file already exists: {} (choose a different --output or omit --defaults)",
+                        out_path.display()
+                    );
+                }
+
                 if output_provided {
                     anyhow::bail!(
                         "Output file already exists: {} (choose a different --output)",
