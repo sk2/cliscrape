@@ -58,7 +58,7 @@ fn main() -> anyhow::Result<()> {
             let output = output::serialize(&results, format)?;
             println!("{}", output);
         }
-        Commands::Debug { template } => {
+        Commands::Debug { template, input: _ } => {
             if let Some(t) = template {
                 println!("Starting TUI debugger with template: {:?}", t);
             } else {

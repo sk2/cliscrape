@@ -32,8 +32,12 @@ pub enum Commands {
     /// Launch the TUI debugger
     Debug {
         /// Path to the template file to debug (optional)
-        #[arg(short, long)]
+        #[arg(short = 't', long)]
         template: Option<PathBuf>,
+
+        /// Path to the input transcript/text file (optional)
+        #[arg(short = 'i', long)]
+        input: Option<PathBuf>,
     },
 
     /// Convert a legacy TextFSM template into a modern YAML/TOML template
