@@ -410,6 +410,23 @@ record = true
     }
 
     #[test]
+    fn modern_yaml_unknown_field_type_fails_with_path() {
+        let doc = r#"
+version: 1
+fields:
+  speed:
+    type: integer
+patterns:
+  - regex: '^speed=(?P<speed>[0-9,]+)$'
+    record: true
+"#;
+
+        let err = load_yaml_str(doc).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("fields.speed.type"), "{msg}");
+    }
+
+    #[test]
     fn modern_local_macro_overrides_builtin_in_compiled_regex() {
         let doc = r#"
 version = 1
