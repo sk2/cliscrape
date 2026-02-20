@@ -5,6 +5,8 @@ use thiserror::Error;
 pub mod engine;
 pub mod template;
 
+pub use engine::debug::{CaptureSpan, DebugReport, EmittedRecord, LineMatch};
+
 use crate::engine::Template;
 use crate::template::loader::TextFsmLoader;
 use crate::template::modern;
@@ -80,6 +82,10 @@ impl FsmParser {
         input: &str,
     ) -> Result<Vec<HashMap<String, serde_json::Value>>, ScraperError> {
         self.template.parse(input)
+    }
+
+    pub fn debug_parse(&self, input: &str) -> Result<engine::debug::DebugReport, ScraperError> {
+        self.template.debug_parse(input)
     }
 }
 
@@ -175,5 +181,48 @@ patterns:
         );
 
         let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn fsm_parser_debug_parse_forwards_to_template() {
+        let mut values = HashMap::new();
+        values.insert(
+            "X".to_string(),
+            engine::Value {
+                name: "X".to_string(),
+                regex: r#"\S+"#.to_string(),
+                filldown: false,
+                required: false,
+                list: false,
+                type_hint: None,
+            },
+        );
+
+        let mut states = HashMap::new();
+        states.insert(
+            "Start".to_string(),
+            engine::State {
+                name: "Start".to_string(),
+                rules: vec![engine::Rule {
+                    regex: r#"X ${X}"#.to_string(),
+                    line_action: engine::Action::Next,
+                    record_action: engine::Action::Record,
+                    next_state: None,
+                }],
+            },
+        );
+
+        let ir = engine::TemplateIR {
+            values,
+            states,
+            macros: HashMap::new(),
+        };
+        let template = engine::Template::from_ir(ir).unwrap();
+        let parser = FsmParser::new(template);
+
+        let report = parser.debug_parse("X one").unwrap();
+        assert_eq!(report.lines, vec!["X one".to_string()]);
+        assert_eq!(report.matches_by_line[0].len(), 1);
+        assert_eq!(report.records.len(), 1);
     }
 }

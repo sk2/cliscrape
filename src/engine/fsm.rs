@@ -353,6 +353,104 @@ mod tests {
         assert_eq!(results[0]["Status"], "up");
     }
 
+    fn build_continue_template() -> Template {
+        let mut values = HashMap::new();
+        values.insert(
+            "Vlan".to_string(),
+            Value {
+                name: "Vlan".to_string(),
+                regex: r#"\d+"#.to_string(),
+                filldown: false,
+                required: false,
+                list: false,
+                type_hint: None,
+            },
+        );
+        values.insert(
+            "Status".to_string(),
+            Value {
+                name: "Status".to_string(),
+                regex: r#"\w+"#.to_string(),
+                filldown: false,
+                required: false,
+                list: false,
+                type_hint: None,
+            },
+        );
+
+        let mut states = HashMap::new();
+        states.insert(
+            "Start".to_string(),
+            State {
+                name: "Start".to_string(),
+                rules: vec![
+                    Rule {
+                        regex: r#"VLAN ${Vlan}"#.to_string(),
+                        line_action: Action::Continue,
+                        record_action: Action::Next,
+                        next_state: None,
+                    },
+                    Rule {
+                        regex: r#"is ${Status}"#.to_string(),
+                        line_action: Action::Next,
+                        record_action: Action::Record,
+                        next_state: None,
+                    },
+                ],
+            },
+        );
+
+        let ir = TemplateIR {
+            values,
+            states,
+            macros: HashMap::new(),
+        };
+
+        Template::from_ir(ir).unwrap()
+    }
+
+    #[test]
+    fn debug_parse_records_continue_stacking_per_line() {
+        let template = build_continue_template();
+        let input = "VLAN 10 is up";
+        let report = template.debug_parse(input).unwrap();
+
+        assert_eq!(report.lines.len(), 1);
+        assert_eq!(report.matches_by_line.len(), 1);
+        assert_eq!(report.matches_by_line[0].len(), 2);
+        assert_eq!(report.matches_by_line[0][0].rule_idx, 0);
+        assert_eq!(report.matches_by_line[0][1].rule_idx, 1);
+    }
+
+    #[test]
+    fn debug_parse_capture_spans_slice_back_to_raw() {
+        let template = build_continue_template();
+        let input = "VLAN 10 is up";
+        let report = template.debug_parse(input).unwrap();
+
+        let line = &report.lines[0];
+        let first = &report.matches_by_line[0][0];
+        let cap = first
+            .captures
+            .iter()
+            .find(|c| c.name == "Vlan")
+            .expect("Vlan capture");
+
+        assert_eq!(&line[cap.start_byte..cap.end_byte], cap.raw);
+    }
+
+    #[test]
+    fn debug_parse_emitted_records_match_parse_output() {
+        let template = build_continue_template();
+        let input = "VLAN 10 is up";
+
+        let parsed = template.parse(input).unwrap();
+        let report = template.debug_parse(input).unwrap();
+        let emitted: Vec<_> = report.records.into_iter().map(|r| r.record).collect();
+
+        assert_eq!(emitted, parsed);
+    }
+
     #[test]
     fn test_invalid_state_transition() {
         let mut states = HashMap::new();
