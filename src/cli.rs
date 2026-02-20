@@ -35,6 +35,21 @@ pub enum Commands {
         #[arg(short, long)]
         template: Option<PathBuf>,
     },
+
+    /// Convert a legacy TextFSM template into a modern YAML/TOML template
+    Convert {
+        /// Path to the input template file (.textfsm)
+        #[arg(short = 'i', long)]
+        input: PathBuf,
+
+        /// Path to write the converted template (if omitted, you'll be prompted)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+
+        /// Output format for the converted template (if omitted, you'll be prompted)
+        #[arg(long, value_enum)]
+        format: Option<ConvertFormat>,
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -57,4 +72,12 @@ pub enum OutputFormat {
     Csv,
     /// Table output (placeholder)
     Table,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+pub enum ConvertFormat {
+    /// Modern YAML template
+    Yaml,
+    /// Modern TOML template
+    Toml,
 }
