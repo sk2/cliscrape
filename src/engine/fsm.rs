@@ -13,7 +13,16 @@ impl Template {
             let mut compiled_rules = Vec::new();
             for rule in &state.rules {
                 // 1. Expand macros {{name}}
-                let expanded_macros = expand_macros(&rule.regex, &ir.macros);
+                let expanded_macros = expand_macros(&rule.regex, &ir.macros).map_err(|e| {
+                    let msg = match e {
+                        ScraperError::Parse(m) => m,
+                        other => other.to_string(),
+                    };
+                    ScraperError::Parse(format!(
+                        "Macro expansion error in state '{}': {}",
+                        state_name, msg
+                    ))
+                })?;
 
                 // 2. Expand values ${ValueName}
                 let mut final_regex_str = expanded_macros;
