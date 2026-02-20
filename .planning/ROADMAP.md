@@ -19,6 +19,10 @@
 - [x] 01-04-PLAN.md — Gap closure: deterministic state transitions + End termination tests
 - [x] 01-05-PLAN.md — Gap closure: mac_address unit test + macro-through-compilation integration test
 
+### Notes (Research)
+
+- `{{mac_address}}` should match both colon-separated (`aa:bb:cc:dd:ee:ff`) and dotted (`aabb.ccdd.eeff`) formats, based on patterns used across ntc-templates (Cisco/Arista/Juniper).
+
 ## Phase 2: Legacy Compatibility & CLI
 **Goal:** Enable parsing of existing TextFSM templates via a standard Unix-style CLI.
 
@@ -43,6 +47,13 @@
     1. User can define a template using YAML blocks that match CLI states.
     2. Numeric captures (e.g., interface speed) are automatically converted to integers in the JSON output.
     3. CLI correctly identifies and handles Cisco IOS style prompts in raw input streams.
+
+**Plans:** 5 plans
+- [ ] 03-01-PLAN.md — Typed record emission (explicit + heuristic conversion)
+- [ ] 03-02-PLAN.md — IOS prompt/echo handling + transcript segmentation
+- [ ] 03-03-PLAN.md — Modern YAML/TOML schema + TemplateIR lowering
+- [ ] 03-04-PLAN.md — CLI format override + starter templates + e2e tests
+- [ ] 03-05-PLAN.md — Interactive TextFSM -> modern conversion tool
 
 ## Phase 4: TUI Debugger Foundation (Live Lab)
 **Goal:** Provide a real-time visual environment for template development and regex matching.
