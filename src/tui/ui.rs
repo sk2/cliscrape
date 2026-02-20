@@ -7,6 +7,67 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph, Wrap},
 };
 
+fn build_highlight_spans<'a>(
+    s: &'a str,
+    normal: Style,
+    highlight: Style,
+    ranges: &[(usize, usize)],
+) -> (Vec<Span<'a>>, usize) {
+    let mut skipped = 0usize;
+    let mut valid: Vec<(usize, usize)> = Vec::new();
+
+    for (start, end) in ranges {
+        if start >= end {
+            skipped += 1;
+            continue;
+        }
+        if *end > s.len() {
+            skipped += 1;
+            continue;
+        }
+        if !s.is_char_boundary(*start) || !s.is_char_boundary(*end) {
+            skipped += 1;
+            continue;
+        }
+        valid.push((*start, *end));
+    }
+
+    valid.sort_by_key(|(s, _e)| *s);
+    let mut merged: Vec<(usize, usize)> = Vec::new();
+    for (start, end) in valid {
+        if let Some((_ps, pe)) = merged.last_mut() {
+            if start <= *pe {
+                *pe = (*pe).max(end);
+                continue;
+            }
+        }
+        merged.push((start, end));
+    }
+
+    let mut spans: Vec<Span<'a>> = Vec::new();
+    let mut pos = 0usize;
+    for (start, end) in merged {
+        if pos < start {
+            if let Some(seg) = s.get(pos..start) {
+                spans.push(Span::styled(seg, normal));
+            }
+        }
+        if let Some(seg) = s.get(start..end) {
+            spans.push(Span::styled(seg, highlight));
+            pos = end;
+        } else {
+            skipped += 1;
+        }
+    }
+    if pos < s.len() {
+        if let Some(seg) = s.get(pos..s.len()) {
+            spans.push(Span::styled(seg, normal));
+        }
+    }
+
+    (spans, skipped)
+}
+
 pub fn draw(frame: &mut Frame, app: &AppState) {
     let root = frame.area();
 
@@ -62,28 +123,84 @@ fn render_lines_pane(frame: &mut Frame, area: Rect, app: &AppState) {
 
     let mut lines: Vec<Line> = Vec::new();
     for (idx, line) in app.lines.iter().enumerate().take(end).skip(start) {
-        let has_matches = app
-            .last_good
-            .as_ref()
-            .and_then(|r| r.matches_by_line.get(idx))
-            .is_some_and(|m| !m.is_empty());
+        let (has_matches, selected_match_ranges) = if let Some(report) = &app.last_good {
+            let has = report
+                .matches_by_line
+                .get(idx)
+                .is_some_and(|m| !m.is_empty());
 
-        let mut style = Style::default();
+            // For now, highlight capture spans for the first match on the selected line.
+            let ranges = if idx == cursor {
+                report
+                    .matches_by_line
+                    .get(idx)
+                    .and_then(|m| m.first())
+                    .map(|lm| {
+                        lm.captures
+                            .iter()
+                            .map(|c| (c.start_byte, c.end_byte))
+                            .collect::<Vec<(usize, usize)>>()
+                    })
+                    .unwrap_or_default()
+            } else {
+                Vec::new()
+            };
+
+            (has, ranges)
+        } else {
+            (false, Vec::new())
+        };
+
+        let matched_line_bg = Style::default().bg(Color::Rgb(30, 30, 30));
+        let selected_line_bg = Style::default().bg(Color::Rgb(0, 55, 95));
+        let highlight_style = Style::default()
+            .bg(Color::Rgb(110, 80, 0))
+            .fg(Color::White)
+            .add_modifier(Modifier::BOLD);
+
+        let mut base = Style::default();
         if has_matches {
-            style = style.fg(Color::Yellow);
+            base = base.patch(matched_line_bg);
         }
         if idx == cursor {
-            style = style
-                .bg(Color::Blue)
+            base = base
+                .patch(selected_line_bg)
                 .fg(Color::White)
                 .add_modifier(Modifier::BOLD);
         }
 
-        let prefix = format!("{:>5} ", idx + 1);
-        lines.push(Line::from(vec![
-            Span::styled(prefix, style),
-            Span::styled(line.as_str(), style),
-        ]));
+        let marker = if idx == cursor { ">" } else { " " };
+        let marker_style = if idx == cursor {
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD)
+                .patch(selected_line_bg)
+        } else {
+            Style::default().fg(Color::DarkGray)
+        };
+        let num_style = base.fg(if idx == cursor {
+            Color::White
+        } else {
+            Color::Gray
+        });
+
+        let prefix_num = format!("{:>5} ", idx + 1);
+
+        let (text_spans, skipped) =
+            build_highlight_spans(line.as_str(), base, highlight_style, &selected_match_ranges);
+
+        let mut row: Vec<Span> = Vec::new();
+        row.push(Span::styled(marker, marker_style));
+        row.push(Span::styled(prefix_num, num_style));
+        if skipped > 0 {
+            // Non-fatal: bad offsets are skipped.
+            row.push(Span::styled(
+                "! ",
+                Style::default().fg(Color::Yellow).patch(base),
+            ));
+        }
+        row.extend(text_spans);
+        lines.push(Line::from(row));
     }
 
     if lines.is_empty() {
@@ -199,6 +316,35 @@ fn render_status_pane(frame: &mut Frame, area: Rect, app: &AppState) {
             .map(|p| p.display().to_string())
             .unwrap_or_else(|| "<missing>".to_string())
     )));
+
+    if let Some(report) = &app.last_good {
+        let cursor = app
+            .cursor_line_idx
+            .min(report.lines.len().saturating_sub(1));
+        if let Some(first_match) = report.matches_by_line.get(cursor).and_then(|m| m.first()) {
+            let line = report.lines.get(cursor).map(|s| s.as_str()).unwrap_or("");
+            let mut bad = 0usize;
+            for c in &first_match.captures {
+                let ok = c.start_byte < c.end_byte
+                    && c.end_byte <= line.len()
+                    && line.is_char_boundary(c.start_byte)
+                    && line.is_char_boundary(c.end_byte);
+                if !ok {
+                    bad += 1;
+                }
+            }
+            if bad > 0 {
+                lines.push(Line::from(""));
+                lines.push(Line::from(Span::styled(
+                    format!(
+                        "warning: {} capture span(s) had invalid byte offsets (skipped)",
+                        bad
+                    ),
+                    Style::default().fg(Color::Yellow),
+                )));
+            }
+        }
+    }
 
     if let Some(err) = &app.current_error {
         lines.push(Line::from(""));
