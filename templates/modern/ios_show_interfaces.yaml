@@ -1,0 +1,13 @@
+version: 1
+
+fields:
+  iface:
+    type: string
+  mtu:
+    type: int
+
+states:
+  Start:
+    - regex: '^Interface (?P<iface>\S+), MTU (?P<mtu>[0-9]+)$'
+      action:
+        record: record
