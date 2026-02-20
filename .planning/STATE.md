@@ -9,11 +9,11 @@
 ## Current Position
 
 **Active Phase:** Phase 3: Modern Ergonomic Templates
-**Active Plan:** 03-04 complete
+**Active Plan:** 03-06 complete
 **Status:** 🟡 In progress
 
 **Progress:**
-`[█████████████████░░░] 86%` (12/14 plans complete)
+`[███████████████████░] 92%` (13/14 plans complete)
 
 ## Performance Metrics
 
@@ -32,6 +32,7 @@
 - **Emit-time Type Conversion:** Convert captured strings to typed `serde_json::Value` at record emission; explicit per-field hint wins, numeric-only heuristics otherwise, failure preserves raw string.
 - **Modern Template Typing Default:** Modern templates default fields to explicit `string` typing (type_hint=String) unless declared otherwise, to avoid heuristic surprises.
 - **CLI Template Format Override:** `cliscrape parse --template-format auto|textfsm|yaml|toml` forces loader selection (useful when file extensions are ambiguous).
+- **Macro Expansion Semantics:** Macro expansion is recursive with max depth 10 and explicit cycle detection; template-local macros shadow builtins.
 
 ### Todos
 - [x] Create engine module structure
@@ -49,6 +50,6 @@
 
 ## Session Continuity
 
-**Last Session:** 2026-02-20T11:54:23Z
-**Stopped at:** Completed 03-04-PLAN.md
+**Last Session:** 2026-02-20T11:57:06Z
+**Stopped at:** Completed 03-06-PLAN.md
 **Resume file:** None
