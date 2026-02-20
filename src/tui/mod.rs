@@ -11,9 +11,9 @@ use std::time::{Duration, Instant};
 
 pub mod app;
 pub mod event;
-pub mod worker;
-pub mod watch;
 pub mod ui;
+pub mod watch;
+pub mod worker;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FsWhich {
@@ -26,6 +26,8 @@ pub enum Message {
     Quit,
     CursorUp,
     CursorDown,
+    MatchPrev,
+    MatchNext,
     FsChanged { which: FsWhich },
     ParseDone(cliscrape::DebugReport),
     ParseError(String),
@@ -44,7 +46,11 @@ pub fn run(mut app: AppState) -> anyhow::Result<()> {
 
     let mut watcher: Option<watch::WatcherHandle> = None;
     if let (Some(tpl), Some(inp)) = (app.template_path.clone(), app.input_path.clone()) {
-        watcher = Some(watch::start_watcher(tpl.clone(), inp.clone(), msg_tx.clone())?);
+        watcher = Some(watch::start_watcher(
+            tpl.clone(),
+            inp.clone(),
+            msg_tx.clone(),
+        )?);
         app.on_parse_started();
         worker.request(worker::ParseRequest {
             template_path: tpl,
@@ -112,6 +118,14 @@ fn handle_message(app: &mut AppState, msg: Message, worker: &worker::ParseWorker
         }
         Message::CursorDown => {
             app.cursor_down();
+            false
+        }
+        Message::MatchPrev => {
+            app.selected_match_prev();
+            false
+        }
+        Message::MatchNext => {
+            app.selected_match_next();
             false
         }
         Message::FsChanged { .. } => {

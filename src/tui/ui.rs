@@ -129,12 +129,12 @@ fn render_lines_pane(frame: &mut Frame, area: Rect, app: &AppState) {
                 .get(idx)
                 .is_some_and(|m| !m.is_empty());
 
-            // For now, highlight capture spans for the first match on the selected line.
+            // Highlight capture spans for the selected match on the cursor line.
             let ranges = if idx == cursor {
                 report
                     .matches_by_line
                     .get(idx)
-                    .and_then(|m| m.first())
+                    .and_then(|m| m.get(app.selected_match_idx))
                     .map(|lm| {
                         lm.captures
                             .iter()
@@ -215,6 +215,7 @@ fn render_lines_pane(frame: &mut Frame, area: Rect, app: &AppState) {
 fn render_matches_pane(frame: &mut Frame, area: Rect, app: &AppState) {
     let block = Block::default().borders(Borders::ALL).title("Matches");
     let cursor = app.cursor_line_idx;
+    let selected = app.selected_match_idx;
 
     let mut lines: Vec<Line> = Vec::new();
     if let Some(report) = &app.last_good {
@@ -222,10 +223,36 @@ fn render_matches_pane(frame: &mut Frame, area: Rect, app: &AppState) {
             if matches.is_empty() {
                 lines.push(Line::from("(no matches on this line)"));
             } else {
-                for m in matches {
-                    lines.push(Line::from(format!(
-                        "#{} {} -> {} | line={} record={}",
-                        m.rule_idx, m.state_before, m.state_after, m.line_action, m.record_action
+                for (i, m) in matches.iter().enumerate() {
+                    let is_sel = i == selected;
+                    let prefix = if is_sel { ">" } else { " " };
+                    let mut style = Style::default();
+                    if is_sel {
+                        style = style
+                            .bg(Color::Rgb(50, 50, 50))
+                            .fg(Color::White)
+                            .add_modifier(Modifier::BOLD);
+                    }
+
+                    let next = m
+                        .next_state
+                        .as_ref()
+                        .map(|s| format!(" next={}", s))
+                        .unwrap_or_default();
+
+                    lines.push(Line::from(Span::styled(
+                        format!(
+                            "{} [{}] r#{} | {} / {} | {} -> {}{}",
+                            prefix,
+                            i + 1,
+                            m.rule_idx,
+                            m.line_action,
+                            m.record_action,
+                            m.state_before,
+                            m.state_after,
+                            next
+                        ),
+                        style,
                     )));
                 }
             }
@@ -245,6 +272,7 @@ fn render_matches_pane(frame: &mut Frame, area: Rect, app: &AppState) {
 fn render_details_pane(frame: &mut Frame, area: Rect, app: &AppState) {
     let block = Block::default().borders(Borders::ALL).title("Details");
     let cursor = app.cursor_line_idx;
+    let selected = app.selected_match_idx;
 
     let mut lines: Vec<Line> = Vec::new();
     if let Some(report) = &app.last_good {
@@ -264,16 +292,42 @@ fn render_details_pane(frame: &mut Frame, area: Rect, app: &AppState) {
             match_count, record_count
         )));
 
-        if let Some(first_match) = report.matches_by_line.get(cursor).and_then(|m| m.first()) {
+        if let Some(sel_match) = report
+            .matches_by_line
+            .get(cursor)
+            .and_then(|m| m.get(selected))
+        {
+            lines.push(Line::from(""));
+            lines.push(Line::from(format!(
+                "match {}/{}",
+                selected + 1,
+                match_count.max(1)
+            )));
+            lines.push(Line::from(format!(
+                "rule: #{} | {} -> {} | line={} record={}",
+                sel_match.rule_idx,
+                sel_match.state_before,
+                sel_match.state_after,
+                sel_match.line_action,
+                sel_match.record_action
+            )));
+            if let Some(ns) = &sel_match.next_state {
+                lines.push(Line::from(format!("next_state: {}", ns)));
+            }
+
             lines.push(Line::from(""));
             lines.push(Line::from("captures:"));
-            if first_match.captures.is_empty() {
+            if sel_match.captures.is_empty() {
                 lines.push(Line::from("(no captures)"));
             } else {
-                for c in &first_match.captures {
+                for c in &sel_match.captures {
+                    let typed = match &c.typed {
+                        serde_json::Value::String(s) => s.clone(),
+                        v => v.to_string(),
+                    };
                     lines.push(Line::from(format!(
                         "- {} = {} (raw: {})",
-                        c.name, c.typed, c.raw
+                        c.name, typed, c.raw
                     )));
                 }
             }
@@ -321,10 +375,14 @@ fn render_status_pane(frame: &mut Frame, area: Rect, app: &AppState) {
         let cursor = app
             .cursor_line_idx
             .min(report.lines.len().saturating_sub(1));
-        if let Some(first_match) = report.matches_by_line.get(cursor).and_then(|m| m.first()) {
+        if let Some(sel_match) = report
+            .matches_by_line
+            .get(cursor)
+            .and_then(|m| m.get(app.selected_match_idx))
+        {
             let line = report.lines.get(cursor).map(|s| s.as_str()).unwrap_or("");
             let mut bad = 0usize;
-            for c in &first_match.captures {
+            for c in &sel_match.captures {
                 let ok = c.start_byte < c.end_byte
                     && c.end_byte <= line.len()
                     && line.is_char_boundary(c.start_byte)
