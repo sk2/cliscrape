@@ -12,7 +12,19 @@ use std::time::{Duration, Instant};
 
 pub mod app;
 pub mod event;
+pub mod watch;
 pub mod ui;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FsWhich {
+    Template,
+    Input,
+}
+
+#[derive(Debug, Clone)]
+pub enum Message {
+    FsChanged { which: FsWhich },
+}
 
 pub fn run_debugger(template: Option<PathBuf>, input: Option<PathBuf>) -> anyhow::Result<()> {
     let mut app = AppState::new(template.clone(), input.clone());
