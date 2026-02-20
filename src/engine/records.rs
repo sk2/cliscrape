@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use crate::engine::types::Value;
 use serde_json;
+use std::collections::HashMap;
 
 #[derive(Debug, Default)]
 pub struct RecordBuffer {
@@ -32,11 +32,14 @@ impl RecordBuffer {
 
     /// Validates and extracts the record.
     /// If valid, returns the record and updates the buffer based on filldown rules.
-    pub fn emit(&mut self, values: &HashMap<String, Value>) -> Option<HashMap<String, serde_json::Value>> {
+    pub fn emit(
+        &mut self,
+        values: &HashMap<String, Value>,
+    ) -> Option<HashMap<String, serde_json::Value>> {
         if !self.dirty {
             return None;
         }
-        
+
         // Check required fields
         for (name, val) in values {
             if val.required {
@@ -52,9 +55,14 @@ impl RecordBuffer {
         for (name, val_def) in values {
             if let Some(vals) = self.buffer.get(name) {
                 if val_def.list {
-                    record.insert(name.clone(), serde_json::Value::Array(
-                        vals.iter().map(|s| serde_json::Value::String(s.clone())).collect()
-                    ));
+                    record.insert(
+                        name.clone(),
+                        serde_json::Value::Array(
+                            vals.iter()
+                                .map(|s| serde_json::Value::String(s.clone()))
+                                .collect(),
+                        ),
+                    );
                 } else {
                     // Should only have one value if it's not a list, but we take the last one just in case
                     if let Some(v) = vals.last() {
@@ -102,17 +110,21 @@ mod tests {
     fn test_list_accumulation() {
         let mut rb = RecordBuffer::new();
         let mut values = HashMap::new();
-        values.insert("Interfaces".to_string(), Value {
-            name: "Interfaces".to_string(),
-            regex: r#"\S+"#.to_string(),
-            filldown: false,
-            required: false,
-            list: true,
-        });
+        values.insert(
+            "Interfaces".to_string(),
+            Value {
+                name: "Interfaces".to_string(),
+                regex: r#"\S+"#.to_string(),
+                filldown: false,
+                required: false,
+                list: true,
+                type_hint: None,
+            },
+        );
 
         rb.insert("Interfaces".to_string(), "Eth1".to_string(), true);
         rb.insert("Interfaces".to_string(), "Eth2".to_string(), true);
-        
+
         let record = rb.emit(&values).unwrap();
         let interfaces = record.get("Interfaces").unwrap();
         assert!(interfaces.is_array());
@@ -122,4 +134,3 @@ mod tests {
         assert_eq!(arr[1], "Eth2");
     }
 }
-

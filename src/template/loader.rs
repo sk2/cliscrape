@@ -1,8 +1,8 @@
-use pest::Parser;
-use pest::iterators::Pair;
-use crate::template::{TextFsmParser, Rule as PestRule};
 use crate::engine::types::*;
+use crate::template::{Rule as PestRule, TextFsmParser};
 use crate::ScraperError;
+use pest::iterators::Pair;
+use pest::Parser;
 use std::collections::HashMap;
 
 pub struct TextFsmLoader;
@@ -70,6 +70,7 @@ fn parse_definition(pair: Pair<PestRule>) -> Result<Value, ScraperError> {
         filldown,
         required,
         list,
+        type_hint: None,
     })
 }
 
@@ -163,7 +164,7 @@ Start
         assert_eq!(ir.values.len(), 2);
         assert!(ir.values.contains_key("INTERFACE"));
         assert!(ir.states.contains_key("Start"));
-        
+
         let start_state = &ir.states["Start"];
         assert_eq!(start_state.rules.len(), 1);
         assert_eq!(start_state.rules[0].record_action, Action::Record);
@@ -178,13 +179,13 @@ Start
 "#;
         let ir = TextFsmLoader::parse_str(input).unwrap();
         let rules = &ir.states["Start"].rules;
-        
+
         assert_eq!(rules[0].line_action, Action::Continue);
         assert_eq!(rules[0].record_action, Action::Record);
         assert_eq!(rules[0].next_state, Some("NextState".to_string()));
-        
+
         assert_eq!(rules[1].record_action, Action::Clear);
-        
+
         assert_eq!(rules[2].next_state, Some("NextState".to_string()));
         assert_eq!(rules[2].line_action, Action::Next);
     }

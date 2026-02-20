@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use regex::Regex;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Action {
@@ -9,6 +9,12 @@ pub enum Action {
     Clear,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum FieldType {
+    Int,
+    String,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Value {
     pub name: String,
@@ -16,6 +22,7 @@ pub struct Value {
     pub filldown: bool,
     pub required: bool,
     pub list: bool,
+    pub type_hint: Option<FieldType>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
