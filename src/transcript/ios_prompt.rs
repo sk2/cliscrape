@@ -106,3 +106,62 @@ pub fn preprocess_ios_transcript(raw: &str) -> Vec<String> {
         blocks
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::preprocess_ios_transcript;
+
+    #[test]
+    fn segments_multi_command_transcript_and_strips_prompts_and_echoes() {
+        let raw = concat!(
+            "Router# show ip interface brief\n",
+            "Interface              IP-Address      OK? Method Status                Protocol\n",
+            "GigabitEthernet0/0     10.0.0.1        YES manual up                    up\n",
+            "Router# show version\n",
+            "Cisco IOS Software, ...\n",
+            "Router#\n",
+        );
+
+        let blocks = preprocess_ios_transcript(raw);
+        assert_eq!(blocks.len(), 2);
+        assert!(!blocks[0].contains("Router#"));
+        assert!(!blocks[1].contains("Router#"));
+        assert!(blocks[0].contains("GigabitEthernet0/0"));
+        assert!(blocks[1].contains("Cisco IOS Software"));
+    }
+
+    #[test]
+    fn strips_single_prompt_command_echo_at_start_even_without_trailing_prompt() {
+        let raw = "Router# show version\nCisco IOS Software, ...\nROM: Bootstrap\n";
+        let blocks = preprocess_ios_transcript(raw);
+
+        assert_eq!(blocks.len(), 1);
+        assert!(!blocks[0].contains("Router# show version"));
+        assert!(blocks[0].contains("Cisco IOS Software"));
+    }
+
+    #[test]
+    fn does_not_trigger_on_single_prompt_like_line_when_confidence_is_low() {
+        let raw = "Some output line\nRouter#\nMore output\n";
+        let blocks = preprocess_ios_transcript(raw);
+
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0], raw);
+    }
+
+    #[test]
+    fn recognizes_config_mode_prompts_as_same_hostname_base() {
+        let raw = concat!(
+            "Router(config)# show running-config\n",
+            "Building configuration...\n",
+            "Current configuration : 1234 bytes\n",
+            "Router(config)#\n",
+        );
+        let blocks = preprocess_ios_transcript(raw);
+
+        assert_eq!(blocks.len(), 1);
+        assert!(!blocks[0].contains("Router(config)#"));
+        assert!(blocks[0].contains("Building configuration"));
+        assert!(blocks[0].contains("Current configuration"));
+    }
+}
