@@ -21,6 +21,14 @@ pub struct FsmParser {
     template: Template,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TemplateFormat {
+    Auto,
+    Textfsm,
+    Yaml,
+    Toml,
+}
+
 impl FsmParser {
     pub fn new(template: Template) -> Self {
         Self { template }
@@ -41,6 +49,26 @@ impl FsmParser {
                     "Unsupported template extension '{ext_display}'. Supported: .textfsm, .yaml, .yml, .toml"
                 )));
             }
+        };
+
+        let template = Template::from_ir(ir)?;
+        Ok(Self { template })
+    }
+
+    pub fn from_file_with_format<P: AsRef<Path>>(
+        path: P,
+        format: TemplateFormat,
+    ) -> Result<Self, ScraperError> {
+        if format == TemplateFormat::Auto {
+            return Self::from_file(path);
+        }
+
+        let content = std::fs::read_to_string(&path)?;
+        let ir = match format {
+            TemplateFormat::Auto => unreachable!("handled above"),
+            TemplateFormat::Textfsm => TextFsmLoader::parse_str(&content)?,
+            TemplateFormat::Yaml => modern::load_yaml_str(&content)?,
+            TemplateFormat::Toml => modern::load_toml_str(&content)?,
         };
 
         let template = Template::from_ir(ir)?;

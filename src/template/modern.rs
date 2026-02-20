@@ -447,4 +447,105 @@ record = true
         let err = load_toml_str(doc).unwrap_err();
         assert!(err.to_string().contains("fields.iface.pattern"));
     }
+
+    #[test]
+    fn modern_rejects_both_states_and_patterns() {
+        let doc = r#"
+version = 1
+
+[fields]
+ip = { type = "string" }
+
+[[patterns]]
+regex = '^IP (?P<ip>\\S+)$'
+record = true
+
+[[states.Start]]
+regex = '^IP (?P<ip>\\S+)$'
+"#;
+
+        let err = load_toml_str(doc).unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("exactly one of 'states' or 'patterns'"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn modern_rejects_missing_states_and_patterns() {
+        let doc = r#"
+version = 1
+
+[fields]
+ip = { type = "string" }
+"#;
+
+        let err = load_toml_str(doc).unwrap_err();
+        assert!(
+            err.to_string().contains("either 'states' or 'patterns'"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn modern_rejects_unsupported_version() {
+        let doc = r#"
+version = 2
+
+[fields]
+ip = { type = "string" }
+
+[[patterns]]
+regex = '^IP (?P<ip>\\S+)$'
+record = true
+"#;
+
+        let err = load_toml_str(doc).unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("Unsupported modern template version 2"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn modern_placeholder_parses_when_field_pattern_defined() {
+        let doc = r#"
+version = 1
+
+[fields]
+iface = { type = "string", pattern = "\\S+" }
+
+[[patterns]]
+regex = '^Interface ${iface}$'
+record = true
+"#;
+
+        let ir = load_toml_str(doc).unwrap();
+        let template = Template::from_ir(ir).unwrap();
+        let results = template.parse("Interface Eth1").unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0]["iface"], "Eth1");
+    }
+
+    #[test]
+    fn modern_named_capture_groups_work_without_placeholders() {
+        let doc = r#"
+version = 1
+
+[fields]
+hostname = { type = "string" }
+
+[[patterns]]
+regex = '^Host=(?P<hostname>\S+)$'
+record = true
+"#;
+
+        let ir = load_toml_str(doc).unwrap();
+        let template = Template::from_ir(ir).unwrap();
+        let results = template.parse("Host=Router1").unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0]["hostname"], "Router1");
+    }
 }

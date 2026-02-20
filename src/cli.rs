@@ -14,9 +14,13 @@ pub struct Cli {
 pub enum Commands {
     /// Parse a raw text file using a template
     Parse {
-        /// Path to the template file (.textfsm)
+        /// Path to the template file (.textfsm, .yaml/.yml, .toml)
         #[arg(short, long)]
         template: PathBuf,
+
+        /// Override template format selection (default: auto from extension)
+        #[arg(long, value_enum, default_value_t = TemplateFormat::Auto)]
+        template_format: TemplateFormat,
 
         /// Path to the raw input file (uses stdin if omitted)
         input: Option<PathBuf>,
@@ -31,6 +35,18 @@ pub enum Commands {
         #[arg(short, long)]
         template: Option<PathBuf>,
     },
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+pub enum TemplateFormat {
+    /// Infer template format from file extension
+    Auto,
+    /// Legacy TextFSM template
+    Textfsm,
+    /// Modern YAML template
+    Yaml,
+    /// Modern TOML template
+    Toml,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]

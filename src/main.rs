@@ -2,7 +2,7 @@ mod cli;
 mod output;
 mod transcript;
 
-use crate::cli::{Cli, Commands};
+use crate::cli::{Cli, Commands, TemplateFormat as CliTemplateFormat};
 use anyhow::Context;
 use clap::Parser;
 use cliscrape::FsmParser;
@@ -14,11 +14,23 @@ fn main() -> anyhow::Result<()> {
     match cli.command {
         Commands::Parse {
             template,
+            template_format,
             input,
             format,
         } => {
-            let parser = FsmParser::from_file(&template)
-                .with_context(|| format!("Failed to load template from {:?}", template))?;
+            let parser = match template_format {
+                CliTemplateFormat::Auto => FsmParser::from_file(&template),
+                CliTemplateFormat::Textfsm => {
+                    FsmParser::from_file_with_format(&template, cliscrape::TemplateFormat::Textfsm)
+                }
+                CliTemplateFormat::Yaml => {
+                    FsmParser::from_file_with_format(&template, cliscrape::TemplateFormat::Yaml)
+                }
+                CliTemplateFormat::Toml => {
+                    FsmParser::from_file_with_format(&template, cliscrape::TemplateFormat::Toml)
+                }
+            }
+            .with_context(|| format!("Failed to load template from {:?}", template))?;
 
             let input_content = match input {
                 Some(path) => std::fs::read_to_string(&path)
