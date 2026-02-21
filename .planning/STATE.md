@@ -9,7 +9,7 @@
 ## Current Position
 
 **Active Phase:** 02-legacy-compatibility-cli (Legacy Compatibility & CLI)
-**Active Plan:** 02-06 (TextFSM action semantics)
+**Active Plan:** 02-08 (Next plan)
 **Status:** In progress
 
 **Progress:**
@@ -48,6 +48,10 @@
 - **StateTracer View Mode:** Tab cycles through Matches -> Records -> StateTracer; [ ] navigation maps to trace stepping in StateTracer mode.
 - **State Tracer Keybindings:** PgUp/PgDn for step backward/forward; Ctrl+N/P for jump to next/previous Record; m for toggle stepping mode (Line/State/Action); F1-F4 for toggle filter categories.
 - **TextFSM Action Semantics:** Action::ClearAll added as distinct from Action::Clear; Clear preserves Filldown values while ClearAll clears everything; Action::Error triggers fail-fast parsing abort.
+- **Strict Token Validation:** Unknown macros and undefined placeholders now error at template load (not silently preserved); leftover `${...}` or `{{...}}` tokens detected after expansion.
+- **EOF State Semantics:** Explicit EOF state with no rules suppresses implicit record; explicit EOF with rules executes once at end-of-input; no EOF state retains implicit behavior.
+- **Warning-Returning Loader API:** from_file_with_warnings() returns (parser, warnings) without library-side printing; unknown Value flags and action keywords trigger warnings and skip behavior.
+- **Comment Line Support:** TextFSM comment lines (`^\s*#`) accepted at file and state-block levels; comments ignored in AST.
 
 ### Todos
 - [x] Create engine module structure
@@ -71,6 +75,6 @@
 
 ## Session Continuity
 
-**Last Session:** 2026-02-21T22:47:26.414Z
-**Stopped at:** Completed 02-06-PLAN.md
+**Last Session:** 2026-02-21T23:01:33Z
+**Stopped at:** Completed 02-07-PLAN.md
 **Resume file:** None
