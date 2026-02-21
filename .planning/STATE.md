@@ -9,11 +9,11 @@
 ## Current Position
 
 **Active Phase:** Phase 5: TUI Advanced Debugging - State Tracer
-**Active Plan:** 05-02 complete (2/4)
+**Active Plan:** 05-03 complete (3/4)
 **Status:** ✅ In progress
 
 **Progress:**
-[█████████░] 91%
+[██████████] 96%
 
 ## Performance Metrics
 
@@ -42,6 +42,9 @@
 - **Trace Variable Snapshots:** Full variable snapshots per trace event (not delta encoding) for initial simplicity; optimize only if profiling shows memory issues with real-world templates.
 - **Default Stepping Mode:** LineByLine for most granular visibility (users can switch to coarser StateByState or ActionByAction modes).
 - **Default Filter State:** Show all event types (visibility-first approach; users can hide events if needed).
+- **Timeline Pane Layout:** Vertical split with timeline (top) and variables (bottom) in right pane; timeline gets more space for scrolling through long traces.
+- **Variable Change Highlighting:** Yellow color + bold for changed variables; old->new values shown inline; watched variables marked with star and sorted first.
+- **StateTracer View Mode:** Tab cycles through Matches -> Records -> StateTracer; [ ] navigation maps to trace stepping in StateTracer mode.
 
 ### Todos
 - [x] Create engine module structure
@@ -65,6 +68,6 @@
 
 ## Session Continuity
 
-**Last Session:** 2026-02-21T03:40:01.571Z
-**Stopped at:** Completed 05-02-PLAN.md
+**Last Session:** 2026-02-21T03:47:34.557Z
+**Stopped at:** Completed 05-03-PLAN.md
 **Resume file:** None
