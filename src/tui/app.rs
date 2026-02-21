@@ -14,6 +14,7 @@ pub enum ParseStatus {
 pub enum ViewMode {
     Matches,
     Records,
+    StateTracer,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -126,6 +127,7 @@ impl AppState {
         self.last_good = Some(report);
         self.current_error = None;
         self.status = ParseStatus::Ok;
+        self.trace_index = 0; // Reset trace to beginning on new parse
         self.clamp_cursor();
         self.clamp_selected_match();
         self.clamp_selected_record();
@@ -160,7 +162,8 @@ impl AppState {
     pub fn toggle_view_mode(&mut self) {
         self.view_mode = match self.view_mode {
             ViewMode::Matches => ViewMode::Records,
-            ViewMode::Records => ViewMode::Matches,
+            ViewMode::Records => ViewMode::StateTracer,
+            ViewMode::StateTracer => ViewMode::Matches,
         };
         self.sync_selections();
     }
@@ -173,6 +176,10 @@ impl AppState {
             ViewMode::Records => {
                 self.selected_record_idx = self.selected_record_idx.saturating_sub(1);
                 self.sync_cursor_to_selected_record();
+            }
+            ViewMode::StateTracer => {
+                // In StateTracer mode, this navigates the trace
+                self.step_backward();
             }
         }
     }
@@ -187,6 +194,10 @@ impl AppState {
                 self.selected_record_idx = self.selected_record_idx.saturating_add(1);
                 self.clamp_selected_record();
                 self.sync_cursor_to_selected_record();
+            }
+            ViewMode::StateTracer => {
+                // In StateTracer mode, this navigates the trace
+                self.step_forward();
             }
         }
     }
@@ -243,6 +254,10 @@ impl AppState {
                 self.clamp_selected_record();
                 self.sync_record_selection_to_cursor();
                 self.sync_cursor_to_selected_record();
+            }
+            ViewMode::StateTracer => {
+                // In StateTracer mode, cursor is controlled by trace navigation
+                self.clamp_cursor();
             }
         }
     }

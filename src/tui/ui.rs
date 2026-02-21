@@ -137,8 +137,16 @@ pub fn draw(frame: &mut Frame, app: &AppState) {
         .split(right);
 
     render_lines_pane(frame, left, app);
-    render_matches_pane(frame, right_rows[0], app);
-    render_details_pane(frame, right_rows[1], app);
+
+    // In StateTracer mode, show timeline + variables instead of matches + details
+    if app.view_mode == ViewMode::StateTracer {
+        render_timeline_pane(frame, right_rows[0], app);
+        render_variables_pane(frame, right_rows[1], app);
+    } else {
+        render_matches_pane(frame, right_rows[0], app);
+        render_details_pane(frame, right_rows[1], app);
+    }
+
     render_status_pane(frame, status, app);
 }
 
@@ -430,6 +438,7 @@ fn render_matches_pane(frame: &mut Frame, area: Rect, app: &AppState) {
     let title = match app.view_mode {
         ViewMode::Matches => "Matches",
         ViewMode::Records => "Records",
+        ViewMode::StateTracer => "State Tracer",
     };
     let block = Block::default().borders(Borders::ALL).title(title);
     let cursor = app.cursor_line_idx;
@@ -509,6 +518,10 @@ fn render_matches_pane(frame: &mut Frame, area: Rect, app: &AppState) {
                     }
                 }
             }
+            ViewMode::StateTracer => {
+                // StateTracer mode uses timeline/variables panes, not matches pane
+                lines.push(Line::from("(use Tab to switch to StateTracer view)"));
+            }
         }
     } else {
         lines.push(Line::from("(no debug report loaded)"));
@@ -529,6 +542,7 @@ fn render_details_pane(frame: &mut Frame, area: Rect, app: &AppState) {
     let title = match app.view_mode {
         ViewMode::Matches => "Details",
         ViewMode::Records => "Record Details",
+        ViewMode::StateTracer => "State Tracer Details",
     };
     let block = Block::default().borders(Borders::ALL).title(title);
     let cursor = app.cursor_line_idx;
@@ -632,6 +646,10 @@ fn render_details_pane(frame: &mut Frame, area: Rect, app: &AppState) {
                     lines.push(Line::from(""));
                     lines.push(Line::from("(no selected record)"));
                 }
+            }
+            ViewMode::StateTracer => {
+                // StateTracer mode uses variables pane for details, not this pane
+                lines.push(Line::from("(use Tab to switch to StateTracer view)"));
             }
         }
     } else {
@@ -868,6 +886,7 @@ fn render_status_pane(frame: &mut Frame, area: Rect, app: &AppState) {
     let view_str = match app.view_mode {
         ViewMode::Matches => "matches",
         ViewMode::Records => "records",
+        ViewMode::StateTracer => "state-tracer",
     };
     lines.push(Line::from(format!("view:     {}", view_str)));
 
@@ -943,6 +962,17 @@ fn render_status_pane(frame: &mut Frame, area: Rect, app: &AppState) {
                 Style::default().fg(Color::Red),
             )));
         }
+    }
+
+    // Add StateTracer help text when in that mode
+    if app.view_mode == ViewMode::StateTracer && app.current_error.is_none() {
+        lines.push(Line::from(""));
+        lines.push(Line::from(Span::styled(
+            "State Tracer Keys:",
+            Style::default().add_modifier(Modifier::BOLD),
+        )));
+        lines.push(Line::from("  PgUp/PgDn: step forward/backward | Ctrl+N/P: jump record"));
+        lines.push(Line::from("  m: toggle stepping mode | f1-f4: toggle filters | w: watch var"));
     }
 
     let title = if app.current_error.is_some() {
