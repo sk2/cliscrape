@@ -505,3 +505,179 @@ impl AppState {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cliscrape::engine::debug::{DebugReport, TraceEvent, TraceEventType};
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_stepping_line_by_line() {
+        let mut app = AppState::new(None, None);
+
+        // Create mock DebugReport with 3 trace events
+        let mut report = DebugReport::new(vec!["line1".into(), "line2".into(), "line3".into()]);
+        report.trace = vec![
+            TraceEvent {
+                line_idx: 0,
+                state_before: "Start".into(),
+                state_after: "Start".into(),
+                variables: HashMap::new(),
+                event_type: TraceEventType::LineProcessed,
+            },
+            TraceEvent {
+                line_idx: 1,
+                state_before: "Start".into(),
+                state_after: "Header".into(),
+                variables: HashMap::new(),
+                event_type: TraceEventType::StateChange,
+            },
+            TraceEvent {
+                line_idx: 2,
+                state_before: "Header".into(),
+                state_after: "Header".into(),
+                variables: HashMap::new(),
+                event_type: TraceEventType::RecordEmitted,
+            },
+        ];
+
+        app.last_good = Some(report);
+        app.stepping_mode = crate::tui::trace::SteppingMode::LineByLine;
+        app.trace_index = 0;
+
+        app.step_forward();
+        assert_eq!(app.trace_index, 1);
+
+        app.step_forward();
+        assert_eq!(app.trace_index, 2);
+
+        app.step_backward();
+        assert_eq!(app.trace_index, 1);
+    }
+
+    #[test]
+    fn test_stepping_state_by_state() {
+        let mut app = AppState::new(None, None);
+
+        // Create mock DebugReport with mixed events
+        let mut report = DebugReport::new(vec![
+            "line1".into(),
+            "line2".into(),
+            "line3".into(),
+            "line4".into(),
+        ]);
+        report.trace = vec![
+            TraceEvent {
+                line_idx: 0,
+                state_before: "Start".into(),
+                state_after: "Start".into(),
+                variables: HashMap::new(),
+                event_type: TraceEventType::LineProcessed,
+            },
+            TraceEvent {
+                line_idx: 1,
+                state_before: "Start".into(),
+                state_after: "Header".into(),
+                variables: HashMap::new(),
+                event_type: TraceEventType::StateChange,
+            },
+            TraceEvent {
+                line_idx: 2,
+                state_before: "Header".into(),
+                state_after: "Header".into(),
+                variables: HashMap::new(),
+                event_type: TraceEventType::LineProcessed,
+            },
+            TraceEvent {
+                line_idx: 3,
+                state_before: "Header".into(),
+                state_after: "Body".into(),
+                variables: HashMap::new(),
+                event_type: TraceEventType::StateChange,
+            },
+        ];
+
+        app.last_good = Some(report);
+        app.stepping_mode = crate::tui::trace::SteppingMode::StateByState;
+        app.trace_index = 0;
+
+        // Should skip LineProcessed and stop at first StateChange
+        app.step_forward();
+        assert_eq!(app.trace_index, 1);
+
+        // Should skip next LineProcessed and stop at second StateChange
+        app.step_forward();
+        assert_eq!(app.trace_index, 3);
+
+        // Should step back to previous StateChange
+        app.step_backward();
+        assert_eq!(app.trace_index, 1);
+    }
+
+    #[test]
+    fn test_jump_to_next_record() {
+        let mut app = AppState::new(None, None);
+
+        // Create mock DebugReport with multiple events including RecordEmitted
+        let mut report = DebugReport::new(vec![
+            "line1".into(),
+            "line2".into(),
+            "line3".into(),
+            "line4".into(),
+            "line5".into(),
+        ]);
+        report.trace = vec![
+            TraceEvent {
+                line_idx: 0,
+                state_before: "Start".into(),
+                state_after: "Start".into(),
+                variables: HashMap::new(),
+                event_type: TraceEventType::LineProcessed,
+            },
+            TraceEvent {
+                line_idx: 1,
+                state_before: "Start".into(),
+                state_after: "Header".into(),
+                variables: HashMap::new(),
+                event_type: TraceEventType::StateChange,
+            },
+            TraceEvent {
+                line_idx: 2,
+                state_before: "Header".into(),
+                state_after: "Header".into(),
+                variables: HashMap::new(),
+                event_type: TraceEventType::RecordEmitted,
+            },
+            TraceEvent {
+                line_idx: 3,
+                state_before: "Header".into(),
+                state_after: "Header".into(),
+                variables: HashMap::new(),
+                event_type: TraceEventType::LineProcessed,
+            },
+            TraceEvent {
+                line_idx: 4,
+                state_before: "Header".into(),
+                state_after: "Header".into(),
+                variables: HashMap::new(),
+                event_type: TraceEventType::RecordEmitted,
+            },
+        ];
+
+        app.last_good = Some(report);
+        app.trace_index = 0;
+
+        // Should jump to first RecordEmitted at index 2
+        app.jump_to_next_record();
+        assert_eq!(app.trace_index, 2);
+
+        // Should jump to second RecordEmitted at index 4
+        app.jump_to_next_record();
+        assert_eq!(app.trace_index, 4);
+
+        // Should not move (already at last record)
+        app.jump_to_next_record();
+        assert_eq!(app.trace_index, 4);
+    }
+}
