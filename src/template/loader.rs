@@ -134,7 +134,9 @@ fn parse_action(pair: Pair<PestRule>) -> Result<(Action, Action, Option<String>)
             PestRule::record_action => {
                 record_action = match inner.as_str() {
                     "Record" => Action::Record,
-                    "Clear" | "Clearall" => Action::Clear,
+                    "Clear" => Action::Clear,
+                    "Clearall" => Action::ClearAll,
+                    "Error" => Action::Error,
                     _ => Action::Next, // NoRecord
                 };
             }

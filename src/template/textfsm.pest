@@ -20,7 +20,7 @@ action = {
 }
 
 line_action = @{ ("Next" | "Continue") ~ !ASCII_ALPHANUMERIC }
-record_action = @{ ("Record" | "NoRecord" | "Clear" | "Clearall") ~ !ASCII_ALPHANUMERIC }
+record_action = @{ ("Record" | "NoRecord" | "Clear" | "Clearall" | "Error") ~ !ASCII_ALPHANUMERIC }
 next_state = { name }
 
 WHITESPACE = _{ " " | "\t" }

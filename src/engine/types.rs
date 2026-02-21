@@ -7,6 +7,8 @@ pub enum Action {
     Continue,
     Record,
     Clear,
+    ClearAll,
+    Error,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

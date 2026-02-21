@@ -147,7 +147,16 @@ impl Template {
                             }
                         }
                         Action::Clear => {
-                            record_buffer.clear();
+                            record_buffer.clear_non_filldown(&self.values);
+                        }
+                        Action::ClearAll => {
+                            record_buffer.clear_all();
+                        }
+                        Action::Error => {
+                            return Err(ScraperError::Parse(format!(
+                                "TextFSM Error action triggered at line {}",
+                                line_idx + 1
+                            )));
                         }
                         _ => {}
                     }
@@ -191,7 +200,8 @@ impl Template {
                             // Determine event type based on state change and actions
                             let event_type = if rule.record_action == Action::Record {
                                 TraceEventType::RecordEmitted
-                            } else if rule.record_action == Action::Clear {
+                            } else if matches!(rule.record_action, Action::Clear | Action::ClearAll)
+                            {
                                 TraceEventType::RecordCleared
                             } else if state_after != state_before {
                                 TraceEventType::StateChange
@@ -892,7 +902,10 @@ mod tests {
         let input = "Line one\nLine two\nLine three";
         let report = template.debug_parse(input).unwrap();
 
-        assert!(report.trace.len() >= 3, "trace should have at least 3 events");
+        assert!(
+            report.trace.len() >= 3,
+            "trace should have at least 3 events"
+        );
         assert_eq!(report.trace[0].line_idx, 0);
         assert_eq!(report.trace[1].line_idx, 1);
         assert_eq!(report.trace[2].line_idx, 2);

@@ -27,8 +27,17 @@ impl RecordBuffer {
     }
 
     pub fn clear(&mut self) {
+        self.clear_all();
+    }
+
+    pub fn clear_all(&mut self) {
         self.buffer.clear();
         self.dirty = false;
+    }
+
+    /// TextFSM `Clear` semantics: clear only non-Filldown values.
+    pub fn clear_non_filldown(&mut self, values: &HashMap<String, Value>) {
+        self.reset_after_emit(values);
     }
 
     /// Validates and extracts the record.
