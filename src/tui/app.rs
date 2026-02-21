@@ -1,4 +1,5 @@
 use cliscrape::DebugReport;
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,6 +38,10 @@ pub struct AppState {
     pub mode: Mode,
     pub editor: Option<crate::tui::editor::EditorState>,
     pub picker: Option<crate::tui::picker::PickerState>,
+    pub trace_index: usize,
+    pub stepping_mode: crate::tui::trace::SteppingMode,
+    pub filter_state: crate::tui::trace::FilterState,
+    pub watch_list: HashSet<String>,
 }
 
 impl AppState {
@@ -83,6 +88,10 @@ impl AppState {
             mode,
             editor: None,
             picker,
+            trace_index: 0,
+            stepping_mode: crate::tui::trace::SteppingMode::LineByLine,
+            filter_state: crate::tui::trace::FilterState::default(),
+            watch_list: HashSet::new(),
         }
     }
 
@@ -276,6 +285,17 @@ impl AppState {
             return;
         };
         self.cursor_line_idx = rec.line_idx;
+        self.clamp_cursor();
+    }
+
+    fn sync_cursor_to_trace(&mut self) {
+        let Some(report) = &self.last_good else {
+            return;
+        };
+        let Some(event) = report.trace.get(self.trace_index) else {
+            return;
+        };
+        self.cursor_line_idx = event.line_idx;
         self.clamp_cursor();
     }
 }
