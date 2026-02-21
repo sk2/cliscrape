@@ -108,6 +108,11 @@ fn build_highlight_spans<'a>(
 }
 
 pub fn draw(frame: &mut Frame, app: &AppState) {
+    if app.mode == Mode::Picker {
+        draw_picker(frame, app);
+        return;
+    }
+
     let root = frame.area();
 
     let rows = Layout::default()
@@ -135,6 +140,176 @@ pub fn draw(frame: &mut Frame, app: &AppState) {
     render_matches_pane(frame, right_rows[0], app);
     render_details_pane(frame, right_rows[1], app);
     render_status_pane(frame, status, app);
+}
+
+fn draw_picker(frame: &mut Frame, app: &AppState) {
+    let root = frame.area();
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(7)])
+        .split(root);
+
+    let main = rows[0];
+    let status = rows[1];
+
+    let cols = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+        .split(main);
+
+    render_picker_list(frame, cols[0], app);
+    render_picker_details(frame, cols[1], app);
+    render_picker_status(frame, status, app);
+}
+
+fn render_picker_list(frame: &mut Frame, area: Rect, app: &AppState) {
+    let Some(picker) = &app.picker else {
+        let block = Block::default().borders(Borders::ALL).title("Picker");
+        frame.render_widget(
+            Paragraph::new("(picker not initialized)").block(block),
+            area,
+        );
+        return;
+    };
+
+    let target = match picker.target {
+        crate::tui::picker::PickTarget::Template => "Template",
+        crate::tui::picker::PickTarget::Input => "Input",
+    };
+    let title = format!(
+        "Pick {} (Enter open/select, Backspace up, i manual, Tab switch)",
+        target
+    );
+    let block = Block::default().borders(Borders::ALL).title(title);
+
+    let mut lines: Vec<Line> = Vec::new();
+    if picker.entries.is_empty() {
+        lines.push(Line::from("(empty directory)"));
+    } else {
+        for (i, ent) in picker.entries.iter().enumerate() {
+            let is_sel = i == picker.selected_idx;
+            let prefix = if is_sel { "> " } else { "  " };
+            let mut name = ent.name.clone();
+            if ent.is_dir {
+                name.push('/');
+            }
+            let mut style = Style::default();
+            if is_sel {
+                style = style
+                    .bg(Color::Rgb(50, 50, 50))
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD);
+            } else if ent.is_dir {
+                style = style.fg(Color::Cyan);
+            }
+            lines.push(Line::from(Span::styled(
+                format!("{}{}", prefix, name),
+                style,
+            )));
+        }
+    }
+
+    let p = Paragraph::new(Text::from(lines))
+        .block(block)
+        .wrap(Wrap { trim: false });
+    frame.render_widget(p, area);
+}
+
+fn render_picker_details(frame: &mut Frame, area: Rect, app: &AppState) {
+    let Some(picker) = &app.picker else {
+        let block = Block::default().borders(Borders::ALL).title("Details");
+        frame.render_widget(Paragraph::new("(no picker)").block(block), area);
+        return;
+    };
+
+    let mut lines: Vec<Line> = Vec::new();
+    lines.push(Line::from(Span::styled(
+        "cliscrape debug: pick template + input",
+        Style::default().add_modifier(Modifier::BOLD),
+    )));
+    lines.push(Line::from(""));
+    lines.push(Line::from(format!("cwd: {}", picker.cwd.display())));
+    lines.push(Line::from(format!(
+        "template: {}",
+        app.template_path
+            .as_ref()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|| "<missing>".to_string())
+    )));
+    lines.push(Line::from(format!(
+        "input:    {}",
+        app.input_path
+            .as_ref()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|| "<missing>".to_string())
+    )));
+
+    lines.push(Line::from(""));
+    if picker.manual {
+        lines.push(Line::from(Span::styled(
+            "manual path entry (Enter accept, Esc cancel):",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )));
+        lines.push(Line::from(Span::raw(format!("> {}", picker.manual_input))));
+    } else {
+        lines.push(Line::from("press `i` to type a path manually"));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(Line::from("keys:"));
+    lines.push(Line::from("- up/down or j/k: move"));
+    lines.push(Line::from("- enter: open dir / select file"));
+    lines.push(Line::from("- backspace: up directory"));
+    lines.push(Line::from("- tab: switch template/input"));
+    lines.push(Line::from("- q: quit"));
+
+    if let Some(err) = &picker.last_error {
+        lines.push(Line::from(""));
+        lines.push(Line::from(Span::styled(
+            "picker error:",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        )));
+        for l in err.lines().take(3) {
+            lines.push(Line::from(Span::styled(l, Style::default().fg(Color::Red))));
+        }
+    }
+
+    let block = Block::default().borders(Borders::ALL).title("Details");
+    let p = Paragraph::new(Text::from(lines))
+        .block(block)
+        .wrap(Wrap { trim: false });
+    frame.render_widget(p, area);
+}
+
+fn render_picker_status(frame: &mut Frame, area: Rect, app: &AppState) {
+    let mut lines: Vec<Line> = Vec::new();
+    lines.push(Line::from(Span::styled(
+        "mode: picker",
+        Style::default().add_modifier(Modifier::BOLD),
+    )));
+    if let Some(err) = &app.current_error {
+        lines.push(Line::from(""));
+        lines.push(Line::from(Span::styled(
+            "error:",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        )));
+        for l in err.lines().take(2) {
+            lines.push(Line::from(Span::styled(l, Style::default().fg(Color::Red))));
+        }
+    } else {
+        lines.push(Line::from(""));
+        lines.push(Line::from("select paths to start parsing"));
+    }
+
+    let block = Block::default().borders(Borders::ALL).title("Status");
+    frame.render_widget(
+        Paragraph::new(Text::from(lines))
+            .block(block)
+            .wrap(Wrap { trim: false }),
+        area,
+    );
 }
 
 fn render_lines_pane(frame: &mut Frame, area: Rect, app: &AppState) {
@@ -571,6 +746,7 @@ fn render_status_pane(frame: &mut Frame, area: Rect, app: &AppState) {
     )));
 
     let mode_str = match app.mode {
+        Mode::Picker => "picker",
         Mode::Browse => "browse",
         Mode::EditTemplate => "edit-template",
     };

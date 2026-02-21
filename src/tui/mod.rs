@@ -13,6 +13,7 @@ use std::time::{Duration, Instant};
 pub mod app;
 pub mod editor;
 pub mod event;
+pub mod picker;
 pub mod ui;
 pub mod watch;
 pub mod worker;
@@ -74,7 +75,7 @@ pub fn run(mut app: AppState) -> anyhow::Result<()> {
     let res = (|| -> anyhow::Result<()> {
         loop {
             while let Ok(msg) = msg_rx.try_recv() {
-                if handle_message(&mut app, msg, &worker) {
+                if handle_message(&mut app, msg, &worker, &msg_tx, &mut watcher) {
                     return Ok(());
                 }
             }
@@ -90,7 +91,7 @@ pub fn run(mut app: AppState) -> anyhow::Result<()> {
             if crossterm_event::poll(tick_rate)? {
                 let ev = crossterm_event::read()?;
                 if let Some(msg) = crate::tui::event::message_from_event(ev) {
-                    if handle_message(&mut app, msg, &worker) {
+                    if handle_message(&mut app, msg, &worker, &msg_tx, &mut watcher) {
                         break;
                     }
                 }
@@ -107,9 +108,15 @@ pub fn run(mut app: AppState) -> anyhow::Result<()> {
     res
 }
 
-fn handle_message(app: &mut AppState, msg: Message, worker: &worker::ParseWorker) -> bool {
+fn handle_message(
+    app: &mut AppState,
+    msg: Message,
+    worker: &worker::ParseWorker,
+    msg_tx: &mpsc::Sender<Message>,
+    watcher: &mut Option<watch::WatcherHandle>,
+) -> bool {
     match msg {
-        Message::Key(key) => handle_key(app, key, worker),
+        Message::Key(key) => handle_key(app, key, worker, msg_tx, watcher),
         Message::FsChanged { .. } => {
             let (Some(tpl), Some(inp)) = (app.template_path.clone(), app.input_path.clone()) else {
                 return false;
@@ -137,6 +144,8 @@ fn handle_key(
     app: &mut AppState,
     key: crossterm::event::KeyEvent,
     worker: &worker::ParseWorker,
+    msg_tx: &mpsc::Sender<Message>,
+    watcher: &mut Option<watch::WatcherHandle>,
 ) -> bool {
     // Safety exits.
     if key.modifiers.contains(KeyModifiers::CONTROL)
@@ -146,8 +155,97 @@ fn handle_key(
     }
 
     match app.mode {
+        Mode::Picker => handle_key_picker(app, key, worker, msg_tx, watcher),
         Mode::Browse => handle_key_browse(app, key),
         Mode::EditTemplate => handle_key_editor(app, key, worker),
+    }
+}
+
+fn handle_key_picker(
+    app: &mut AppState,
+    key: crossterm::event::KeyEvent,
+    worker: &worker::ParseWorker,
+    msg_tx: &mpsc::Sender<Message>,
+    watcher: &mut Option<watch::WatcherHandle>,
+) -> bool {
+    if matches!(key.code, KeyCode::Char('q')) {
+        return true;
+    }
+
+    let Some(picker) = app.picker.as_mut() else {
+        return false;
+    };
+
+    if matches!(key.code, KeyCode::Tab) {
+        picker.set_target(match picker.target {
+            crate::tui::picker::PickTarget::Template => crate::tui::picker::PickTarget::Input,
+            crate::tui::picker::PickTarget::Input => crate::tui::picker::PickTarget::Template,
+        });
+        return false;
+    }
+
+    match picker.apply_key(key) {
+        crate::tui::picker::PickerKeyResult::Noop => false,
+        crate::tui::picker::PickerKeyResult::Selected(path) => {
+            if path.is_dir() {
+                picker.cwd = path;
+                if let Err(e) = picker.refresh() {
+                    picker.last_error = Some(format!("{:#}", e));
+                }
+                return false;
+            }
+
+            if !path.exists() {
+                picker.last_error = Some(format!("path does not exist: {}", path.display()));
+                return false;
+            }
+            if !path.is_file() {
+                picker.last_error = Some(format!("not a file: {}", path.display()));
+                return false;
+            }
+
+            match picker.target {
+                crate::tui::picker::PickTarget::Template => {
+                    app.template_path = Some(path);
+                }
+                crate::tui::picker::PickTarget::Input => {
+                    app.input_path = Some(path);
+                }
+            }
+
+            if app.template_path.is_none() {
+                picker.set_target(crate::tui::picker::PickTarget::Template);
+                return false;
+            }
+            if app.input_path.is_none() {
+                picker.set_target(crate::tui::picker::PickTarget::Input);
+                return false;
+            }
+
+            app.mode = Mode::Browse;
+            app.picker = None;
+            app.current_error = None;
+
+            if let (Some(tpl), Some(inp)) = (app.template_path.clone(), app.input_path.clone()) {
+                // (Re)start watcher.
+                *watcher = None;
+                match watch::start_watcher(tpl.clone(), inp.clone(), msg_tx.clone()) {
+                    Ok(w) => *watcher = Some(w),
+                    Err(err) => {
+                        app.current_error = Some(format!("{:#}", err));
+                    }
+                }
+
+                app.on_parse_started();
+                worker.request(worker::ParseRequest {
+                    template_path: tpl,
+                    input_path: inp,
+                    block_idx: 0,
+                });
+            }
+
+            false
+        }
     }
 }
 

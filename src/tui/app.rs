@@ -17,6 +17,7 @@ pub enum ViewMode {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
+    Picker,
     Browse,
     EditTemplate,
 }
@@ -35,6 +36,7 @@ pub struct AppState {
     pub status: ParseStatus,
     pub mode: Mode,
     pub editor: Option<crate::tui::editor::EditorState>,
+    pub picker: Option<crate::tui::picker::PickerState>,
 }
 
 impl AppState {
@@ -45,6 +47,28 @@ impl AppState {
         lines.push("Usage:".to_string());
         lines.push("  cliscrape debug --template <PATH> --input <PATH>".to_string());
 
+        let mut mode = Mode::Browse;
+        let mut picker: Option<crate::tui::picker::PickerState> = None;
+        let mut current_error: Option<String> = None;
+
+        if template_path.is_none() || input_path.is_none() {
+            mode = Mode::Picker;
+            let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            let target = if template_path.is_none() {
+                crate::tui::picker::PickTarget::Template
+            } else {
+                crate::tui::picker::PickTarget::Input
+            };
+
+            match crate::tui::picker::PickerState::new(cwd, target) {
+                Ok(p) => picker = Some(p),
+                Err(err) => {
+                    current_error = Some(format!("{:#}", err));
+                    mode = Mode::Browse;
+                }
+            }
+        }
+
         Self {
             template_path,
             input_path,
@@ -54,10 +78,11 @@ impl AppState {
             view_mode: ViewMode::Matches,
             selected_record_idx: 0,
             last_good: None,
-            current_error: None,
+            current_error,
             status: ParseStatus::Idle,
-            mode: Mode::Browse,
+            mode,
             editor: None,
+            picker,
         }
     }
 
