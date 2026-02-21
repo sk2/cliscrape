@@ -14,6 +14,7 @@ pub mod app;
 pub mod editor;
 pub mod event;
 pub mod picker;
+pub mod trace;
 pub mod ui;
 pub mod watch;
 pub mod worker;
