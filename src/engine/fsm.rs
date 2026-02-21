@@ -852,4 +852,252 @@ mod tests {
         assert_eq!(arr[0], "Eth1");
         assert_eq!(arr[1], "Eth2");
     }
+
+    #[test]
+    fn trace_records_line_by_line_events() {
+        let mut values = HashMap::new();
+        values.insert(
+            "Data".to_string(),
+            Value {
+                name: "Data".to_string(),
+                regex: r#"\S+"#.to_string(),
+                filldown: false,
+                required: false,
+                list: false,
+                type_hint: None,
+            },
+        );
+
+        let mut states = HashMap::new();
+        states.insert(
+            "Start".to_string(),
+            State {
+                name: "Start".to_string(),
+                rules: vec![Rule {
+                    regex: r#"Line ${Data}"#.to_string(),
+                    line_action: Action::Next,
+                    record_action: Action::Next,
+                    next_state: None,
+                }],
+            },
+        );
+
+        let ir = TemplateIR {
+            values,
+            states,
+            macros: HashMap::new(),
+        };
+
+        let template = Template::from_ir(ir).unwrap();
+        let input = "Line one\nLine two\nLine three";
+        let report = template.debug_parse(input).unwrap();
+
+        assert!(report.trace.len() >= 3, "trace should have at least 3 events");
+        assert_eq!(report.trace[0].line_idx, 0);
+        assert_eq!(report.trace[1].line_idx, 1);
+        assert_eq!(report.trace[2].line_idx, 2);
+    }
+
+    #[test]
+    fn trace_captures_state_transitions() {
+        let mut values = HashMap::new();
+        values.insert(
+            "A".to_string(),
+            Value {
+                name: "A".to_string(),
+                regex: r#"\S+"#.to_string(),
+                filldown: false,
+                required: false,
+                list: false,
+                type_hint: None,
+            },
+        );
+
+        let mut states = HashMap::new();
+        states.insert(
+            "Start".to_string(),
+            State {
+                name: "Start".to_string(),
+                rules: vec![Rule {
+                    regex: r#"A ${A}"#.to_string(),
+                    line_action: Action::Next,
+                    record_action: Action::Next,
+                    next_state: Some("State2".to_string()),
+                }],
+            },
+        );
+        states.insert(
+            "State2".to_string(),
+            State {
+                name: "State2".to_string(),
+                rules: vec![Rule {
+                    regex: r#".*"#.to_string(),
+                    line_action: Action::Next,
+                    record_action: Action::Next,
+                    next_state: None,
+                }],
+            },
+        );
+
+        let ir = TemplateIR {
+            values,
+            states,
+            macros: HashMap::new(),
+        };
+
+        let template = Template::from_ir(ir).unwrap();
+        let input = "A first\nSecond line";
+        let report = template.debug_parse(input).unwrap();
+
+        assert!(!report.trace.is_empty());
+        let first_event = &report.trace[0];
+        assert_eq!(first_event.state_before, "Start");
+        assert_eq!(first_event.state_after, "State2");
+        assert_eq!(first_event.event_type, TraceEventType::StateChange);
+    }
+
+    #[test]
+    fn trace_records_variable_snapshots() {
+        let mut values = HashMap::new();
+        values.insert(
+            "IP".to_string(),
+            Value {
+                name: "IP".to_string(),
+                regex: r#"\S+"#.to_string(),
+                filldown: false,
+                required: false,
+                list: false,
+                type_hint: None,
+            },
+        );
+
+        let mut states = HashMap::new();
+        states.insert(
+            "Start".to_string(),
+            State {
+                name: "Start".to_string(),
+                rules: vec![Rule {
+                    regex: r#"IP ${IP}"#.to_string(),
+                    line_action: Action::Next,
+                    record_action: Action::Next,
+                    next_state: None,
+                }],
+            },
+        );
+
+        let ir = TemplateIR {
+            values,
+            states,
+            macros: HashMap::new(),
+        };
+
+        let template = Template::from_ir(ir).unwrap();
+        let input = "IP 192.168.1.1";
+        let report = template.debug_parse(input).unwrap();
+
+        assert!(!report.trace.is_empty());
+        let event = &report.trace[0];
+        assert!(event.variables.contains_key("IP"));
+        assert_eq!(event.variables["IP"], "192.168.1.1");
+    }
+
+    #[test]
+    fn trace_marks_record_emission() {
+        let mut values = HashMap::new();
+        values.insert(
+            "Field".to_string(),
+            Value {
+                name: "Field".to_string(),
+                regex: r#"\S+"#.to_string(),
+                filldown: false,
+                required: false,
+                list: false,
+                type_hint: None,
+            },
+        );
+
+        let mut states = HashMap::new();
+        states.insert(
+            "Start".to_string(),
+            State {
+                name: "Start".to_string(),
+                rules: vec![Rule {
+                    regex: r#"Data ${Field}"#.to_string(),
+                    line_action: Action::Next,
+                    record_action: Action::Record,
+                    next_state: None,
+                }],
+            },
+        );
+
+        let ir = TemplateIR {
+            values,
+            states,
+            macros: HashMap::new(),
+        };
+
+        let template = Template::from_ir(ir).unwrap();
+        let input = "Data value";
+        let report = template.debug_parse(input).unwrap();
+
+        let record_events: Vec<_> = report
+            .trace
+            .iter()
+            .filter(|e| e.event_type == TraceEventType::RecordEmitted)
+            .collect();
+        assert!(!record_events.is_empty(), "should have RecordEmitted event");
+        assert_eq!(record_events[0].line_idx, 0);
+        assert_eq!(report.records[0].line_idx, 0);
+    }
+
+    #[test]
+    fn trace_handles_eof_record() {
+        let mut values = HashMap::new();
+        values.insert(
+            "Value".to_string(),
+            Value {
+                name: "Value".to_string(),
+                regex: r#"\w+"#.to_string(),
+                filldown: false,
+                required: false,
+                list: false,
+                type_hint: None,
+            },
+        );
+
+        let mut states = HashMap::new();
+        states.insert(
+            "Start".to_string(),
+            State {
+                name: "Start".to_string(),
+                rules: vec![Rule {
+                    regex: r#"Set ${Value}"#.to_string(),
+                    line_action: Action::Next,
+                    record_action: Action::Next,
+                    next_state: None,
+                }],
+            },
+        );
+
+        let ir = TemplateIR {
+            values,
+            states,
+            macros: HashMap::new(),
+        };
+
+        let template = Template::from_ir(ir).unwrap();
+        let input = "Set Data";
+        let report = template.debug_parse(input).unwrap();
+
+        let lines_count = input.lines().count();
+        let eof_events: Vec<_> = report
+            .trace
+            .iter()
+            .filter(|e| e.line_idx == lines_count && e.event_type == TraceEventType::RecordEmitted)
+            .collect();
+        assert!(
+            !eof_events.is_empty(),
+            "should have RecordEmitted event at EOF"
+        );
+    }
 }
