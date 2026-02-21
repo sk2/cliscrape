@@ -1,4 +1,4 @@
-Value Required,Filldown INTERFACE (\S+)
+Value Required Filldown INTERFACE (\S+)
 Value ADDRESS (\S+)
 
 Start
