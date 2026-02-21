@@ -14,8 +14,8 @@
 
 ### TUI Debugger
 - [x] **TUI-01**: "Live Lab" split-pane view with real-time regex matching and field highlighting.
-- [ ] **TUI-02**: "State Tracer" to watch FSM transitions line-by-line, including current variable values.
-- [ ] **TUI-03**: Trace history buffer for debugging complex multi-state templates.
+- [x] **TUI-02**: "State Tracer" to watch FSM transitions line-by-line, including current variable values.
+- [x] **TUI-03**: Trace history buffer for debugging complex multi-state templates.
 
 ### CLI & Connectivity
 - [x] **CLI-01**: Standalone CLI for parsing local files or piped input (Unix-style pipe support).
@@ -50,8 +50,8 @@
 | FORM-02     | Phase 3 | Complete |
 | FORM-03     | Phase 3 | Complete |
 | TUI-01      | Phase 4 | Complete |
-| TUI-02      | Phase 5 | Pending |
-| TUI-03      | Phase 5 | Pending |
+| TUI-02      | Phase 5 | Complete |
+| TUI-03      | Phase 5 | Complete |
 | CLI-01      | Phase 2 | Complete |
 | CLI-02      | Phase 3 | Complete |
 
