@@ -1,0 +1,6 @@
+Value Required,Filldown INTERFACE (\S+)
+Value ADDRESS (\S+)
+
+Start
+  ^Interface: ${INTERFACE}
+  ^  Address: ${ADDRESS} -> Record

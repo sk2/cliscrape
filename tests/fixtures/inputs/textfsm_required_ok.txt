@@ -1,0 +1,5 @@
+Interface: eth0
+  Address: 10.0.0.1
+  Address: 10.0.0.2
+Interface: eth1
+  Address: 192.168.1.1

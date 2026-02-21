@@ -1,8 +1,8 @@
 version = 1
 
-[fields]
-hostname = { type = "string" }
+[fields.hostname]
+type = "string"
 
 [[patterns]]
-regex = '^Hostname: (?P<hostname>\S+)$'
+regex = "^Hostname: (?P<hostname>\\S+)$"
 record = true
