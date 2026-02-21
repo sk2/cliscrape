@@ -3,17 +3,87 @@ mod output;
 mod transcript;
 mod tui;
 
-use crate::cli::{Cli, Commands, TemplateFormat as CliTemplateFormat};
+use crate::cli::{Cli, Commands, ErrorFormat, TemplateFormat as CliTemplateFormat};
 use anyhow::Context;
 use clap::Parser;
 use cliscrape::FsmParser;
 use dialoguer::{theme::ColorfulTheme, Confirm, Input, Select};
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
-fn main() -> anyhow::Result<()> {
-    let cli = Cli::parse();
+fn main() {
+    // Pre-scan argv for --error-format to honor it even during clap parsing failures
+    let error_format = detect_error_format_from_argv();
 
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(e) => {
+            use clap::error::ErrorKind;
+            match e.kind() {
+                ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => {
+                    // Help/version are success cases - print to stdout and exit 0
+                    print!("{}", e);
+                    std::process::exit(0);
+                }
+                _ => {
+                    // Real errors - format according to --error-format and exit 1
+                    print_error(&e.to_string(), error_format);
+                    std::process::exit(1);
+                }
+            }
+        }
+    };
+
+    let error_format = cli.error_format;
+    if let Err(e) = run_command(cli) {
+        print_error(&format!("{:#}", e), error_format);
+        std::process::exit(1);
+    }
+}
+
+fn detect_error_format_from_argv() -> ErrorFormat {
+    let args: Vec<_> = std::env::args_os().collect();
+    for (i, arg) in args.iter().enumerate() {
+        if let Some(arg_str) = arg.to_str() {
+            // Handle --error-format=json
+            if arg_str.starts_with("--error-format=") {
+                if arg_str == "--error-format=json" {
+                    return ErrorFormat::Json;
+                }
+            }
+            // Handle --error-format json
+            else if arg_str == "--error-format" {
+                if let Some(next_arg) = args.get(i + 1).and_then(|a| a.to_str()) {
+                    if next_arg == "json" {
+                        return ErrorFormat::Json;
+                    }
+                }
+            }
+        }
+    }
+    ErrorFormat::Human
+}
+
+fn print_error(message: &str, format: ErrorFormat) {
+    match format {
+        ErrorFormat::Human => {
+            eprintln!("Error: {}", message);
+        }
+        ErrorFormat::Json => {
+            let error_obj = serde_json::json!({
+                "ok": false,
+                "error": message,
+            });
+            if let Err(e) = writeln!(io::stderr(), "{}", error_obj) {
+                // Fallback if JSON serialization somehow fails
+                eprintln!("Error: {}", message);
+                eprintln!("(JSON serialization failed: {})", e);
+            }
+        }
+    }
+}
+
+fn run_command(cli: Cli) -> anyhow::Result<()> {
     match cli.command {
         Commands::Parse {
             template,
@@ -31,23 +101,44 @@ fn main() -> anyhow::Result<()> {
                 );
             }
 
-            let template_path = PathBuf::from(&template);
-            let parser = match template_format {
-                CliTemplateFormat::Auto => FsmParser::from_file(&template_path),
-                CliTemplateFormat::Textfsm => FsmParser::from_file_with_format(
-                    &template_path,
-                    cliscrape::TemplateFormat::Textfsm,
-                ),
-                CliTemplateFormat::Yaml => FsmParser::from_file_with_format(
-                    &template_path,
-                    cliscrape::TemplateFormat::Yaml,
-                ),
-                CliTemplateFormat::Toml => FsmParser::from_file_with_format(
-                    &template_path,
-                    cliscrape::TemplateFormat::Toml,
-                ),
+            // Template resolution: path vs identifier
+            let template_path = resolve_template_spec(&template, template_format)?;
+
+            let (parser, warnings) = match template_format {
+                CliTemplateFormat::Auto => {
+                    FsmParser::from_file_with_warnings(&template_path)
+                        .with_context(|| format!("Failed to load template from {}", template_path.display()))?
+                }
+                CliTemplateFormat::Textfsm => {
+                    let p = FsmParser::from_file_with_format(
+                        &template_path,
+                        cliscrape::TemplateFormat::Textfsm,
+                    )
+                    .with_context(|| format!("Failed to load template from {}", template_path.display()))?;
+                    (p, Vec::new())
+                }
+                CliTemplateFormat::Yaml => {
+                    let p = FsmParser::from_file_with_format(
+                        &template_path,
+                        cliscrape::TemplateFormat::Yaml,
+                    )
+                    .with_context(|| format!("Failed to load template from {}", template_path.display()))?;
+                    (p, Vec::new())
+                }
+                CliTemplateFormat::Toml => {
+                    let p = FsmParser::from_file_with_format(
+                        &template_path,
+                        cliscrape::TemplateFormat::Toml,
+                    )
+                    .with_context(|| format!("Failed to load template from {}", template_path.display()))?;
+                    (p, Vec::new())
+                }
+            };
+
+            // Print template loader warnings to stderr
+            for warning in &warnings {
+                eprintln!("Warning ({}): {}", warning.kind, warning.message);
             }
-            .with_context(|| format!("Failed to load template from {}", template_path.display()))?;
 
             let mut input_paths = Vec::new();
             input_paths.extend(inputs);
@@ -221,4 +312,50 @@ fn default_output_path(input: &Path, format: crate::cli::ConvertFormat) -> PathB
         }
     }
     out
+}
+
+/// Resolve template spec: if it's a path, use it; otherwise search CWD for identifier
+fn resolve_template_spec(
+    spec: &str,
+    format_filter: CliTemplateFormat,
+) -> anyhow::Result<PathBuf> {
+    let spec_path = PathBuf::from(spec);
+
+    // If spec points to an existing path, use it directly
+    if spec_path.exists() {
+        return Ok(spec_path);
+    }
+
+    // Otherwise treat as identifier and search CWD
+    let extensions = match format_filter {
+        CliTemplateFormat::Auto => vec!["textfsm", "yaml", "yml", "toml"],
+        CliTemplateFormat::Textfsm => vec!["textfsm"],
+        CliTemplateFormat::Yaml => vec!["yaml", "yml"],
+        CliTemplateFormat::Toml => vec!["toml"],
+    };
+
+    let mut candidates = Vec::new();
+    for ext in extensions {
+        let candidate = PathBuf::from(format!("{}.{}", spec, ext));
+        if candidate.exists() {
+            candidates.push(candidate);
+        }
+    }
+
+    match candidates.len() {
+        0 => anyhow::bail!(
+            "Template '{}' not found (tried {} and identifier search in CWD)",
+            spec,
+            spec_path.display()
+        ),
+        1 => Ok(candidates.into_iter().next().unwrap()),
+        _ => {
+            let names: Vec<_> = candidates.iter().map(|p| p.display().to_string()).collect();
+            anyhow::bail!(
+                "Ambiguous template identifier '{}': found multiple matches: {}. Use an explicit path or --template-format to disambiguate.",
+                spec,
+                names.join(", ")
+            )
+        }
+    }
 }
