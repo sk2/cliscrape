@@ -9,11 +9,11 @@
 ## Current Position
 
 **Active Phase:** Phase 4: TUI Debugger Foundation (Live Lab)
-**Active Plan:** 04-03 complete (3/5)
+**Active Plan:** 04-04 complete (4/5)
 **Status:** 🟢 In progress
 
 **Progress:**
-`[██████████████████░░] 89%` (04-03 complete; carryover: interactive converter smoke pending)
+`[███████████████████░] 95%` (04-04 complete; next: 04-05; carryover: interactive converter smoke pending)
 
 ## Performance Metrics
 
@@ -37,6 +37,8 @@
 - **Debug Trace Actions:** DebugReport stores action/record semantics as strings to stay serde-friendly without changing engine Action types.
 - **EOF Record Attribution:** DebugReport uses `line_idx = lines.len()` as an explicit EOF sentinel for implicit record emission.
 - **Live Reload Architecture:** Debounced notify watcher (watch parent dirs) emits `Message::FsChanged`; background parse worker coalesces requests and retains last-good results while showing current parse errors.
+- **Live Lab Keymap:** Tab toggles Matches/Records view; `[ ]` / `h l` / left-right cycles match/record selection.
+- **Highlight Safety:** Capture span rendering uses byte offsets with UTF-8 boundary checks; invalid spans are skipped and surfaced as warnings.
 
 ### Todos
 - [x] Create engine module structure
@@ -51,12 +53,13 @@
 - [ ] Run interactive converter smoke test (Phase 3 verification)
 - [x] Phase 4: Implement TUI scaffolding + `cliscrape debug` wiring (04-02)
 - [x] Phase 4: Add live reload watcher + background parsing with last-good retention (04-03)
+- [x] Phase 4: Add match shading + capture highlights + records toggle (04-04)
 
 ### Blockers
 - None
 
 ## Session Continuity
 
-**Last Session:** 2026-02-20T23:45:10Z
-**Stopped at:** Completed 04-tui-debugger-foundation-(live-lab) 04-03-PLAN.md
+**Last Session:** 2026-02-21T00:00:30Z
+**Stopped at:** Completed 04-tui-debugger-foundation-(live-lab) 04-04-PLAN.md
 **Resume file:** None
