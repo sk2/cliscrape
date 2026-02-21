@@ -8,6 +8,8 @@ pub struct DebugReport {
     pub matches_by_line: Vec<Vec<LineMatch>>,
     /// Records emitted during parsing, with the line index that triggered emission.
     pub records: Vec<EmittedRecord>,
+    /// Temporal trace of FSM state transitions and variable values at each line.
+    pub trace: Vec<TraceEvent>,
 }
 
 impl DebugReport {
@@ -17,6 +19,7 @@ impl DebugReport {
             lines,
             matches_by_line,
             records: Vec::new(),
+            trace: Vec::new(),
         }
     }
 }
@@ -47,4 +50,21 @@ pub struct CaptureSpan {
 pub struct EmittedRecord {
     pub line_idx: usize,
     pub record: HashMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TraceEvent {
+    pub line_idx: usize,
+    pub state_before: String,
+    pub state_after: String,
+    pub variables: HashMap<String, serde_json::Value>,
+    pub event_type: TraceEventType,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TraceEventType {
+    LineProcessed,
+    StateChange,
+    RecordEmitted,
+    RecordCleared,
 }
