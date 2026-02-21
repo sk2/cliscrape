@@ -1,4 +1,5 @@
-use crate::tui::app::AppState;
+use crate::tui::app::{AppState, Mode};
+use crossterm::event::{KeyCode, KeyModifiers};
 use crossterm::{
     cursor, event as crossterm_event, execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -10,6 +11,7 @@ use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 pub mod app;
+pub mod editor;
 pub mod event;
 pub mod ui;
 pub mod watch;
@@ -23,12 +25,7 @@ pub enum FsWhich {
 
 #[derive(Debug)]
 pub enum Message {
-    Quit,
-    CursorUp,
-    CursorDown,
-    ToggleView,
-    MatchPrev,
-    MatchNext,
+    Key(crossterm::event::KeyEvent),
     FsChanged { which: FsWhich },
     ParseDone(cliscrape::DebugReport),
     ParseError(String),
@@ -112,27 +109,7 @@ pub fn run(mut app: AppState) -> anyhow::Result<()> {
 
 fn handle_message(app: &mut AppState, msg: Message, worker: &worker::ParseWorker) -> bool {
     match msg {
-        Message::Quit => true,
-        Message::CursorUp => {
-            app.cursor_up();
-            false
-        }
-        Message::CursorDown => {
-            app.cursor_down();
-            false
-        }
-        Message::ToggleView => {
-            app.toggle_view_mode();
-            false
-        }
-        Message::MatchPrev => {
-            app.selected_match_prev();
-            false
-        }
-        Message::MatchNext => {
-            app.selected_match_next();
-            false
-        }
+        Message::Key(key) => handle_key(app, key, worker),
         Message::FsChanged { .. } => {
             let (Some(tpl), Some(inp)) = (app.template_path.clone(), app.input_path.clone()) else {
                 return false;
@@ -151,6 +128,94 @@ fn handle_message(app: &mut AppState, msg: Message, worker: &worker::ParseWorker
         }
         Message::ParseError(err) => {
             app.on_parse_error(err);
+            false
+        }
+    }
+}
+
+fn handle_key(
+    app: &mut AppState,
+    key: crossterm::event::KeyEvent,
+    worker: &worker::ParseWorker,
+) -> bool {
+    // Safety exits.
+    if key.modifiers.contains(KeyModifiers::CONTROL)
+        && matches!(key.code, KeyCode::Char('c') | KeyCode::Char('C'))
+    {
+        return true;
+    }
+
+    match app.mode {
+        Mode::Browse => handle_key_browse(app, key),
+        Mode::EditTemplate => handle_key_editor(app, key, worker),
+    }
+}
+
+fn handle_key_browse(app: &mut AppState, key: crossterm::event::KeyEvent) -> bool {
+    match key.code {
+        KeyCode::Char('q') => true,
+        KeyCode::Up | KeyCode::Char('k') => {
+            app.cursor_up();
+            false
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            app.cursor_down();
+            false
+        }
+        KeyCode::Tab => {
+            app.toggle_view_mode();
+            false
+        }
+        KeyCode::Left | KeyCode::Char('h') | KeyCode::Char('[') => {
+            app.selected_match_prev();
+            false
+        }
+        KeyCode::Right | KeyCode::Char('l') | KeyCode::Char(']') => {
+            app.selected_match_next();
+            false
+        }
+        KeyCode::Char('e') => {
+            app.enter_edit_template();
+            false
+        }
+        _ => false,
+    }
+}
+
+fn handle_key_editor(
+    app: &mut AppState,
+    key: crossterm::event::KeyEvent,
+    worker: &worker::ParseWorker,
+) -> bool {
+    let Some(ed) = app.editor.as_mut() else {
+        app.exit_edit_template();
+        return false;
+    };
+
+    match ed.apply_key(key) {
+        crate::tui::editor::EditorKeyResult::Noop => false,
+        crate::tui::editor::EditorKeyResult::Exit => {
+            app.exit_edit_template();
+            false
+        }
+        crate::tui::editor::EditorKeyResult::Save => {
+            match ed.save() {
+                Ok(()) => {
+                    if let (Some(tpl), Some(inp)) =
+                        (app.template_path.clone(), app.input_path.clone())
+                    {
+                        app.on_parse_started();
+                        worker.request(worker::ParseRequest {
+                            template_path: tpl,
+                            input_path: inp,
+                            block_idx: 0,
+                        });
+                    }
+                }
+                Err(err) => {
+                    ed.last_save_error = Some(format!("{:#}", err));
+                }
+            }
             false
         }
     }

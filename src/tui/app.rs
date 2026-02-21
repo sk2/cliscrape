@@ -15,6 +15,12 @@ pub enum ViewMode {
     Records,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Mode {
+    Browse,
+    EditTemplate,
+}
+
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub template_path: Option<PathBuf>,
@@ -27,6 +33,8 @@ pub struct AppState {
     pub last_good: Option<DebugReport>,
     pub current_error: Option<String>,
     pub status: ParseStatus,
+    pub mode: Mode,
+    pub editor: Option<crate::tui::editor::EditorState>,
 }
 
 impl AppState {
@@ -48,7 +56,31 @@ impl AppState {
             last_good: None,
             current_error: None,
             status: ParseStatus::Idle,
+            mode: Mode::Browse,
+            editor: None,
         }
+    }
+
+    pub fn enter_edit_template(&mut self) {
+        let Some(path) = self.template_path.clone() else {
+            self.current_error = Some("no template path set".to_string());
+            return;
+        };
+
+        match crate::tui::editor::EditorState::open(path) {
+            Ok(ed) => {
+                self.editor = Some(ed);
+                self.mode = Mode::EditTemplate;
+                self.current_error = None;
+            }
+            Err(err) => {
+                self.current_error = Some(format!("{:#}", err));
+            }
+        }
+    }
+
+    pub fn exit_edit_template(&mut self) {
+        self.mode = Mode::Browse;
     }
 
     pub fn on_parse_started(&mut self) {

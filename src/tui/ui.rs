@@ -1,4 +1,4 @@
-use crate::tui::app::{AppState, ViewMode};
+use crate::tui::app::{AppState, Mode, ViewMode};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     prelude::*,
@@ -346,6 +346,11 @@ fn render_matches_pane(frame: &mut Frame, area: Rect, app: &AppState) {
 }
 
 fn render_details_pane(frame: &mut Frame, area: Rect, app: &AppState) {
+    if app.mode == Mode::EditTemplate {
+        render_editor_pane(frame, area, app);
+        return;
+    }
+
     let title = match app.view_mode {
         ViewMode::Matches => "Details",
         ViewMode::Records => "Record Details",
@@ -464,6 +469,72 @@ fn render_details_pane(frame: &mut Frame, area: Rect, app: &AppState) {
     frame.render_widget(p, area);
 }
 
+fn render_editor_pane(frame: &mut Frame, area: Rect, app: &AppState) {
+    let Some(ed) = &app.editor else {
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .title("Template Editor");
+        frame.render_widget(Paragraph::new("(no editor loaded)").block(block), area);
+        return;
+    };
+
+    let title = format!(
+        "Template Editor{} (Ctrl+S save, Esc exit)",
+        if ed.dirty { " *" } else { "" }
+    );
+    let block = Block::default().borders(Borders::ALL).title(title);
+    let inner = block.inner(area);
+    let view_height = inner.height as usize;
+
+    let start = ed.buf.scroll_row.min(ed.buf.lines.len().saturating_sub(1));
+    let end = (start + view_height).min(ed.buf.lines.len());
+
+    let mut lines: Vec<Line> = Vec::new();
+    for (i, line) in ed.buf.lines.iter().enumerate().take(end).skip(start) {
+        let row = start + i;
+        let is_cursor = row == ed.buf.cursor_row;
+        let prefix = if is_cursor { "> " } else { "  " };
+        let mut style = Style::default();
+        if is_cursor {
+            style = style
+                .bg(Color::Rgb(50, 50, 50))
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD);
+        }
+
+        lines.push(Line::from(vec![
+            Span::styled(prefix, style),
+            Span::styled(line.as_str(), style),
+        ]));
+    }
+
+    if lines.is_empty() {
+        lines.push(Line::from("(empty)"));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(Line::from(Span::styled(
+        format!("file: {}", ed.path.display()),
+        Style::default().fg(Color::Gray),
+    )));
+
+    if let Some(err) = &ed.last_save_error {
+        lines.push(Line::from(""));
+        lines.push(Line::from(Span::styled(
+            "save error:",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        )));
+        for l in err.lines().take(2) {
+            lines.push(Line::from(Span::styled(l, Style::default().fg(Color::Red))));
+        }
+    }
+
+    let p = Paragraph::new(Text::from(lines))
+        .block(block)
+        .wrap(Wrap { trim: false });
+    frame.render_widget(p, area);
+}
+
 fn render_status_pane(frame: &mut Frame, area: Rect, app: &AppState) {
     let status_str = match app.status {
         crate::tui::app::ParseStatus::Idle => "idle",
@@ -498,6 +569,12 @@ fn render_status_pane(frame: &mut Frame, area: Rect, app: &AppState) {
             .map(|p| p.display().to_string())
             .unwrap_or_else(|| "<missing>".to_string())
     )));
+
+    let mode_str = match app.mode {
+        Mode::Browse => "browse",
+        Mode::EditTemplate => "edit-template",
+    };
+    lines.push(Line::from(format!("mode:     {}", mode_str)));
 
     if let Some(report) = &app.last_good {
         let cursor = app
