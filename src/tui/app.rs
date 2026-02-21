@@ -298,4 +298,195 @@ impl AppState {
         self.cursor_line_idx = event.line_idx;
         self.clamp_cursor();
     }
+
+    // Trace navigation methods
+
+    pub fn step_forward(&mut self) {
+        let Some(report) = &self.last_good else {
+            return;
+        };
+        let next = self.find_next_event(report, self.trace_index, self.stepping_mode);
+        if next != self.trace_index {
+            self.trace_index = next;
+            self.sync_cursor_to_trace();
+        }
+    }
+
+    pub fn step_backward(&mut self) {
+        let Some(report) = &self.last_good else {
+            return;
+        };
+        let prev = self.find_prev_event(report, self.trace_index, self.stepping_mode);
+        if prev != self.trace_index {
+            self.trace_index = prev;
+            self.sync_cursor_to_trace();
+        }
+    }
+
+    fn find_next_event(
+        &self,
+        report: &DebugReport,
+        current: usize,
+        mode: crate::tui::trace::SteppingMode,
+    ) -> usize {
+        use crate::tui::trace::SteppingMode;
+        use cliscrape::engine::debug::TraceEventType;
+
+        match mode {
+            SteppingMode::LineByLine => (current + 1).min(report.trace.len().saturating_sub(1)),
+            SteppingMode::StateByState => report
+                .trace
+                .iter()
+                .enumerate()
+                .skip(current + 1)
+                .find(|(_, e)| e.state_before != e.state_after)
+                .map(|(i, _)| i)
+                .unwrap_or(current),
+            SteppingMode::ActionByAction => report
+                .trace
+                .iter()
+                .enumerate()
+                .skip(current + 1)
+                .find(|(_, e)| {
+                    matches!(
+                        e.event_type,
+                        TraceEventType::RecordEmitted | TraceEventType::RecordCleared
+                    )
+                })
+                .map(|(i, _)| i)
+                .unwrap_or(current),
+        }
+    }
+
+    fn find_prev_event(
+        &self,
+        report: &DebugReport,
+        current: usize,
+        mode: crate::tui::trace::SteppingMode,
+    ) -> usize {
+        use crate::tui::trace::SteppingMode;
+        use cliscrape::engine::debug::TraceEventType;
+
+        if current == 0 {
+            return 0;
+        }
+
+        match mode {
+            SteppingMode::LineByLine => current.saturating_sub(1),
+            SteppingMode::StateByState => report
+                .trace
+                .iter()
+                .enumerate()
+                .take(current)
+                .rev()
+                .find(|(_, e)| e.state_before != e.state_after)
+                .map(|(i, _)| i)
+                .unwrap_or(current),
+            SteppingMode::ActionByAction => report
+                .trace
+                .iter()
+                .enumerate()
+                .take(current)
+                .rev()
+                .find(|(_, e)| {
+                    matches!(
+                        e.event_type,
+                        TraceEventType::RecordEmitted | TraceEventType::RecordCleared
+                    )
+                })
+                .map(|(i, _)| i)
+                .unwrap_or(current),
+        }
+    }
+
+    // Jump methods
+
+    pub fn jump_to_next_record(&mut self) {
+        use cliscrape::engine::debug::TraceEventType;
+
+        let Some(report) = &self.last_good else {
+            return;
+        };
+        if let Some((idx, _)) = report
+            .trace
+            .iter()
+            .enumerate()
+            .skip(self.trace_index + 1)
+            .find(|(_, e)| matches!(e.event_type, TraceEventType::RecordEmitted))
+        {
+            self.trace_index = idx;
+            self.sync_cursor_to_trace();
+        }
+    }
+
+    pub fn jump_to_previous_record(&mut self) {
+        use cliscrape::engine::debug::TraceEventType;
+
+        let Some(report) = &self.last_good else {
+            return;
+        };
+        if let Some((idx, _)) = report
+            .trace
+            .iter()
+            .enumerate()
+            .take(self.trace_index)
+            .rev()
+            .find(|(_, e)| matches!(e.event_type, TraceEventType::RecordEmitted))
+        {
+            self.trace_index = idx;
+            self.sync_cursor_to_trace();
+        }
+    }
+
+    pub fn jump_to_line(&mut self, line_idx: usize) {
+        let Some(report) = &self.last_good else {
+            return;
+        };
+        if let Some((idx, _)) = report
+            .trace
+            .iter()
+            .enumerate()
+            .find(|(_, e)| e.line_idx == line_idx)
+        {
+            self.trace_index = idx;
+            self.sync_cursor_to_trace();
+        }
+    }
+
+    // Filter and mode toggles
+
+    pub fn toggle_stepping_mode(&mut self) {
+        use crate::tui::trace::SteppingMode;
+        self.stepping_mode = match self.stepping_mode {
+            SteppingMode::LineByLine => SteppingMode::StateByState,
+            SteppingMode::StateByState => SteppingMode::ActionByAction,
+            SteppingMode::ActionByAction => SteppingMode::LineByLine,
+        };
+    }
+
+    pub fn toggle_filter_line_events(&mut self) {
+        self.filter_state.show_line_events = !self.filter_state.show_line_events;
+    }
+
+    pub fn toggle_filter_state_changes(&mut self) {
+        self.filter_state.show_state_changes = !self.filter_state.show_state_changes;
+    }
+
+    pub fn toggle_filter_record_actions(&mut self) {
+        self.filter_state.show_record_actions = !self.filter_state.show_record_actions;
+    }
+
+    pub fn toggle_filter_clear_actions(&mut self) {
+        self.filter_state.show_clear_actions = !self.filter_state.show_clear_actions;
+    }
+
+    // Watch list methods
+
+    pub fn toggle_watch(&mut self, var_name: String) {
+        if self.watch_list.contains(&var_name) {
+            self.watch_list.remove(&var_name);
+        } else {
+            self.watch_list.insert(var_name);
+        }
+    }
 }
