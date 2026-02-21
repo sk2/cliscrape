@@ -56,7 +56,7 @@
 - [x] 03-05-PLAN.md — Interactive TextFSM -> modern conversion tool
 - [x] 03-06-PLAN.md — Modern wiring tests + recursive macros gap closure
 
-## Phase 4: TUI Debugger Foundation (Live Lab)
+## Phase 4: TUI Debugger Foundation (Live Lab) [COMPLETED]
 **Goal:** Provide a real-time visual environment for template development and regex matching.
 
 - **Requirements:** TUI-01

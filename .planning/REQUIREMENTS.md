@@ -13,7 +13,7 @@
 - [x] **FORM-03**: Typed captures (e.g., `IP`, `Integer`, `Date`) with automatic string-to-type conversion.
 
 ### TUI Debugger
-- [ ] **TUI-01**: "Live Lab" split-pane view with real-time regex matching and field highlighting.
+- [x] **TUI-01**: "Live Lab" split-pane view with real-time regex matching and field highlighting.
 - [ ] **TUI-02**: "State Tracer" to watch FSM transitions line-by-line, including current variable values.
 - [ ] **TUI-03**: Trace history buffer for debugging complex multi-state templates.
 
@@ -49,7 +49,7 @@
 | FORM-01     | Phase 2 | Complete |
 | FORM-02     | Phase 3 | Complete |
 | FORM-03     | Phase 3 | Complete |
-| TUI-01      | Phase 4 | Pending |
+| TUI-01      | Phase 4 | Complete |
 | TUI-02      | Phase 5 | Pending |
 | TUI-03      | Phase 5 | Pending |
 | CLI-01      | Phase 2 | Complete |
