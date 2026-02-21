@@ -1,8 +1,8 @@
 file = { SOI ~ (val_def | state_block | NEWLINE)* ~ EOI }
 
-val_def = { "Value" ~ flags? ~ name ~ "(" ~ regex ~ ")" ~ NEWLINE }
-flags = { (flag ~ WHITESPACE*)+ }
-flag = { "Filldown" | "Fillup" | "Required" | "List" | "Key" }
+val_def = { "Value" ~ value_tokens ~ "(" ~ regex ~ ")" ~ NEWLINE }
+value_tokens = { (value_token ~ WHITESPACE*)+ }
+value_token = @{ (ASCII_ALPHANUMERIC | "_")+ }
 name = @{ (ASCII_ALPHANUMERIC | "_")+ }
 regex = @{ ( !(")" ~ (NEWLINE | EOI)) ~ ANY )+ }
 
@@ -19,9 +19,9 @@ action = {
     | next_state
 }
 
-line_action = @{ ("Next" | "Continue") ~ !ASCII_ALPHANUMERIC }
+line_action = @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC* }
 // Order matters due to atomic matching: prefer longer tokens before prefixes.
-record_action = @{ ("Record" | "NoRecord" | "Clearall" | "Clear" | "Error") ~ !ASCII_ALPHANUMERIC }
+record_action = @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC* }
 next_state = { name }
 
 WHITESPACE = _{ " " | "\t" }

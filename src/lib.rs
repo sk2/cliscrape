@@ -11,6 +11,12 @@ use crate::engine::Template;
 use crate::template::loader::TextFsmLoader;
 use crate::template::modern;
 
+#[derive(Debug, Clone)]
+pub struct TemplateWarning {
+    pub kind: String,
+    pub message: String,
+}
+
 #[derive(Error, Debug)]
 pub enum ScraperError {
     #[error("IO error: {0}")]
@@ -37,15 +43,28 @@ impl FsmParser {
     }
 
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, ScraperError> {
+        let (parser, _warnings) = Self::from_file_with_warnings(path)?;
+        Ok(parser)
+    }
+
+    pub fn from_file_with_warnings<P: AsRef<Path>>(
+        path: P,
+    ) -> Result<(Self, Vec<TemplateWarning>), ScraperError> {
         let content = std::fs::read_to_string(&path)?;
         let path_ref = path.as_ref();
 
         let ext = path_ref.extension().and_then(|s| s.to_str());
         let ext_display = ext.unwrap_or("<none>");
-        let ir = match ext {
-            Some("textfsm") => TextFsmLoader::parse_str(&content)?,
-            Some("yaml") | Some("yml") => modern::load_yaml_str(&content)?,
-            Some("toml") => modern::load_toml_str(&content)?,
+        let (ir, warnings) = match ext {
+            Some("textfsm") => TextFsmLoader::parse_str_with_warnings(&content)?,
+            Some("yaml") | Some("yml") => {
+                let ir = modern::load_yaml_str(&content)?;
+                (ir, Vec::new())
+            }
+            Some("toml") => {
+                let ir = modern::load_toml_str(&content)?;
+                (ir, Vec::new())
+            }
             _ => {
                 return Err(ScraperError::Parse(format!(
                     "Unsupported template extension '{ext_display}'. Supported: .textfsm, .yaml, .yml, .toml"
@@ -54,7 +73,7 @@ impl FsmParser {
         };
 
         let template = Template::from_ir(ir)?;
-        Ok(Self { template })
+        Ok((Self { template }, warnings))
     }
 
     pub fn from_file_with_format<P: AsRef<Path>>(

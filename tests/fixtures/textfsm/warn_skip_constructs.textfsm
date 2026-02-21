@@ -1,0 +1,7 @@
+Value UnknownFlag DATA (\S+)
+Value COUNT (\d+)
+
+Start
+  ^Data ${DATA}
+  ^Count ${COUNT} -> Continue.UnknownAction
+  ^Trigger -> Record
