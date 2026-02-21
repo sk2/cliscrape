@@ -8,12 +8,12 @@
 
 ## Current Position
 
-**Active Phase:** Not started (defining requirements)
-**Active Plan:** —
-**Status:** Milestone v0.5 initialization
+**Active Phase:** 02-legacy-compatibility-cli (Legacy Compatibility & CLI)
+**Active Plan:** 02-05 (Parse clap contract)
+**Status:** In progress
 
 **Progress:**
-`[░░░░░░░░░░] 0%` (v0.5 started; next: requirements definition)
+`[█████████░] 96%` (24/25 plans complete; latest: 02-05)
 
 ## Performance Metrics
 
@@ -32,6 +32,7 @@
 - **Emit-time Type Conversion:** Convert captured strings to typed `serde_json::Value` at record emission; explicit per-field hint wins, numeric-only heuristics otherwise, failure preserves raw string.
 - **Modern Template Typing Default:** Modern templates default fields to explicit `string` typing (type_hint=String) unless declared otherwise, to avoid heuristic surprises.
 - **CLI Template Format Override:** `cliscrape parse --template-format auto|textfsm|yaml|toml` forces loader selection (useful when file extensions are ambiguous).
+- **Phase-2 Parse CLI Contract:** `cliscrape parse` exposes multi-input flags (`inputs...`, `--input`, `--stdin`, `--input-glob`), defaults `--format` to `auto`, and provides global `--error-format human|json`.
 - **Macro Expansion Semantics:** Macro expansion is recursive with max depth 10 and explicit cycle detection; template-local macros shadow builtins.
 - **Template Migration Tooling:** `cliscrape convert` converts `.textfsm` to strict-schema modern YAML/TOML via a shared `ModernTemplateDoc` + serialization helpers.
 - **Debug Trace Actions:** DebugReport stores action/record semantics as strings to stay serde-friendly without changing engine Action types.
@@ -69,6 +70,6 @@
 
 ## Session Continuity
 
-**Last Session:** 2026-02-21T03:51:25Z
-**Stopped at:** Completed 05-04-PLAN.md
+**Last Session:** 2026-02-21T22:11:53Z
+**Stopped at:** Completed 02-05-PLAN.md
 **Resume file:** None
