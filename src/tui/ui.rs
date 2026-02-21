@@ -4,7 +4,7 @@ use ratatui::{
     prelude::*,
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Paragraph, Wrap},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
 };
 use std::collections::HashMap;
 
@@ -708,6 +708,66 @@ fn render_editor_pane(frame: &mut Frame, area: Rect, app: &AppState) {
         .block(block)
         .wrap(Wrap { trim: false });
     frame.render_widget(p, area);
+}
+
+fn render_timeline_pane(frame: &mut Frame, area: Rect, app: &AppState) {
+    let Some(report) = &app.last_good else {
+        let block = Block::default().borders(Borders::ALL).title("Timeline");
+        frame.render_widget(Paragraph::new("(no trace)").block(block), area);
+        return;
+    };
+
+    // Apply filtering
+    let filtered: Vec<(usize, &cliscrape::engine::debug::TraceEvent)> = report
+        .trace
+        .iter()
+        .enumerate()
+        .filter(|(_, e)| app.filter_state.matches(&e.event_type))
+        .collect();
+
+    let items: Vec<ListItem> = filtered
+        .iter()
+        .map(|(idx, event)| {
+            let is_current = *idx == app.trace_index;
+            let prefix = if is_current { ">" } else { " " };
+
+            // User decision: show line numbers with state (e.g., 'HEADER @L15')
+            let state_display = if event.state_before == event.state_after {
+                format!("{} @L{}", event.state_after, event.line_idx + 1)
+            } else {
+                format!(
+                    "{} -> {} @L{}",
+                    event.state_before,
+                    event.state_after,
+                    event.line_idx + 1
+                )
+            };
+
+            let text = format!("{} {} | {:?}", prefix, state_display, event.event_type);
+
+            // Highlight current event (user decision: visual distinction)
+            let style = if is_current {
+                Style::default()
+                    .bg(Color::Rgb(50, 50, 50))
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
+
+            ListItem::new(text).style(style)
+        })
+        .collect();
+
+    let title = format!(
+        "Timeline ({}/{}) | Mode: {:?}",
+        app.trace_index + 1,
+        report.trace.len(),
+        app.stepping_mode
+    );
+    let block = Block::default().borders(Borders::ALL).title(title);
+    let list = List::new(items).block(block);
+    frame.render_widget(list, area);
 }
 
 fn render_status_pane(frame: &mut Frame, area: Rect, app: &AppState) {
