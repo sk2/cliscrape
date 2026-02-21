@@ -1,10 +1,10 @@
-use cliscrape::engine::debug::{DebugReport, TraceEvent, TraceEventType};
+use cliscrape::engine::debug::TraceEventType;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SteppingMode {
-    LineByLine,       // Every trace event
-    StateByState,     // Only state transitions
-    ActionByAction,   // Only Record/Clear actions
+    LineByLine,     // Every trace event
+    StateByState,   // Only state transitions
+    ActionByAction, // Only Record/Clear actions
 }
 
 #[derive(Debug, Clone)]

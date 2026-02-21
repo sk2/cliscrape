@@ -10,12 +10,16 @@ fn benchmark_throughput(c: &mut Criterion) {
         regex: r#"\S+"#.to_string(),
         filldown: false,
         required: true,
+        list: false,
+        type_hint: None,
     });
     values.insert("Status".to_string(), Value {
         name: "Status".to_string(),
         regex: r#"\w+"#.to_string(),
         filldown: false,
         required: false,
+        list: false,
+        type_hint: None,
     });
 
     let mut states = HashMap::new();
