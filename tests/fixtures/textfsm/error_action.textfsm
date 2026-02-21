@@ -1,0 +1,5 @@
+Value NAME (\S+)
+
+Start
+  ^OK ${NAME} -> Record
+  ^BOOM .* -> Error

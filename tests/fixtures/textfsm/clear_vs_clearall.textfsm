@@ -1,0 +1,8 @@
+Value Filldown CHASSIS (\S+)
+Value SLOT (\d+)
+
+Start
+  ^Chassis: ${CHASSIS} -> Continue
+  ^Slot: ${SLOT} -> Record
+  ^CLEAR$ -> Clear
+  ^CLEARALL$ -> Clearall
