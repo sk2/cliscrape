@@ -1,0 +1,9 @@
+# This is a comment before any Value lines
+Value INTERFACE (\S+)
+# Comment between Value lines
+Value STATUS (up|down)
+
+# Comment before state block
+Start
+  ^Interface ${INTERFACE} is ${STATUS} -> Record
+

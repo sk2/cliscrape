@@ -36,6 +36,9 @@ impl TextFsmLoader {
                     warnings.extend(state_warnings);
                     states.insert(state.name.clone(), state);
                 }
+                PestRule::comment_line => {
+                    // Comments are ignored
+                }
                 PestRule::EOI => {}
                 _ => {}
             }
@@ -132,6 +135,9 @@ fn parse_state_block_with_warnings(
                 if let Some(r) = rule {
                     rules.push(r);
                 }
+            }
+            PestRule::comment_line => {
+                // Comments are ignored
             }
             _ => {}
         }

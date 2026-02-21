@@ -136,3 +136,17 @@ fn warn_skip_constructs_returns_warnings_and_parses() {
     assert_eq!(results.len(), 1, "should emit one record from valid rule");
     assert_eq!(results[0]["DATA"], "value");
 }
+
+#[test]
+fn comment_lines_are_ignored() {
+    let parser = FsmParser::from_file("tests/fixtures/textfsm/comment_lines_ignored.textfsm")
+        .expect("fixture template with comments should load");
+
+    // Comments should not affect template behavior
+    let input = "Interface Eth0 is up";
+    let results = parser.parse(input).expect("parse should succeed");
+
+    assert_eq!(results.len(), 1, "should emit one record");
+    assert_eq!(results[0]["INTERFACE"], "Eth0");
+    assert_eq!(results[0]["STATUS"], "up");
+}

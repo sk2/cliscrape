@@ -1,4 +1,6 @@
-file = { SOI ~ (val_def | state_block | NEWLINE)* ~ EOI }
+file = { SOI ~ (val_def | state_block | comment_line | NEWLINE)* ~ EOI }
+
+comment_line = { WHITESPACE* ~ "#" ~ (!NEWLINE ~ ANY)* ~ NEWLINE }
 
 val_def = { "Value" ~ value_tokens ~ "(" ~ regex ~ ")" ~ NEWLINE }
 value_tokens = { (value_token ~ WHITESPACE*)+ }
@@ -6,10 +8,10 @@ value_token = @{ (ASCII_ALPHANUMERIC | "_")+ }
 name = @{ (ASCII_ALPHANUMERIC | "_")+ }
 regex = @{ ( !(")" ~ (NEWLINE | EOI)) ~ ANY )+ }
 
-state_block = { state_name ~ NEWLINE ~ fsm_rule* }
+state_block = { state_name ~ NEWLINE ~ (comment_line | fsm_rule)* }
 state_name = @{ (ASCII_ALPHANUMERIC | "_")+ }
 
-fsm_rule = { "^" ~ rule_regex ~ ("->" ~ action)? ~ NEWLINE }
+fsm_rule = { WHITESPACE* ~ "^" ~ rule_regex ~ ("->" ~ action)? ~ NEWLINE }
 rule_regex = @{ ( !((" " | "\t")+ ~ "->") ~ !("\r" | "\n") ~ ANY )+ }
 
 action = {
