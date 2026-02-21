@@ -15,36 +15,46 @@ The networking industry relies heavily on CLI-based management, and parsing this
 
 The one thing that must work perfectly: **Extremely fast, reliable parsing of semi-structured CLI output into structured data, regardless of whether the template is legacy TextFSM or the new ergonomic format.**
 
-## Current Milestone: v0.1 Alpha
+## Current Milestone: v0.5 Beta
 
-**Goal:** Build a complete, high-performance CLI parsing tool with TextFSM compatibility, modern YAML/TOML templates, and an interactive TUI debugger.
+**Goal:** Transform cliscrape into a complete network automation solution with direct device connectivity and a comprehensive template ecosystem.
 
 **Target capabilities:**
-- High-throughput FSM engine for parsing CLI output
-- Full TextFSM grammar support for backward compatibility
-- Modern YAML/TOML template format as ergonomic alternative
-- Interactive TUI for template development and debugging
-- Vendor-agnostic design (Cisco, Juniper, Arista, etc.)
+- SSH/Telnet connectivity layer (single commands, interactive sessions, batch operations)
+- ntc-templates compatibility validation and testing
+- Template conversion pipeline (TextFSM → modern YAML)
+- Built-in template library with discovery mechanism
+- Device credential management and authentication
 
 ## Requirements
 
 ### Validated
 
+**v0.1 Alpha (Complete):**
 - ✓ **Rust Project Scaffolding** — Basic project structure and CLI setup initialized.
 - ✓ **Vision & Documentation** — Initial README and DESIGN documents created.
+- ✓ **High-Throughput FSM Engine** — Core Rust-based state machine processing ~4.1M lines/sec.
+- ✓ **TextFSM Compatibility Layer** — Full grammar support with Filldown, Required, all actions.
+- ✓ **Modern Ergonomic Format** — YAML/TOML templates with typed captures and macro support.
+- ✓ **TUI "Dry Run" Environment** — Interactive Live Lab and State Tracer for debugging.
+- ✓ **Vendor-Agnostic Core** — Generic engine handling Cisco, Juniper, Arista, etc.
 
 ### Active
 
-- [ ] **High-Throughput FSM Engine** — A core Rust-based state machine capable of processing thousands of command outputs per second.
-- [ ] **TextFSM Compatibility Layer** — Support for the full TextFSM grammar, including `Filldown`, `Required`, and all actions (`Next`, `Continue`, `Record`, `Clear`).
-- [ ] **Modern Ergonomic Format** — A hybrid YAML/TOML format using named blocks, shared regex patterns, and typed captures.
-- [ ] **TUI "Dry Run" Environment** — An interactive debugger with live-editing and step-through state tracing.
-- [ ] **Vendor-Agnostic Core** — A generic engine that handles Cisco, Juniper, Arista, and others equally well.
+**v0.5 Beta (Current):**
+- [ ] **SSH/Telnet Connectivity** — Direct device connection with command execution and session management.
+- [ ] **Interactive Session Management** — Multi-command sessions with context tracking and prompt handling.
+- [ ] **Batch Device Operations** — Parallel execution across device fleets with result aggregation.
+- [ ] **ntc-templates Compatibility** — Validation suite ensuring existing templates work unchanged.
+- [ ] **Template Conversion Tools** — Pipeline to convert TextFSM templates to modern YAML format.
+- [ ] **Template Library & Discovery** — Built-in templates referenced by name without local files.
 
 ### Out of Scope
 
-- **Massive File Optimization (v0.1)** — While fast, the primary focus is throughput across many small outputs rather than gigabyte-scale single files.
-- **Direct Device Interaction (v0.1)** — SSH/Telnet connectivity is deferred. Other tools like `netmiko` can handle device connections; `cliscrape` focuses on parsing excellence. May be added as optional transport layer in future versions.
+- **Massive File Optimization** — Primary focus remains throughput across many small outputs rather than gigabyte-scale single files.
+- **GUI/Web Interface** — CLI-first tool; graphical interfaces deferred to future versions.
+- **Configuration Management** — Focuses on read-only command execution; device configuration changes out of scope.
+- **SNMP/NETCONF/REST** — SSH/CLI-focused; other protocols deferred to maintain scope.
 
 ## Key Decisions
 
@@ -56,4 +66,4 @@ The one thing that must work perfectly: **Extremely fast, reliable parsing of se
 | **TUI Mode: Dual-Purpose** | Support both "Live Lab" (editing) and "State Tracer" (debugging) workflows. | — Finalized |
 
 ---
-*Last updated: 2026-02-17 after v0.1 milestone initialization*
+*Last updated: 2026-02-21 after v0.5 milestone initialization*

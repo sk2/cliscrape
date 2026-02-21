@@ -4,16 +4,16 @@
 
 **Core Value:** Extremely fast, reliable parsing of semi-structured CLI output into structured data, regardless of whether the template is legacy TextFSM or the new ergonomic format.
 
-**Current Focus:** Phase 5: TUI Advanced Debugging - State Tracer
+**Current Focus:** Milestone v0.5 Beta - Connectivity & Templates
 
 ## Current Position
 
-**Active Phase:** Phase 5: TUI Advanced Debugging - State Tracer
-**Active Plan:** 05-04 complete (4/4)
-**Status:** Ready to plan
+**Active Phase:** Not started (defining requirements)
+**Active Plan:** —
+**Status:** Milestone v0.5 initialization
 
 **Progress:**
-[██████████] 100%
+`[░░░░░░░░░░] 0%` (v0.5 started; next: requirements definition)
 
 ## Performance Metrics
 
