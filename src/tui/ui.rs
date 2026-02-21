@@ -770,6 +770,87 @@ fn render_timeline_pane(frame: &mut Frame, area: Rect, app: &AppState) {
     frame.render_widget(list, area);
 }
 
+fn render_variables_pane(frame: &mut Frame, area: Rect, app: &AppState) {
+    let Some(report) = &app.last_good else {
+        let block = Block::default().borders(Borders::ALL).title("Variables");
+        frame.render_widget(Paragraph::new("(no trace)").block(block), area);
+        return;
+    };
+
+    let Some(current_event) = report.trace.get(app.trace_index) else {
+        let block = Block::default().borders(Borders::ALL).title("Variables");
+        frame.render_widget(
+            Paragraph::new("(trace index out of range)").block(block),
+            area,
+        );
+        return;
+    };
+
+    let prev_event = if app.trace_index > 0 {
+        report.trace.get(app.trace_index - 1)
+    } else {
+        None
+    };
+
+    let mut lines: Vec<Line> = Vec::new();
+
+    // Sort variables: watched first, then alphabetical
+    let mut var_names: Vec<&String> = current_event.variables.keys().collect();
+    var_names.sort_by_key(|name| {
+        let is_watched = app.watch_list.contains(*name);
+        (!is_watched, *name) // watched sort first (false < true)
+    });
+
+    for var_name in var_names {
+        let current_val = &current_event.variables[var_name];
+        let prev_val = prev_event.and_then(|p| p.variables.get(var_name));
+
+        let changed = prev_val.map(|p| p != current_val).unwrap_or(true);
+        let is_watched = app.watch_list.contains(var_name);
+
+        // User decision: highlight changed variables + show old->new
+        let (text, style) = if changed {
+            let change_text = if let Some(prev) = prev_val {
+                format!(
+                    "{} = {} -> {}",
+                    var_name,
+                    display_value_compact(prev),
+                    display_value_compact(current_val)
+                )
+            } else {
+                format!("{} = {} (new)", var_name, display_value_compact(current_val))
+            };
+            (
+                change_text,
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            )
+        } else {
+            let text = format!("{} = {}", var_name, display_value_compact(current_val));
+            (text, Style::default())
+        };
+
+        // Add watch indicator
+        let display = if is_watched {
+            format!("★ {}", text)
+        } else {
+            format!("  {}", text)
+        };
+
+        lines.push(Line::from(Span::styled(display, style)));
+    }
+
+    if lines.is_empty() {
+        lines.push(Line::from("(no variables at this trace point)"));
+    }
+
+    let title = format!("Variables @L{}", current_event.line_idx + 1);
+    let block = Block::default().borders(Borders::ALL).title(title);
+    let paragraph = Paragraph::new(lines).block(block);
+    frame.render_widget(paragraph, area);
+}
+
 fn render_status_pane(frame: &mut Frame, area: Rect, app: &AppState) {
     let status_str = match app.status {
         crate::tui::app::ParseStatus::Idle => "idle",
