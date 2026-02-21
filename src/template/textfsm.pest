@@ -6,7 +6,7 @@ flag = { "Filldown" | "Fillup" | "Required" | "List" | "Key" }
 name = @{ (ASCII_ALPHANUMERIC | "_")+ }
 regex = @{ ( !(")" ~ (NEWLINE | EOI)) ~ ANY )+ }
 
-state_block = { state_name ~ NEWLINE ~ fsm_rule+ }
+state_block = { state_name ~ NEWLINE ~ fsm_rule* }
 state_name = @{ (ASCII_ALPHANUMERIC | "_")+ }
 
 fsm_rule = { "^" ~ rule_regex ~ ("->" ~ action)? ~ NEWLINE }
@@ -20,7 +20,8 @@ action = {
 }
 
 line_action = @{ ("Next" | "Continue") ~ !ASCII_ALPHANUMERIC }
-record_action = @{ ("Record" | "NoRecord" | "Clear" | "Clearall" | "Error") ~ !ASCII_ALPHANUMERIC }
+// Order matters due to atomic matching: prefer longer tokens before prefixes.
+record_action = @{ ("Record" | "NoRecord" | "Clearall" | "Clear" | "Error") ~ !ASCII_ALPHANUMERIC }
 next_state = { name }
 
 WHITESPACE = _{ " " | "\t" }

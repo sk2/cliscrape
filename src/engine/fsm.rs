@@ -254,27 +254,117 @@ impl Template {
             }
         }
 
-        // Implicit Record on EOF
-        if let Some(record) = record_buffer.emit(&self.values) {
-            if want_debug {
-                if let Some(d) = debug.as_mut() {
-                    d.records.push(EmittedRecord {
-                        line_idx: lines.len(),
-                        record: record.clone(),
-                    });
+        // EOF handling: check for explicit EOF state
+        if let Some(eof_rules) = self.states.get("EOF") {
+            if eof_rules.is_empty() {
+                // Explicit EOF state with zero rules: suppress implicit record emission
+                // (do nothing)
+            } else {
+                // Explicit EOF state with rules: execute those rules once
+                // Treat EOF as an empty pseudo-line
+                let eof_line = "";
+                for (_rule_idx, rule) in eof_rules.iter().enumerate() {
+                    if let Some(caps) = rule.regex.captures(eof_line) {
+                        let mut capture_spans: Vec<CaptureSpan> = Vec::new();
 
-                    // Record trace event for EOF record emission
-                    let trace_event = TraceEvent {
-                        line_idx: lines.len(),
-                        state_before: current_state.clone(),
-                        state_after: current_state.clone(),
-                        variables: record_buffer.current_values(&self.values),
-                        event_type: TraceEventType::RecordEmitted,
-                    };
-                    d.trace.push(trace_event);
+                        // Capture named groups into record buffer
+                        for name in rule.regex.capture_names().flatten() {
+                            if let Some(m) = caps.name(name) {
+                                let def = self.values.get(name);
+                                let is_list = def.map(|v| v.list).unwrap_or(false);
+                                record_buffer.insert(name.to_string(), m.as_str().to_string(), is_list);
+
+                                if want_debug {
+                                    let typed = convert_scalar(m.as_str(), def.and_then(|v| v.type_hint));
+                                    capture_spans.push(CaptureSpan {
+                                        name: name.to_string(),
+                                        start_byte: m.start(),
+                                        end_byte: m.end(),
+                                        raw: m.as_str().to_string(),
+                                        typed,
+                                        is_list,
+                                    });
+                                }
+                            }
+                        }
+
+                        // Handle record action
+                        match rule.record_action {
+                            Action::Record => {
+                                if let Some(record) = record_buffer.emit(&self.values) {
+                                    if want_debug {
+                                        if let Some(d) = debug.as_mut() {
+                                            d.records.push(EmittedRecord {
+                                                line_idx: lines.len(),
+                                                record: record.clone(),
+                                            });
+                                        }
+                                    }
+                                    results.push(record);
+                                }
+                            }
+                            Action::Clear => {
+                                record_buffer.clear_non_filldown(&self.values);
+                            }
+                            Action::ClearAll => {
+                                record_buffer.clear_all();
+                            }
+                            Action::Error => {
+                                return Err(ScraperError::Parse(
+                                    "TextFSM Error action triggered at EOF".to_string()
+                                ));
+                            }
+                            _ => {}
+                        }
+
+                        // Record successful match for EOF
+                        if want_debug {
+                            if let Some(d) = debug.as_mut() {
+                                let trace_event = TraceEvent {
+                                    line_idx: lines.len(),
+                                    state_before: "EOF".to_string(),
+                                    state_after: "EOF".to_string(),
+                                    variables: record_buffer.current_values(&self.values),
+                                    event_type: if rule.record_action == Action::Record {
+                                        TraceEventType::RecordEmitted
+                                    } else if matches!(rule.record_action, Action::Clear | Action::ClearAll) {
+                                        TraceEventType::RecordCleared
+                                    } else {
+                                        TraceEventType::LineProcessed
+                                    },
+                                };
+                                d.trace.push(trace_event);
+                            }
+                        }
+
+                        // EOF rules don't support Continue or state transitions
+                        break;
+                    }
                 }
             }
-            results.push(record);
+        } else {
+            // No explicit EOF state: use implicit EOF record emission
+            if let Some(record) = record_buffer.emit(&self.values) {
+                if want_debug {
+                    if let Some(d) = debug.as_mut() {
+                        d.records.push(EmittedRecord {
+                            line_idx: lines.len(),
+                            record: record.clone(),
+                        });
+
+                        // Record trace event for EOF record emission
+                        let trace_event = TraceEvent {
+                            line_idx: lines.len(),
+                            state_before: current_state.clone(),
+                            state_after: current_state.clone(),
+                            variables: record_buffer.current_values(&self.values),
+                            event_type: TraceEventType::RecordEmitted,
+                        };
+                        d.trace.push(trace_event);
+                    }
+                }
+                results.push(record);
+            }
         }
 
         Ok(results)

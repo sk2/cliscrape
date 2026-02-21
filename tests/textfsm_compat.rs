@@ -73,3 +73,33 @@ Start
         "error should mention undefined macro missing_macro, got: {msg}"
     );
 }
+
+#[test]
+fn explicit_eof_empty_suppresses_implicit_record() {
+    let parser = FsmParser::from_file("tests/fixtures/textfsm/explicit_eof_empty.textfsm")
+        .expect("fixture template should load");
+
+    // Without explicit empty EOF, this would emit 1 record at EOF
+    // With explicit empty EOF, no record should be emitted
+    let input = "Data value";
+    let results = parser.parse(input).expect("parse should succeed");
+    assert_eq!(
+        results.len(),
+        0,
+        "explicit empty EOF state should suppress implicit EOF record"
+    );
+}
+
+#[test]
+fn explicit_eof_rules_execute_once() {
+    let parser = FsmParser::from_file("tests/fixtures/textfsm/explicit_eof_rules.textfsm")
+        .expect("fixture template should load");
+
+    // EOF rule matches empty string and records
+    let input = "Item 1\nItem 2\nItem 3";
+    let results = parser.parse(input).expect("parse should succeed");
+
+    // Should emit one record at EOF containing the last captured COUNT
+    assert_eq!(results.len(), 1, "EOF rules should execute once at end of input");
+    assert_eq!(results[0]["COUNT"], serde_json::json!(3));
+}
