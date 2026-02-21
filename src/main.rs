@@ -8,6 +8,7 @@ use anyhow::Context;
 use clap::Parser;
 use cliscrape::FsmParser;
 use dialoguer::{theme::ColorfulTheme, Confirm, Input, Select};
+use std::collections::HashSet;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
@@ -95,12 +96,6 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
             format,
             quiet: _,
         } => {
-            if !input_glob.is_empty() {
-                anyhow::bail!(
-                    "--input-glob is recognized but not implemented yet; expand globs in your shell or pass repeated --input"
-                );
-            }
-
             // Template resolution: path vs identifier
             let template_path = resolve_template_spec(&template, template_format)?;
 
@@ -140,47 +135,48 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
                 eprintln!("Warning ({}): {}", warning.kind, warning.message);
             }
 
-            let mut input_paths = Vec::new();
-            input_paths.extend(inputs);
-            input_paths.extend(input);
+            // Resolve multi-input: files + globs + stdin
+            let input_sources = resolve_input_sources(&inputs, &input, &input_glob, stdin)?;
 
-            let use_stdin = stdin || input_paths.is_empty();
+            // Fail-fast parsing: collect all records before writing to stdout
+            let mut all_results = Vec::new();
+            let mut all_transcript_warnings = Vec::new();
 
-            let mut results = Vec::new();
+            for source in &input_sources {
+                let content = match source {
+                    InputSource::Stdin => {
+                        let mut buffer = String::new();
+                        io::stdin()
+                            .read_to_string(&mut buffer)
+                            .context("Failed to read input from stdin")?;
+                        buffer
+                    }
+                    InputSource::File(path) => std::fs::read_to_string(path)
+                        .with_context(|| format!("Failed to read input from {}", path.display()))?,
+                };
 
-            if use_stdin {
-                let mut buffer = String::new();
-                io::stdin()
-                    .read_to_string(&mut buffer)
-                    .context("Failed to read input from stdin")?;
+                let (blocks, transcript_warnings) =
+                    transcript::preprocess_ios_transcript_with_warnings(&content);
+                all_transcript_warnings.extend(transcript_warnings);
 
-                let blocks = transcript::preprocess_ios_transcript(&buffer);
-                for (idx, block) in blocks.iter().enumerate() {
-                    let mut parsed = parser
-                        .parse(block)
-                        .with_context(|| format!("Failed to parse stdin block {}", idx + 1))?;
-                    results.append(&mut parsed);
-                }
-            }
-
-            for path in input_paths {
-                let input_content = std::fs::read_to_string(&path)
-                    .with_context(|| format!("Failed to read input from {}", path.display()))?;
-
-                let blocks = transcript::preprocess_ios_transcript(&input_content);
                 for (idx, block) in blocks.iter().enumerate() {
                     let mut parsed = parser.parse(block).with_context(|| {
                         format!(
-                            "Failed to parse input block {} from {}",
+                            "Failed to parse block {} from {}",
                             idx + 1,
-                            path.display()
+                            source.display()
                         )
                     })?;
-                    results.append(&mut parsed);
+                    all_results.append(&mut parsed);
                 }
             }
 
-            let output = output::serialize(&results, format)?;
+            // Print transcript warnings to stderr
+            for warning in all_transcript_warnings {
+                eprintln!("Warning: {}", warning);
+            }
+
+            let output = output::serialize(&all_results, format)?;
             println!("{}", output);
         }
         Commands::Debug { template, input } => tui::run_debugger(template, input)?,
@@ -358,4 +354,89 @@ fn resolve_template_spec(
             )
         }
     }
+}
+
+#[derive(Debug, Clone)]
+enum InputSource {
+    Stdin,
+    File(PathBuf),
+}
+
+impl InputSource {
+    fn display(&self) -> String {
+        match self {
+            InputSource::Stdin => "<stdin>".to_string(),
+            InputSource::File(p) => p.display().to_string(),
+        }
+    }
+}
+
+/// Resolve final input sources: combine positional inputs, --input, --input-glob, and stdin
+fn resolve_input_sources(
+    positional: &[PathBuf],
+    repeatable_inputs: &[PathBuf],
+    globs: &[String],
+    explicit_stdin: bool,
+) -> anyhow::Result<Vec<InputSource>> {
+    let mut file_paths = HashSet::new();
+
+    // Add positional inputs
+    for p in positional {
+        file_paths.insert(p.clone());
+    }
+
+    // Add repeatable --input
+    for p in repeatable_inputs {
+        file_paths.insert(p.clone());
+    }
+
+    // Expand --input-glob patterns
+    for pattern in globs {
+        let matches: Vec<_> = glob::glob(pattern)
+            .with_context(|| format!("Invalid glob pattern: {}", pattern))?
+            .collect::<Result<Vec<_>, _>>()
+            .with_context(|| format!("Failed to expand glob pattern: {}", pattern))?;
+
+        if matches.is_empty() {
+            anyhow::bail!("Glob pattern matched no files: {}", pattern);
+        }
+
+        for path in matches {
+            file_paths.insert(path);
+        }
+    }
+
+    let mut sources: Vec<InputSource> = file_paths
+        .into_iter()
+        .map(InputSource::File)
+        .collect();
+
+    // Sort file sources deterministically
+    sources.sort_by(|a, b| match (a, b) {
+        (InputSource::File(p1), InputSource::File(p2)) => p1.cmp(p2),
+        _ => std::cmp::Ordering::Equal,
+    });
+
+    // Determine if stdin should be included
+    let include_stdin = if explicit_stdin {
+        true
+    } else if sources.is_empty() {
+        // No explicit inputs: include stdin if it's not a TTY
+        use std::io::IsTerminal;
+        !io::stdin().is_terminal()
+    } else {
+        false
+    };
+
+    if include_stdin {
+        // Process stdin last
+        sources.push(InputSource::Stdin);
+    }
+
+    // Error if final input set is empty
+    if sources.is_empty() {
+        anyhow::bail!("No input sources specified (use files, --stdin, or pipe input)");
+    }
+
+    Ok(sources)
 }
