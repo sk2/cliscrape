@@ -91,6 +91,7 @@ impl Template {
         while line_idx < lines.len() {
             let line = lines[line_idx];
             let mut rule_idx = 0;
+            let state_before = current_state.clone();
 
             loop {
                 let rules = self.states.get(&current_state).ok_or_else(|| {
@@ -184,6 +185,31 @@ impl Template {
                         return Ok(results);
                     }
 
+                    // Record trace event after all actions for this match
+                    if want_debug {
+                        if let Some(d) = debug.as_mut() {
+                            // Determine event type based on state change and actions
+                            let event_type = if rule.record_action == Action::Record {
+                                TraceEventType::RecordEmitted
+                            } else if rule.record_action == Action::Clear {
+                                TraceEventType::RecordCleared
+                            } else if state_after != state_before {
+                                TraceEventType::StateChange
+                            } else {
+                                TraceEventType::LineProcessed
+                            };
+
+                            let trace_event = TraceEvent {
+                                line_idx,
+                                state_before: state_before.clone(),
+                                state_after: state_after.clone(),
+                                variables: record_buffer.current_values(&self.values),
+                                event_type,
+                            };
+                            d.trace.push(trace_event);
+                        }
+                    }
+
                     // Handle line action
                     if rule.line_action == Action::Continue {
                         // Move to next rule. If state changed, restart from 0
@@ -213,6 +239,16 @@ impl Template {
                         line_idx: lines.len(),
                         record: record.clone(),
                     });
+
+                    // Record trace event for EOF record emission
+                    let trace_event = TraceEvent {
+                        line_idx: lines.len(),
+                        state_before: current_state.clone(),
+                        state_after: current_state.clone(),
+                        variables: record_buffer.current_values(&self.values),
+                        event_type: TraceEventType::RecordEmitted,
+                    };
+                    d.trace.push(trace_event);
                 }
             }
             results.push(record);

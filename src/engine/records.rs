@@ -101,6 +101,32 @@ impl RecordBuffer {
     pub fn get_buffer(&self) -> &HashMap<String, Vec<String>> {
         &self.buffer
     }
+
+    /// Returns the current variable values as a snapshot for trace events.
+    /// Converts raw string buffers to typed JSON values based on value definitions.
+    pub fn current_values(
+        &self,
+        values: &HashMap<String, Value>,
+    ) -> HashMap<String, serde_json::Value> {
+        let mut snapshot = HashMap::new();
+        for (name, val_def) in values {
+            if let Some(vals) = self.buffer.get(name) {
+                if val_def.list {
+                    snapshot.insert(
+                        name.clone(),
+                        serde_json::Value::Array(
+                            vals.iter()
+                                .map(|s| convert_scalar(s, val_def.type_hint))
+                                .collect(),
+                        ),
+                    );
+                } else if let Some(v) = vals.last() {
+                    snapshot.insert(name.clone(), convert_scalar(v, val_def.type_hint));
+                }
+            }
+        }
+        snapshot
+    }
 }
 
 #[cfg(test)]
