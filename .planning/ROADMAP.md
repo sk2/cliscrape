@@ -23,7 +23,7 @@
 
 - `{{mac_address}}` should match both colon-separated (`aa:bb:cc:dd:ee:ff`) and dotted (`aabb.ccdd.eeff`) formats, based on patterns used across ntc-templates (Cisco/Arista/Juniper).
 
-## Phase 2: Legacy Compatibility & CLI
+## Phase 2: Legacy Compatibility & CLI [COMPLETED]
 **Goal:** Enable parsing of existing TextFSM templates via a standard Unix-style CLI.
 
 - **Requirements:** CORE-02, FORM-01, CLI-01
@@ -33,10 +33,16 @@
     2. Parser correctly handles `Filldown` and `Required` values from standard `ntc-templates`.
     3. Piped input (e.g., `cat output.txt | cliscrape parse`) produces correct structured data.
 
-**Plans:** 3 plans
-- [ ] 02-01-PLAN.md — TextFSM DSL Parser (Pest)
-- [ ] 02-02-PLAN.md — CLI & Input Stream Handling
-- [ ] 02-03-PLAN.md — Serialization & EOF Nuances
+**Plans:** 9 plans (01-04 superseded, 05-09 executed)
+- [x] 02-01-PLAN.md — TextFSM DSL Parser (Pest) [superseded]
+- [x] 02-02-PLAN.md — CLI & Input Stream Handling [superseded]
+- [x] 02-03-PLAN.md — Serialization & EOF Nuances [superseded]
+- [x] 02-04-PLAN.md — [superseded]
+- [x] 02-05-PLAN.md — Phase-2 parse CLI contract + flag wiring
+- [x] 02-06-PLAN.md — TextFSM action support (ClearAll, Error) + warnings API
+- [x] 02-07-PLAN.md — TextFSM EOF semantics + comment support + strict validation
+- [x] 02-08-PLAN.md — Verification gap closure + unknown flag/action warnings
+- [x] 02-09-PLAN.md — CLI parse e2e tests + fixtures
 
 ## Phase 3: Modern Ergonomic Templates [COMPLETED]
 **Goal:** Support YAML/TOML template formats with automatic type conversion and basic prompt handling.
@@ -88,7 +94,7 @@
 | Phase | Description | Status | Progress |
 |-------|-------------|--------|----------|
 | 1 | Core Parsing Engine | Complete | 100% |
-| 2 | Legacy Compatibility & CLI | Active | 0% |
+| 2 | Legacy Compatibility & CLI | Complete | 100% |
 | 3 | Modern Ergonomic Templates | Complete | 100% |
-| 4 | TUI Debugger Foundation | Pending | 0% |
+| 4 | TUI Debugger Foundation | Complete | 100% |
 | 5 | TUI Advanced Debugging | Pending | 0% |
