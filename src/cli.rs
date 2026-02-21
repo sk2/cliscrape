@@ -6,6 +6,10 @@ use std::path::PathBuf;
 #[command(about = "High-performance CLI scraping and parsing tool", long_about = None)]
 #[command(version)]
 pub struct Cli {
+    /// Error output format
+    #[arg(long, value_enum, default_value_t = ErrorFormat::Human, global = true)]
+    pub error_format: ErrorFormat,
+
     #[command(subcommand)]
     pub command: Commands,
 }
@@ -14,20 +18,37 @@ pub struct Cli {
 pub enum Commands {
     /// Parse a raw text file using a template
     Parse {
-        /// Path to the template file (.textfsm, .yaml/.yml, .toml)
-        #[arg(short, long)]
-        template: PathBuf,
+        /// Template spec (path or identifier)
+        #[arg(short, long, value_name = "TEMPLATE")]
+        template: String,
 
         /// Override template format selection (default: auto from extension)
         #[arg(long, value_enum, default_value_t = TemplateFormat::Auto)]
         template_format: TemplateFormat,
 
-        /// Path to the raw input file (uses stdin if omitted)
-        input: Option<PathBuf>,
+        /// Input paths (0+)
+        #[arg(value_name = "INPUTS", num_args = 0..)]
+        inputs: Vec<PathBuf>,
+
+        /// Add an input path (repeatable)
+        #[arg(long, value_name = "PATH")]
+        input: Vec<PathBuf>,
+
+        /// Add an input glob pattern (repeatable; expanded by app code)
+        #[arg(long, value_name = "PATTERN")]
+        input_glob: Vec<String>,
+
+        /// Include stdin as an input source (in addition to file inputs)
+        #[arg(long)]
+        stdin: bool,
 
         /// Output format
-        #[arg(short, long, value_enum, default_value_t = OutputFormat::Json)]
+        #[arg(short, long, value_enum, default_value_t = OutputFormat::Auto)]
         format: OutputFormat,
+
+        /// Suppress the success status line (warnings still print)
+        #[arg(long)]
+        quiet: bool,
     },
     /// Launch the TUI debugger
     Debug {
@@ -74,12 +95,22 @@ pub enum TemplateFormat {
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 pub enum OutputFormat {
+    /// Auto-select output format
+    Auto,
     /// JSON output
     Json,
     /// CSV output (placeholder)
     Csv,
     /// Table output (placeholder)
     Table,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+pub enum ErrorFormat {
+    /// Human-readable error messages
+    Human,
+    /// Machine-readable JSON error objects
+    Json,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]

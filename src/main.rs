@@ -18,42 +18,75 @@ fn main() -> anyhow::Result<()> {
         Commands::Parse {
             template,
             template_format,
+            inputs,
             input,
+            input_glob,
+            stdin,
             format,
+            quiet: _,
         } => {
+            if !input_glob.is_empty() {
+                anyhow::bail!(
+                    "--input-glob is recognized but not implemented yet; expand globs in your shell or pass repeated --input"
+                );
+            }
+
+            let template_path = PathBuf::from(&template);
             let parser = match template_format {
-                CliTemplateFormat::Auto => FsmParser::from_file(&template),
-                CliTemplateFormat::Textfsm => {
-                    FsmParser::from_file_with_format(&template, cliscrape::TemplateFormat::Textfsm)
-                }
-                CliTemplateFormat::Yaml => {
-                    FsmParser::from_file_with_format(&template, cliscrape::TemplateFormat::Yaml)
-                }
-                CliTemplateFormat::Toml => {
-                    FsmParser::from_file_with_format(&template, cliscrape::TemplateFormat::Toml)
+                CliTemplateFormat::Auto => FsmParser::from_file(&template_path),
+                CliTemplateFormat::Textfsm => FsmParser::from_file_with_format(
+                    &template_path,
+                    cliscrape::TemplateFormat::Textfsm,
+                ),
+                CliTemplateFormat::Yaml => FsmParser::from_file_with_format(
+                    &template_path,
+                    cliscrape::TemplateFormat::Yaml,
+                ),
+                CliTemplateFormat::Toml => FsmParser::from_file_with_format(
+                    &template_path,
+                    cliscrape::TemplateFormat::Toml,
+                ),
+            }
+            .with_context(|| format!("Failed to load template from {}", template_path.display()))?;
+
+            let mut input_paths = Vec::new();
+            input_paths.extend(inputs);
+            input_paths.extend(input);
+
+            let use_stdin = stdin || input_paths.is_empty();
+
+            let mut results = Vec::new();
+
+            if use_stdin {
+                let mut buffer = String::new();
+                io::stdin()
+                    .read_to_string(&mut buffer)
+                    .context("Failed to read input from stdin")?;
+
+                let blocks = transcript::preprocess_ios_transcript(&buffer);
+                for (idx, block) in blocks.iter().enumerate() {
+                    let mut parsed = parser
+                        .parse(block)
+                        .with_context(|| format!("Failed to parse stdin block {}", idx + 1))?;
+                    results.append(&mut parsed);
                 }
             }
-            .with_context(|| format!("Failed to load template from {:?}", template))?;
 
-            let input_content = match input {
-                Some(path) => std::fs::read_to_string(&path)
-                    .with_context(|| format!("Failed to read input from {:?}", path))?,
-                None => {
-                    let mut buffer = String::new();
-                    io::stdin()
-                        .read_to_string(&mut buffer)
-                        .context("Failed to read input from stdin")?;
-                    buffer
+            for path in input_paths {
+                let input_content = std::fs::read_to_string(&path)
+                    .with_context(|| format!("Failed to read input from {}", path.display()))?;
+
+                let blocks = transcript::preprocess_ios_transcript(&input_content);
+                for (idx, block) in blocks.iter().enumerate() {
+                    let mut parsed = parser.parse(block).with_context(|| {
+                        format!(
+                            "Failed to parse input block {} from {}",
+                            idx + 1,
+                            path.display()
+                        )
+                    })?;
+                    results.append(&mut parsed);
                 }
-            };
-
-            let blocks = transcript::preprocess_ios_transcript(&input_content);
-            let mut results = Vec::new();
-            for (idx, block) in blocks.iter().enumerate() {
-                let mut parsed = parser
-                    .parse(block)
-                    .with_context(|| format!("Failed to parse input block {}", idx + 1))?;
-                results.append(&mut parsed);
             }
 
             let output = output::serialize(&results, format)?;

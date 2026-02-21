@@ -11,6 +11,11 @@ pub fn serialize(results: &[HashMap<String, Value>], format: OutputFormat) -> Re
     }
 
     match format {
+        OutputFormat::Auto => {
+            // Default auto behavior to JSON for now; higher-level CLI may
+            // later choose based on tty/output destination.
+            serde_json::to_string_pretty(results).context("Failed to serialize to JSON")
+        }
         OutputFormat::Json => {
             serde_json::to_string_pretty(results).context("Failed to serialize to JSON")
         }
