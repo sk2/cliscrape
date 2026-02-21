@@ -3,14 +3,15 @@ mod output;
 mod transcript;
 mod tui;
 
-use crate::cli::{Cli, Commands, ErrorFormat, TemplateFormat as CliTemplateFormat};
+use crate::cli::{Cli, Commands, ErrorFormat, OutputFormat, TemplateFormat as CliTemplateFormat};
 use anyhow::Context;
 use clap::Parser;
 use cliscrape::FsmParser;
 use dialoguer::{theme::ColorfulTheme, Confirm, Input, Select};
 use std::collections::HashSet;
-use std::io::{self, Read, Write};
+use std::io::{self, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 fn main() {
     // Pre-scan argv for --error-format to honor it even during clap parsing failures
@@ -94,8 +95,9 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
             input_glob,
             stdin,
             format,
-            quiet: _,
+            quiet,
         } => {
+            let start_time = Instant::now();
             // Template resolution: path vs identifier
             let template_path = resolve_template_spec(&template, template_format)?;
 
@@ -176,8 +178,30 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
                 eprintln!("Warning: {}", warning);
             }
 
-            let output = output::serialize(&all_results, format)?;
+            // Resolve format=auto based on TTY
+            let final_format = if format == OutputFormat::Auto {
+                if io::stdout().is_terminal() {
+                    OutputFormat::Table
+                } else {
+                    OutputFormat::Json
+                }
+            } else {
+                format
+            };
+
+            let output = output::serialize(&all_results, final_format)?;
             println!("{}", output);
+
+            // Print success status to stderr (unless --quiet)
+            if !quiet {
+                let duration = start_time.elapsed();
+                eprintln!(
+                    "Parsed {} record(s) from {} source(s) in {:.2}s",
+                    all_results.len(),
+                    input_sources.len(),
+                    duration.as_secs_f64()
+                );
+            }
         }
         Commands::Debug { template, input } => tui::run_debugger(template, input)?,
 

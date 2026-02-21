@@ -1,0 +1,8 @@
+version = 1
+
+[fields]
+hostname = { type = "string" }
+
+[[patterns]]
+regex = '^Hostname:\s+(?P<hostname>\S+)$'
+record = true
