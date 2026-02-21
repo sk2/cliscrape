@@ -67,8 +67,11 @@ fn expand_string(
             let expanded = resolve_macro(name, macros, cache, stack, depth + 1, max_depth)?;
             out.push_str(&expanded);
         } else {
-            // Preserve unknown macros verbatim.
-            out.push_str(m.as_str());
+            // Unknown macro is an error during template load
+            return Err(ScraperError::Parse(format!(
+                "Unknown macro '{{{{{}}}}}' - macros must be defined before use",
+                name
+            )));
         }
 
         last = m.end();

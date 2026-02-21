@@ -35,3 +35,41 @@ fn clear_preserves_filldown_and_clearall_clears_it() {
     assert_eq!(results[2]["CHASSIS"], serde_json::json!(""));
     assert_eq!(results[2]["SLOT"], serde_json::json!(3));
 }
+
+#[test]
+fn undefined_placeholder_errors_at_template_load() {
+    let template = r#"Value INTERFACE (\S+)
+
+Start
+  ^Interface ${INTERFACE} status ${MISSING}
+"#;
+
+    use cliscrape::template::loader::TextFsmLoader;
+    use cliscrape::engine::Template;
+    let ir = TextFsmLoader::parse_str(template).expect("parse should succeed");
+    let err = Template::from_ir(ir).expect_err("template with undefined placeholder should error");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("${MISSING}") || msg.contains("MISSING"),
+        "error should mention undefined placeholder MISSING, got: {msg}"
+    );
+}
+
+#[test]
+fn undefined_macro_errors_at_template_load() {
+    let template = r#"Value INTERFACE (\S+)
+
+Start
+  ^Interface ${INTERFACE} is {{missing_macro}}
+"#;
+
+    use cliscrape::template::loader::TextFsmLoader;
+    use cliscrape::engine::Template;
+    let ir = TextFsmLoader::parse_str(template).expect("parse should succeed");
+    let err = Template::from_ir(ir).expect_err("template with undefined macro should error");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("missing_macro") || msg.contains("Unknown macro"),
+        "error should mention undefined macro missing_macro, got: {msg}"
+    );
+}

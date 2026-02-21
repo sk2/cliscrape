@@ -33,6 +33,19 @@ impl Template {
                     final_regex_str = final_regex_str.replace(&placeholder, &replacement);
                 }
 
+                // 2b. Validate no undefined tokens remain
+                static LEFTOVER_TOKEN_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+                let token_re = LEFTOVER_TOKEN_RE.get_or_init(|| {
+                    regex::Regex::new(r"\$\{([^}]+)\}|\{\{([^}]+)\}\}").unwrap()
+                });
+                if let Some(cap) = token_re.captures(&final_regex_str) {
+                    let token = cap.get(0).unwrap().as_str();
+                    return Err(ScraperError::Parse(format!(
+                        "Undefined token '{}' in state '{}' - all placeholders and macros must be defined",
+                        token, state_name
+                    )));
+                }
+
                 // 3. Compile regex
                 let regex = Regex::new(&final_regex_str).map_err(|e| {
                     ScraperError::Parse(format!(
