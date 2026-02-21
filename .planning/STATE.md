@@ -9,11 +9,11 @@
 ## Current Position
 
 **Active Phase:** Phase 5: TUI Advanced Debugging - State Tracer
-**Active Plan:** 05-01 complete (1/4)
+**Active Plan:** 05-02 complete (2/4)
 **Status:** ✅ In progress
 
 **Progress:**
-`[█████░░░░░░░░░░░░░░░] 25%` (05-01 complete; next: 05-02)
+[█████████░] 91%
 
 ## Performance Metrics
 
@@ -40,6 +40,8 @@
 - **Live Lab Keymap:** Tab toggles Matches/Records view; `[ ]` / `h l` / left-right cycles match/record selection.
 - **Highlight Safety:** Capture span rendering uses byte offsets with UTF-8 boundary checks; invalid spans are skipped and surfaced as warnings.
 - **Trace Variable Snapshots:** Full variable snapshots per trace event (not delta encoding) for initial simplicity; optimize only if profiling shows memory issues with real-world templates.
+- **Default Stepping Mode:** LineByLine for most granular visibility (users can switch to coarser StateByState or ActionByAction modes).
+- **Default Filter State:** Show all event types (visibility-first approach; users can hide events if needed).
 
 ### Todos
 - [x] Create engine module structure
@@ -63,6 +65,6 @@
 
 ## Session Continuity
 
-**Last Session:** 2026-02-21T03:34:31.271Z
-**Stopped at:** Completed 05-01-PLAN.md
+**Last Session:** 2026-02-21T03:40:01.571Z
+**Stopped at:** Completed 05-02-PLAN.md
 **Resume file:** None
