@@ -277,6 +277,46 @@ fn handle_key_browse(app: &mut AppState, key: crossterm::event::KeyEvent) -> boo
             app.enter_edit_template();
             false
         }
+        // State Tracer stepping controls
+        KeyCode::PageDown => {
+            app.step_forward();
+            false
+        }
+        KeyCode::PageUp => {
+            app.step_backward();
+            false
+        }
+        // State Tracer jump controls (Ctrl+N/P for next/previous Record)
+        KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            app.jump_to_next_record();
+            false
+        }
+        KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            app.jump_to_previous_record();
+            false
+        }
+        // State Tracer mode toggle
+        KeyCode::Char('m') => {
+            app.toggle_stepping_mode();
+            false
+        }
+        // State Tracer filter toggles
+        KeyCode::F(1) => {
+            app.toggle_filter_line_events();
+            false
+        }
+        KeyCode::F(2) => {
+            app.toggle_filter_state_changes();
+            false
+        }
+        KeyCode::F(3) => {
+            app.toggle_filter_record_actions();
+            false
+        }
+        KeyCode::F(4) => {
+            app.toggle_filter_clear_actions();
+            false
+        }
         _ => false,
     }
 }
