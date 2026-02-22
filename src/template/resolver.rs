@@ -20,12 +20,20 @@ use xdg::BaseDirectories;
 use super::library;
 
 /// Template source location
-#[derive(Debug)]
 pub enum TemplateSource {
     /// Template from XDG user directory
     UserFile(PathBuf),
     /// Template from embedded resources
     Embedded(EmbeddedFile),
+}
+
+impl std::fmt::Debug for TemplateSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TemplateSource::UserFile(path) => f.debug_tuple("UserFile").field(path).finish(),
+            TemplateSource::Embedded(_) => f.debug_tuple("Embedded").field(&"<embedded>").finish(),
+        }
+    }
 }
 
 /// Validate template name for security
@@ -125,7 +133,7 @@ impl TemplateResolver {
     /// - `Ok(TemplateResolver)` if XDG directories can be initialized
     /// - `Err(xdg::BaseDirectoriesError)` if initialization fails
     pub fn new() -> Result<Self, xdg::BaseDirectoriesError> {
-        let xdg = BaseDirectories::with_prefix("cliscrape")?;
+        let xdg = BaseDirectories::with_prefix("cliscrape");
         Ok(TemplateResolver { xdg })
     }
 
