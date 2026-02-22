@@ -1,0 +1,20 @@
+---
+source: tests/validation.rs
+assertion_line: 12
+expression: results
+---
+- model: ""
+  serial: ""
+  version: 9.3(7)
+  hostname: ""
+  uptime: ""
+- serial: 9ABCDEF0123
+  model: Nexus9000 9000v
+  hostname: ""
+  uptime: ""
+  version: ""
+- hostname: NEXUS-DC-CORE-01
+  version: ""
+  model: ""
+  uptime: "234 day(s), 12 hour(s), 45 minute(s), 30 second(s)"
+  serial: ""

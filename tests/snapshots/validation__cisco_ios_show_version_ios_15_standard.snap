@@ -1,0 +1,25 @@
+---
+source: tests/validation.rs
+assertion_line: 12
+expression: results
+---
+- uptime: ""
+  model: ""
+  serial: ""
+  hostname: ""
+  version: "15.0(2)SE11,"
+- version: ""
+  serial: ""
+  model: ""
+  hostname: SW-CORE-01
+  uptime: "5 weeks, 2 days, 3 hours, 45 minutes"
+- uptime: ""
+  serial: FOC1234ABCD
+  version: ""
+  hostname: ""
+  model: WS-C2960-48TT-L
+- uptime: ""
+  model: ""
+  hostname: ""
+  version: ""
+  serial: ":"

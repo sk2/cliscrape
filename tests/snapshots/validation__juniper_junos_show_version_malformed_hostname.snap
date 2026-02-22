@@ -1,8 +1,9 @@
 ---
 source: tests/validation.rs
+assertion_line: 28
 expression: records
 ---
-- model: EX4200-48T
-  hostname: ""
+- serial: ABC1234567
   junos_version: 12.3R12.4
-  serial: ABC1234567
+  hostname: ""
+  model: EX4200-48T

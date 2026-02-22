@@ -1,0 +1,13 @@
+---
+source: tests/validation.rs
+assertion_line: 12
+expression: results
+---
+- hostname: MX-EDGE-01
+  serial: ""
+  junos_version: 12.3R11.2
+  model: mx240
+- junos_version: ""
+  serial: JN1234567890
+  hostname: ""
+  model: ""

@@ -1,9 +1,10 @@
 ---
 source: tests/validation.rs
+assertion_line: 28
 expression: records
 ---
-- model: Nexus9000 C9396PX
+- serial: "InvalidSerialFormat!@#$"
   uptime: "45 days, 12 hours, 30 minutes, 15 seconds"
-  serial: "InvalidSerialFormat!@#$"
-  version: 9.3(7)
   hostname: NX-Switch1
+  model: Nexus9000 C9396PX
+  version: 9.3(7)

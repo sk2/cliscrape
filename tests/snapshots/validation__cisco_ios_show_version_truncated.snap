@@ -1,9 +1,10 @@
 ---
 source: tests/validation.rs
+assertion_line: 28
 expression: records
 ---
-- serial: ""
-  model: ""
+- hostname: Router1
   uptime: "5 weeks, 2 days, 3 hours, 45 minutes"
+  model: ""
   version: "15.0(2)SE11,"
-  hostname: Router1
+  serial: ""

@@ -1,6 +1,17 @@
 use cliscrape::FsmParser;
 use insta::assert_yaml_snapshot;
 
+/// Helper function for positive test cases
+/// Parses fixture input and snapshots the JSON output
+fn test_positive_case(snapshot_name: &str, template_path: &str, fixture_path: &str) {
+    let parser = FsmParser::from_file(template_path).unwrap();
+    let input = std::fs::read_to_string(fixture_path).unwrap();
+    let results = parser.parse(&input).unwrap();
+
+    // Snapshot the JSON output for regression detection
+    assert_yaml_snapshot!(snapshot_name, results);
+}
+
 /// Helper function for negative test cases
 /// Documents parser behavior on malformed/incomplete input via snapshots
 /// Note: Parser may return Ok([]) for incomplete data - this is by design
@@ -21,6 +32,69 @@ fn test_negative_case(snapshot_name: &str, template_path: &str, fixture_path: &s
             assert_yaml_snapshot!(snapshot_name, format!("{:?}", err));
         }
     }
+}
+
+// ============================================================================
+// POSITIVE TEST CASES - Snapshot testing for all embedded templates
+// ============================================================================
+
+// Cisco IOS show version positive tests
+#[test]
+fn test_cisco_ios_show_version_ios_15_standard() {
+    test_positive_case(
+        "cisco_ios_show_version_ios_15_standard",
+        "templates/cisco_ios_show_version.yaml",
+        "tests/fixtures/cisco/ios_show_version/ios_15_standard.txt",
+    );
+}
+
+#[test]
+fn test_cisco_ios_show_version_ios_12_legacy() {
+    test_positive_case(
+        "cisco_ios_show_version_ios_12_legacy",
+        "templates/cisco_ios_show_version.yaml",
+        "tests/fixtures/cisco/ios_show_version/ios_12_legacy.txt",
+    );
+}
+
+// Cisco IOS show interfaces positive tests
+#[test]
+fn test_cisco_ios_show_interfaces_ios_15_standard() {
+    test_positive_case(
+        "cisco_ios_show_interfaces_ios_15_standard",
+        "templates/cisco_ios_show_interfaces.yaml",
+        "tests/fixtures/cisco/ios_show_interfaces/ios_15_standard.txt",
+    );
+}
+
+// Cisco NX-OS show version positive tests
+#[test]
+fn test_cisco_nxos_show_version_nxos_9_standard() {
+    test_positive_case(
+        "cisco_nxos_show_version_nxos_9_standard",
+        "templates/cisco_nxos_show_version.yaml",
+        "tests/fixtures/cisco/nxos_show_version/nxos_9_standard.txt",
+    );
+}
+
+// Juniper JunOS show version positive tests
+#[test]
+fn test_juniper_junos_show_version_junos_12_standard() {
+    test_positive_case(
+        "juniper_junos_show_version_junos_12_standard",
+        "templates/juniper_junos_show_version.yaml",
+        "tests/fixtures/juniper/junos_show_version/junos_12_standard.txt",
+    );
+}
+
+// Arista EOS show version positive tests
+#[test]
+fn test_arista_eos_show_version_eos_4_standard() {
+    test_positive_case(
+        "arista_eos_show_version_eos_4_standard",
+        "templates/arista_eos_show_version.yaml",
+        "tests/fixtures/arista/eos_show_version/eos_4_standard.txt",
+    );
 }
 
 // ============================================================================

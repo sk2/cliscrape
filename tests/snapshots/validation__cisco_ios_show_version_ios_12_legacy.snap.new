@@ -1,0 +1,25 @@
+---
+source: tests/validation.rs
+assertion_line: 12
+expression: results
+---
+- uptime: ""
+  serial: ""
+  hostname: ""
+  version: "12.2(55)SE12,"
+  model: ""
+- uptime: "3 years, 28 weeks, 4 days, 17 hours, 22 minutes"
+  version: ""
+  model: ""
+  hostname: DC-SWITCH-01
+  serial: ""
+- uptime: ""
+  hostname: ""
+  serial: CAT0123X4YZ
+  model: WS-C3560G-24TS
+  version: ""
+- serial: ":"
+  version: ""
+  model: ""
+  hostname: ""
+  uptime: ""
