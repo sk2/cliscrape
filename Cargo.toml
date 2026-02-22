@@ -36,3 +36,7 @@ insta = { version = "1", features = ["yaml", "json"] }
 [[bench]]
 name = "throughput"
 harness = false
+
+[[bench]]
+name = "template_performance"
+harness = false
