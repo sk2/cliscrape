@@ -1,0 +1,28 @@
+metadata:
+  description: "Parse output of 'show version' command"
+  compatibility: "Cisco NX-OS 7.x, 9.x"
+  version: "1.0.0"
+  author: "cliscrape"
+
+version: 1
+
+fields:
+  version:
+    type: string
+  uptime:
+    type: string
+  hostname:
+    type: string
+  serial:
+    type: string
+  model:
+    type: string
+
+patterns:
+  - regex: '^\s+NXOS:\s+version\s+(?P<version>\S+)$'
+  - regex: '^\s+cisco\s+(?P<model>\S+\s+\S+)\s+Chassis'
+  - regex: '^\s+Device name:\s+(?P<hostname>\S+)$'
+  - regex: '^\s+Processor Board ID\s+(?P<serial>\S+)$'
+  - regex: '^.+uptime is (?P<uptime>.+)$'
+  - regex: '^$'
+    record: true

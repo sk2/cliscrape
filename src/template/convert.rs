@@ -72,6 +72,7 @@ pub fn template_ir_to_modern_doc(ir: &TemplateIR) -> ModernTemplateDoc {
         fields,
         states: Some(states),
         patterns: None,
+        metadata: None,
     }
 }
 

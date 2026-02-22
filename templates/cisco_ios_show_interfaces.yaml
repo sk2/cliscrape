@@ -1,0 +1,36 @@
+metadata:
+  description: "Parse output of 'show interfaces' command"
+  compatibility: "Cisco IOS 12.x, 15.x"
+  version: "1.0.0"
+  author: "cliscrape"
+
+version: 1
+
+fields:
+  interface:
+    type: string
+  status:
+    type: string
+  protocol:
+    type: string
+  description:
+    type: string
+  mtu:
+    type: int
+  bandwidth:
+    type: int
+
+states:
+  Start:
+    - regex: '^(?P<interface>\S+) is (?P<status>\S+),.*protocol is (?P<protocol>\S+)$'
+      action:
+        line: next
+    - regex: '^\s+Description: (?P<description>.+)$'
+      action:
+        line: next
+    - regex: '^\s+MTU (?P<mtu>\d+) bytes, BW (?P<bandwidth>\d+) Kbit'
+      action:
+        line: next
+    - regex: '^$'
+      action:
+        record: record

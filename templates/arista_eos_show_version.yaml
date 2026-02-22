@@ -1,0 +1,25 @@
+metadata:
+  description: "Parse output of 'show version' command"
+  compatibility: "Arista EOS 4.x+"
+  version: "1.0.0"
+  author: "cliscrape"
+
+version: 1
+
+fields:
+  version:
+    type: string
+  model:
+    type: string
+  serial:
+    type: string
+  uptime:
+    type: string
+
+patterns:
+  - regex: '^Arista (?P<model>\S+)$'
+  - regex: '^\s*Software image version:\s+(?P<version>\S+)$'
+  - regex: '^\s*System MAC address:\s+\S+\s+Serial number:\s+(?P<serial>\S+)$'
+  - regex: '^.+uptime is (?P<uptime>.+)$'
+  - regex: '^$'
+    record: true

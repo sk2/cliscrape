@@ -1,0 +1,25 @@
+metadata:
+  description: "Parse output of 'show version' command"
+  compatibility: "Junos OS 12.x+"
+  version: "1.0.0"
+  author: "cliscrape"
+
+version: 1
+
+fields:
+  hostname:
+    type: string
+  model:
+    type: string
+  junos_version:
+    type: string
+  serial:
+    type: string
+
+patterns:
+  - regex: '^Hostname:\s+(?P<hostname>\S+)$'
+  - regex: '^Model:\s+(?P<model>.+)$'
+  - regex: '^JUNOS.*\[(?P<junos_version>[^\]]+)\]'
+  - regex: '^Chassis.*:\s+(?P<serial>\S+)$'
+  - regex: '^$'
+    record: true

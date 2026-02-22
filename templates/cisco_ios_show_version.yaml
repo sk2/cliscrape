@@ -1,0 +1,27 @@
+metadata:
+  description: "Parse output of 'show version' command"
+  compatibility: "Cisco IOS 12.x, 15.x, IOS-XE"
+  version: "1.0.0"
+  author: "cliscrape"
+
+version: 1
+
+fields:
+  version:
+    type: string
+  uptime:
+    type: string
+  hostname:
+    type: string
+  serial:
+    type: string
+  model:
+    type: string
+
+patterns:
+  - regex: '^(?P<hostname>\S+) uptime is (?P<uptime>.+)$'
+  - regex: '^Cisco IOS Software,.+Version (?P<version>\S+)'
+  - regex: '^\s*(?:Processor board ID|System serial number)\s+(?P<serial>\S+)'
+  - regex: '^cisco (?P<model>\S+).+processor'
+  - regex: '^$'
+    record: true
