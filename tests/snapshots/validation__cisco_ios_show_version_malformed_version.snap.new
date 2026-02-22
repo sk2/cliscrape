@@ -1,0 +1,10 @@
+---
+source: tests/validation.rs
+assertion_line: 17
+expression: records
+---
+- version: ""
+  model: WS-C2960-48TT-L
+  serial: ""
+  hostname: Router1
+  uptime: "5 weeks, 2 days, 3 hours, 45 minutes"

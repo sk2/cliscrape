@@ -1,0 +1,9 @@
+---
+source: tests/validation.rs
+expression: records
+---
+- uptime: not a valid uptime format
+  model: WS-C2960-48TT-L
+  version: "15.0(2)SE11,"
+  serial: ""
+  hostname: Router1

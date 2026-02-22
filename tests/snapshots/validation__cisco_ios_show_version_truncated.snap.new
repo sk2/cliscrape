@@ -1,0 +1,10 @@
+---
+source: tests/validation.rs
+assertion_line: 17
+expression: records
+---
+- model: ""
+  version: "15.0(2)SE11,"
+  uptime: "5 weeks, 2 days, 3 hours, 45 minutes"
+  serial: ""
+  hostname: Router1

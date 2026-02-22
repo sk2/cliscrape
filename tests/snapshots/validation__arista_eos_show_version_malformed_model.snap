@@ -1,0 +1,8 @@
+---
+source: tests/validation.rs
+expression: records
+---
+- model: ""
+  version: 4.22.0F
+  uptime: "15 weeks, 3 days, 8 hours, 22 minutes"
+  serial: JPE12345678

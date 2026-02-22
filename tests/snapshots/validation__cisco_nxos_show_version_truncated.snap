@@ -1,0 +1,9 @@
+---
+source: tests/validation.rs
+expression: records
+---
+- hostname: NX-Switch1
+  uptime: ""
+  version: 9.3(7)
+  serial: JAE12345678
+  model: ""

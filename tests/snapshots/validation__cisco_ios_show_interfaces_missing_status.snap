@@ -1,0 +1,10 @@
+---
+source: tests/validation.rs
+expression: records
+---
+- description: Invalid interface format
+  status: ""
+  mtu: 1500
+  interface: ""
+  protocol: ""
+  bandwidth: 1000000
