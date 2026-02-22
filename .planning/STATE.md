@@ -4,16 +4,17 @@
 
 **Core Value:** Extremely fast, reliable parsing of semi-structured CLI output into structured data, regardless of whether the template is legacy TextFSM or the new ergonomic format.
 
-**Current Focus:** Milestone v0.5 Beta - Connectivity & Templates
+**Current Focus:** Milestone v1.5 - Template Ecosystem & Production Hardening
 
 ## Current Position
 
-**Active Phase:** 02-legacy-compatibility-cli (Legacy Compatibility & CLI)
-**Active Plan:** Completed (9/9 plans)
-**Status:** v1.0 milestone complete
+**Active Phase:** Not started (defining requirements)
+**Active Plan:** —
+**Status:** Defining v1.5 requirements
+**Last Activity:** 2026-02-22 — Milestone v1.5 started
 
 **Progress:**
-[██████████] 100%
+[░░░░░░░░░░] 0%
 
 ## Performance Metrics
 

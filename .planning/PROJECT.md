@@ -22,6 +22,17 @@ The one thing that must work perfectly: **Extremely fast, reliable parsing of se
 **Codebase:** 6,970 lines of Rust
 **Test Coverage:** 77 tests passing (51 engine + 9 TUI + 6 CLI e2e + 3 modern + 8 TextFSM compat)
 
+## Current Milestone: v1.5 Template Ecosystem & Production Hardening
+
+**Goal:** Transform cliscrape into a production-ready tool with comprehensive template library and hardened edge case handling.
+
+**Target features:**
+- Pre-built template library for common network devices and commands
+- Template discovery mechanism (reference templates by name without local files)
+- Compatibility validation suite against real device outputs
+- Complete TUI verification and edge case hardening
+- Production-grade error handling, logging, and documentation
+
 ## Requirements
 
 ### Validated
@@ -41,12 +52,19 @@ The one thing that must work perfectly: **Extremely fast, reliable parsing of se
 
 ### Active
 
-**v2.0 (Planned):**
+**v1.5 Template Ecosystem & Production Hardening (Current):**
+- [ ] **Template Library** — Pre-built templates for common devices (Cisco, Juniper, Arista) and commands
+- [ ] **Template Discovery** — Reference templates by name without local file paths
+- [ ] **Compatibility Validation** — Automated testing against real device outputs
+- [ ] **TUI Verification** — Complete Phase 4 human testing (7 interactive behaviors)
+- [ ] **Edge Case Handling** — Robust error handling for malformed input, parser errors, memory limits
+- [ ] **Production Logging** — Structured logging with configurable levels
+- [ ] **Documentation** — User guide, template authoring guide, examples, troubleshooting
+
+**v2.0 Connectivity (Future):**
 - [ ] **SSH/Telnet Connectivity** — Direct device connection with command execution
 - [ ] **Interactive Session Management** — Multi-command sessions with prompt handling
 - [ ] **Batch Device Operations** — Parallel execution across device fleets
-- [ ] **ntc-templates Validation Suite** — Automated compatibility testing
-- [ ] **Template Library & Discovery** — Built-in templates by device/command
 
 ### Out of Scope
 
@@ -76,4 +94,4 @@ The one thing that must work perfectly: **Extremely fast, reliable parsing of se
 - **Read-Only:** Parse command outputs only; no configuration management or device changes
 
 ---
-*Last updated: 2026-02-22 after v1.0 MVP milestone*
+*Last updated: 2026-02-22 after v1.5 milestone initialization*
