@@ -1,480 +1,365 @@
-# Feature Landscape: cliscrape v0.1 Alpha
+# Feature Research
 
-**Project:** cliscrape - CLI parsing tool for network devices
-**Milestone:** v0.1 Alpha (FSM Engine, TextFSM Compat, TUI Debugger, Modern Formats)
-**Researched:** 2026-02-17
-**Overall Confidence:** HIGH
+**Domain:** CLI Parsing Tool Ecosystem (Template Library, Discovery, Validation, Logging, Documentation)
+**Researched:** 2026-02-22
+**Confidence:** HIGH
 
-## Executive Summary
+## Feature Landscape
 
-v0.1 Alpha focuses on four core capabilities:
-1. **High-performance FSM Engine** - Zero-copy parsing, thread-safe, sub-millisecond execution
-2. **Full TextFSM Compatibility** - Support all ntc-templates (1000+ existing templates)
-3. **TUI Debugger** - Template development workflow (biggest user pain point)
-4. **Modern YAML/TOML Format** - Ergonomic alternative to TextFSM DSL
+This research focuses on the **v1.5 milestone features**: template library, discovery mechanism, validation testing, production logging, and documentation. The existing v1.0 CLI parser and TUI debugger are already built and shipped.
 
-This document maps features by phase with complexity estimates, dependencies, and user workflow justification.
+### Table Stakes (Users Expect These)
 
----
+Features users assume exist. Missing these = product feels incomplete.
 
-## Phase 1: FSM Engine Features
-
-The engine must be **faster than Python TextFSM** and **correct** for all TextFSM edge cases.
-
-### Table Stakes (Must Have)
-
-| Feature | Complexity | Dependencies | User Workflow |
-|---------|-----------|--------------|---------------|
-| **Line-by-line state machine execution** | Medium | None | Core parsing loop: process CLI output incrementally |
-| **Regex compilation cache** | Low | None | Performance: compile once, use many times (10-100x speedup) |
-| **Value capture with named groups** | Low | Regex cache | Extract variables from matched lines |
-| **State transition logic** | Medium | None | Navigate between parsing states based on matches |
-| **Record accumulation** | Low | None | Collect parsed records in memory-efficient structure |
-| **Zero-copy string references** | Medium | None | Performance: use `Cow<'a, str>` to avoid heap allocations |
-
-**Rationale:** These are the minimum viable features for a functioning FSM parser. Without these, the tool cannot parse anything.
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| **Pre-built template library** | Every production parser tool ships with common device/command templates (ntc-templates has 280+ templates, pyATS Genie has 2000+ parsers) | MEDIUM | Vendor organized (cisco_ios, juniper_junos, arista_eos), command-based naming. Start with 10-20 critical templates |
+| **Template discovery by name** | Users expect `cliscrape --template cisco_ios_show_version` not hunting for file paths | MEDIUM | Requires index file mapping platform+command to template, embedded in binary via rust-embed |
+| **Index file for template selection** | Standard in TextFSM ecosystem (ntc-templates/index maps platform+command to template path) | LOW | CSV/YAML format: `Platform,Command,Template`, supports command abbreviations like `sh[[ow]] ver[[sion]]` |
+| **Embedded templates in binary** | Production tools don't require separate template downloads or file path management | LOW | Use rust-embed crate to compile templates into binary at build time |
+| **Template validation testing** | Users trust templates work correctly; pyATS Genie uses schemas for self-testing parsers | MEDIUM | Golden file testing: raw output + expected JSON pairs per template |
+| **Structured logging with levels** | Production tools need controllable log verbosity (ERROR/WARN/INFO/DEBUG/TRACE) | LOW | Standard: RUST_LOG env var + --verbose flags. Use tracing crate |
+| **Error messages for malformed input** | Clear errors when template fails, input malformed, or parser errors | MEDIUM | Show line/column for parsing failures, suggest fixes for common errors |
+| **Basic usage documentation** | Users need quick start guide, examples, and template selection guide | LOW | README + examples directory with common use cases |
 
 ### Differentiators (Competitive Advantage)
 
-| Feature | Complexity | Dependencies | Why Better Than Python TextFSM |
-|---------|-----------|--------------|----------------------------------|
-| **Pre-compiled regex bundles** | Medium | Regex cache | Rust's `RegexSet` allows parallel matching of multiple patterns |
-| **Thread-safe engine instances** | Low | None | Parse multiple outputs concurrently without GIL contention |
-| **Streaming mode for large files** | High | Zero-copy | Handle 50MB+ BGP tables without OOM (circular buffer) |
-| **Instrumentation hooks** | Medium | None | Pluggable tracing for TUI/metrics without performance cost |
+Features that set the product apart. Not required, but valuable.
 
-**Performance targets:**
-- Parse 100k line output in <100ms (vs 1-2s in Python)
-- Support 100+ concurrent parsing jobs
-- Handle files up to 100MB without memory issues
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Template compatibility validation suite** | Automated testing against real device outputs ensures templates work before shipping | HIGH | Snapshot testing framework: CLI output samples + expected results. Run in CI/CD |
+| **Template authoring guide** | Empower users to create templates for unsupported devices/commands | MEDIUM | Document modern YAML format advantages over TextFSM, provide examples, explain FSM concepts |
+| **Modern YAML metadata in templates** | Description, author, version, tags embedded in templates for searchability | LOW | Already have YAML format; add metadata section. ntc-templates lacks this |
+| **Multiple template format support** | Support both .textfsm (legacy) and .yaml/.toml (modern) in library | LOW | Already implemented in v1.0; just populate library with both formats |
+| **Progressive verbosity levels** | `-v` (warnings), `-vv` (info), `-vvv` (debug), `-vvvv` (trace) for granular control | LOW | Standard Rust CLI pattern via clap-verbosity-flag crate |
+| **TUI debugger integration** | Template library accessible from TUI for live testing | MEDIUM | Load embedded templates in TUI mode, combine with existing Live Lab feature |
+| **Troubleshooting documentation** | Common errors, solutions, and debugging workflow guide | MEDIUM | Document FSM state issues, regex debugging, template selection errors |
+| **XDG-compliant user template directory** | Users can add custom templates in ~/.config/cliscrape/templates/ | LOW | Use xdg/directories crate for platform-specific paths |
 
-### Anti-Features (Deliberately Excluded)
+### Anti-Features (Commonly Requested, Often Problematic)
 
-| Anti-Feature | Why NOT Build | What Instead |
-|--------------|---------------|--------------|
-| Dynamic regex compilation at runtime | Kills performance, unsafe | Pre-compile all templates at load time |
-| Global state / singleton engine | Not thread-safe, hard to test | Instance-based design with `Context` |
-| Automatic regex optimization | Complex, unpredictable, marginal gains | Rely on Rust `regex` crate's optimization |
+Features that seem good but create problems.
 
----
-
-## Phase 2: TextFSM Compatibility Features
-
-Must support **99%+ of ntc-templates** without modification. Compatibility = adoption.
-
-### Table Stakes (Must Have)
-
-| Feature | Complexity | Dependencies | ntc-templates Usage |
-|---------|-----------|--------------|---------------------|
-| **Value options: Filldown** | Low | Record accumulation | ~60% of templates use this (carry values forward) |
-| **Value options: Required** | Low | Record validation | ~40% of templates (filter incomplete records) |
-| **Value options: Key** | Low | Record uniqueness | ~20% of templates (deduplicate entries) |
-| **Value options: List** | Medium | Record accumulation | ~15% of templates (multiple matches per record) |
-| **Value options: Fillup** | Medium | Record accumulation | Rare but critical (populate upwards in table) |
-| **Actions: Record** | Low | None | Every template uses this |
-| **Actions: Next** | Low | State transitions | Default action, ~90% of rules |
-| **Actions: Continue** | Medium | Rule processing | ~20% of templates (multi-rule line matching) |
-| **Actions: Clear** | Low | Record reset | ~30% of templates (reset non-Filldown values) |
-| **Actions: Clearall** | Low | Record reset | ~10% of templates (full state reset) |
-| **Actions: Error** | Low | Validation | ~5% of templates (explicit failure on malformed input) |
-| **Reserved states: Start, End, EOF** | Low | State transitions | Every template requires Start |
-
-**Critical edge cases:**
-- **Filldown + List interaction:** List appends, Filldown carries only last value
-- **Continue + state transitions:** Continue cannot transition (loop-free guarantee)
-- **Required + Fillup interaction:** Not allowed (conflict between directions)
-- **Error action:** Discards all records and raises exception (not partial failure)
-
-**Sources:**
-- [TextFSM Wiki](https://github.com/google/textfsm/wiki/TextFSM) (HIGH confidence)
-- [TextFSM template syntax - Python for network engineers](https://pyneng.readthedocs.io/en/latest/book/21_textfsm/textfsm_syntax.html) (HIGH confidence)
-
-### Differentiators (Better Than Python)
-
-| Feature | Complexity | Dependencies | Why Better |
-|---------|-----------|--------------|------------|
-| **Validation at compile-time** | Medium | Template parser | Catch incompatible options (Required + Fillup) before parsing |
-| **Helpful error messages** | Medium | Template parser | Point to exact line/column in template with suggestions |
-| **Regex syntax validation** | Low | `regex` crate | Rust regex is stricter, catch errors early |
-| **Performance profiling hooks** | Low | Instrumentation | Show which rules are slow in TUI debugger |
-
-### Anti-Features
-
-| Anti-Feature | Why NOT Build | What Instead |
-|--------------|---------------|--------------|
-| Automatic template repair | Magic = unpredictable, breaks debugging workflow | Show errors, suggest fixes |
-| Regex syntax translation | Python `re` != Rust `regex`, unsafe | Document differences, validate at load |
-| Template versioning | Scope creep, Git exists | Use Git for template version control |
-
----
-
-## Phase 3: TUI Debugger Features
-
-The **killer feature**. Template development is trial-and-error hell. TUI makes it visual and interactive.
-
-### Table Stakes (Must Have)
-
-| Feature | Complexity | Dependencies | User Workflow |
-|---------|-----------|--------------|---------------|
-| **Live template editing** | High | Ratatui textarea | Edit template and see results immediately |
-| **Input text display** | Low | Ratatui paragraph | Show CLI output being parsed |
-| **Current state indicator** | Low | Engine instrumentation | Know which state FSM is in |
-| **Matched lines highlighting** | Medium | Engine instrumentation | See which lines matched which rules |
-| **Current record values** | Medium | Engine context | Inspect variables as they're captured |
-| **Results table** | Medium | Ratatui table | View all records produced so far |
-| **Step-through execution** | High | Engine control | Execute line-by-line with pause/resume |
-
-**Layout (4-pane TUI):**
-```
-┌─────────────────────────┬─────────────────────────┐
-│ Input Stream (scrolling)│ FSM State: [Interface]  │
-│ Line 42: GigabitEth...  │ Current Values:         │
-│ > Line 43: Internet ... │ - interface: Gig1       │
-│                         │ - status: up            │
-├─────────────────────────┼─────────────────────────┤
-│ Match Trace (live log)  │ Results Table           │
-│ Line 42: Rule #1 matched│ Record 1: ...           │
-│ Transition: Start->Intf │ Record 2: ...           │
-├─────────────────────────┴─────────────────────────┤
-│ Help: [n] Next [s] Step [q] Quit [e] Edit         │
-└───────────────────────────────────────────────────┘
-```
-
-### Differentiators (Unique Value)
-
-| Feature | Complexity | Dependencies | Why Valuable |
-|---------|-----------|--------------|--------------|
-| **Hot-reload on save** | Medium | File watching | Zero-friction edit loop (no manual re-run) |
-| **Regex match highlighting** | High | Syntax highlighting | See capture groups visually in text |
-| **Rule performance metrics** | Medium | Instrumentation | Identify slow regexes causing bottlenecks |
-| **Coverage warnings** | Medium | Engine tracing | Flag unmatched lines (potential missing data) |
-| **History/time-travel** | High | Circular buffer | Rewind execution to previous state |
-| **Breakpoints on states/rules** | High | Engine control | Pause when entering specific state |
-| **Export trace logs** | Low | File I/O | Share debugging session with teammates |
-
-**Critical UX patterns:**
-- **Async rendering:** Parse in background thread, update UI via channels (avoid blocking)
-- **Circular buffer for traces:** Last 10k events only (prevent OOM on large files)
-- **Keyboard focus clarity:** Clear visual indicator of which pane is active
-- **Responsive layouts:** Adapt to terminal size (Ratatui constraint-based layout)
-
-**Sources:**
-- [Ratatui official site](https://ratatui.rs) (HIGH confidence)
-- [TUI mode debugging patterns](https://sourceware.org/gdb/current/onlinedocs/gdb.html/TUI.html) (MEDIUM confidence)
-- [Debug TUI blog post](https://www.dantleech.com/blog/2025/05/11/debug-tui/) (MEDIUM confidence)
-
-### Anti-Features
-
-| Anti-Feature | Why NOT Build | What Instead |
-|--------------|---------------|--------------|
-| Vim keybindings | Scope creep, not needed for MVP | Standard arrow keys, simple shortcuts |
-| Graphical visualizations | Terminal-only tool | Use ASCII art for state diagrams |
-| Multi-file editing | Complexity, unclear value | Edit one template at a time |
-| Remote debugging | Network complexity, security | Run TUI locally, debug local files |
-
----
-
-## Phase 4: Modern YAML/TOML Format Features
-
-Make template authoring **ergonomic** for new users. TextFSM DSL is cryptic.
-
-### Table Stakes (Must Have)
-
-| Feature | Complexity | Dependencies | User Experience Win |
-|---------|-----------|--------------|---------------------|
-| **YAML template support** | Medium | serde_yml | Familiar format, readable structure |
-| **TOML template support** | Medium | toml | Preferred by Rust community |
-| **Named states with clear syntax** | Low | Template IR | `states.Start.rules[0]` vs positional |
-| **Inline regex patterns** | Low | Template IR | Patterns next to variable names |
-| **Comments in templates** | Low | YAML/TOML parsers | Document complex logic |
-| **Compile to FSM IR** | Medium | Core IR | Same engine for all formats |
-
-**Example YAML template:**
-```yaml
-meta:
-  name: cisco_show_interface
-  author: cliscrape
-
-values:
-  interface:
-    regex: '^(?P<interface>\S+) is'
-    filldown: true
-    required: true
-
-  status:
-    regex: 'is (?P<status>up|down)'
-
-  ip_address:
-    regex: 'Internet address is (?P<ip_address>\S+)'
-
-states:
-  Start:
-    - match: "${interface}"
-      actions: [Clear]
-      next_state: Interface
-
-  Interface:
-    - match: "${status}"
-    - match: "${ip_address}"
-      actions: [Record]
-      next_state: Start
-```
-
-### Differentiators (Better Than TextFSM)
-
-| Feature | Complexity | Dependencies | Why Better |
-|---------|-----------|--------------|------------|
-| **Schema validation** | High | JSON Schema | Catch errors before parsing (IDE integration) |
-| **Helpful validation errors** | Medium | Parser | "Line 42: Unknown state 'Interfce' (did you mean 'Interface'?)" |
-| **Variable interpolation** | Medium | Template compiler | `"${interface}"` instead of `^Value interface (.+)` |
-| **Type annotations** | Medium | Template IR | `type: ipv4` validates format, converts to structured type |
-| **Progressive disclosure** | Low | Documentation | Start simple, add complexity as needed |
-
-**Type system (future extensibility):**
-- `string` (default)
-- `integer`
-- `ipv4` / `ipv6`
-- `mac_address`
-- `timestamp` (with format specifier)
-
-**Sources:**
-- [JSON vs YAML vs TOML comparison 2026](https://devtoolbox.dedyn.io/blog/json-vs-yaml-vs-toml) (MEDIUM confidence)
-- [YAML Schema Validation](https://json-schema-everywhere.github.io/yaml) (HIGH confidence)
-- [TOML Schema Validation](https://json-schema-everywhere.github.io/toml) (HIGH confidence)
-
-### Anti-Features
-
-| Anti-Feature | Why NOT Build | What Instead |
-|--------------|---------------|--------------|
-| Custom DSL | TextFSM mistake, don't repeat | Use existing YAML/TOML standards |
-| Template macros/includes | Complexity, hard to debug | Keep templates self-contained |
-| Template inheritance | OOP patterns don't fit FSMs | Composition via clear states |
-| Turing-complete templating | Security risk, complexity | Keep templates declarative |
-
----
-
-## Cross-Cutting Features
-
-Features that span multiple phases or support all capabilities.
-
-### Development Tooling
-
-| Feature | Complexity | Phase | User Need |
-|---------|-----------|-------|-----------|
-| **CLI interface** | Low | All | Run parser from command line |
-| **JSON output** | Low | 1 | Structured data for downstream tools |
-| **CSV output** | Low | 1 | Excel compatibility, human-readable |
-| **Error reporting** | Medium | All | Helpful messages with context |
-| **Template validation** | Medium | 2,4 | Check syntax before parsing |
-| **Example templates** | Low | All | Quick start, learning material |
-
-### Testing Infrastructure
-
-| Feature | Complexity | Phase | Purpose |
-|---------|-----------|-------|---------|
-| **Unit tests for engine** | Medium | 1 | Verify FSM correctness |
-| **ntc-templates test suite** | High | 2 | Ensure compatibility |
-| **Property-based tests** | High | 1 | Find edge cases automatically |
-| **Benchmarks** | Medium | 1 | Track performance regressions |
-| **Example corpus** | Low | All | Real-world test data |
-
-### Documentation
-
-| Feature | Complexity | Phase | Audience |
-|---------|-----------|-------|----------|
-| **README with quick start** | Low | All | First-time users |
-| **YAML/TOML format guide** | Medium | 4 | Template authors |
-| **TUI keyboard shortcuts** | Low | 3 | TUI users |
-| **Migration guide from TextFSM** | Medium | 2 | Python TextFSM users |
-| **Performance tuning guide** | Medium | 1 | Power users |
-
----
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| **Dynamic template downloads** | "Why bundle templates? Let users download what they need" | Network dependencies break offline use, versioning nightmares, security risks | Embed templates in binary; users can specify custom path for additional templates |
+| **Template auto-detection** | "Tool should guess which template to use from input" | Unreliable (many commands share output formats), false positives cause silent failures | Require explicit --template flag; provide helpful error if missing |
+| **GUI template builder** | "Visual FSM editor would be easier than YAML" | Scope creep, maintenance burden, doesn't leverage existing TUI strength | TUI Live Lab already provides real-time template editing with visual feedback |
+| **Template marketplace/registry** | "Community templates should be in centralized repo" | Becomes moderation/quality control problem, deployment complexity | Ship curated templates with releases; document custom template workflow |
+| **Real-time device connectivity in v1.5** | "Add SSH to test templates against live devices" | Out of scope (planned for v2.0), would delay template library milestone | Focus on parsing pre-collected outputs; v2.0 adds connectivity |
 
 ## Feature Dependencies
 
-Critical path for v0.1 Alpha:
-
 ```
-Phase 1: FSM Engine
-  ├─ Basic execution loop
-  ├─ Regex compilation cache
-  ├─ Value capture
-  └─ State transitions
-      └─ Phase 2: TextFSM Compatibility
-          ├─ All Value options (Filldown, Required, etc.)
-          ├─ All Actions (Record, Continue, etc.)
-          └─ Edge case handling
-              └─ Phase 3: TUI Debugger
-                  ├─ Instrumentation hooks
-                  ├─ Live template editing
-                  ├─ Step-through execution
-                  └─ Results visualization
-                      └─ Phase 4: Modern Formats
-                          ├─ YAML parser
-                          ├─ TOML parser
-                          ├─ Compile to IR
-                          └─ Schema validation
+Template Library
+    └──requires──> Embedded Assets (rust-embed)
+    └──requires──> Index File
+
+Template Discovery
+    └──requires──> Template Library
+    └──requires──> Index File
+
+Validation Suite
+    └──requires──> Template Library
+    └──enhances──> Template Discovery (validates index mappings)
+
+Production Logging
+    └──no dependencies──> (standalone feature)
+
+Documentation
+    └──requires──> Template Library (to document available templates)
+    └──requires──> Template Discovery (to document usage)
+    └──enhances──> Validation Suite (test examples in docs)
+
+TUI Integration
+    └──requires──> Template Library
+    └──requires──> Template Discovery
+    └──enhances──> v1.0 TUI features (Live Lab + State Tracer)
+
+User Template Directory (XDG)
+    └──requires──> Template Discovery (extends search path)
 ```
 
-**Critical dependencies:**
-- TUI requires instrumentation hooks from Phase 1
-- Modern formats require full TextFSM compatibility to prove IR design
-- All phases depend on rock-solid Phase 1 engine
+### Dependency Notes
 
----
+- **Template Library requires Embedded Assets:** Templates must be compiled into binary via rust-embed crate for zero-install experience
+- **Template Discovery requires Index File:** Index maps platform+command combinations to template files; without it, discovery is file-based only
+- **Validation Suite enhances Template Discovery:** Tests verify index mappings are correct and templates produce expected output
+- **Documentation requires Template Library:** Can't document templates that don't exist; library ships first, docs second
+- **TUI Integration enhances v1.0 features:** Combines existing Live Lab/State Tracer with embedded template library for complete workflow
+- **User Template Directory extends Discovery:** XDG paths provide override mechanism without replacing embedded library
 
-## MVP Recommendation
+## MVP Definition
 
-For v0.1 Alpha launch, prioritize in order:
+### Launch With (v1.5)
 
-### Must Have (Launch Blockers)
-1. **Phase 1 complete** - Engine with all core features
-2. **Phase 2 core** - Filldown, Required, List, Record, Next, Continue
-3. **Phase 3 basic** - 4-pane TUI with live editing and step-through
-4. **Phase 4 YAML only** - YAML format support (defer TOML to v0.2)
+Minimum viable product — what's needed to validate the template ecosystem.
 
-### Should Have (Strong User Value)
-5. **Phase 2 edge cases** - Fillup, Clearall, Error action
-6. **Phase 3 advanced** - Hot-reload, coverage warnings, history
-7. **Phase 4 validation** - Schema validation with helpful errors
+- [x] **Template Library (10-20 templates)** — Focus on highest-value Cisco IOS commands (show version, show interfaces, show ip route). These cover 80% of common automation use cases
+- [x] **Template Index File** — CSV/YAML format mapping platform+command to template. Enables discovery by name
+- [x] **Embedded Templates** — rust-embed integration. Zero-install, no file path management
+- [x] **Template Discovery CLI** — `--template cisco_ios_show_version` syntax. Core UX improvement
+- [x] **Basic Validation Tests** — Golden file tests for each template (raw input + expected JSON). Ensures templates work
+- [x] **Production Logging** — RUST_LOG + --verbose flags with tracing crate. Standard Rust practice
+- [x] **Usage Documentation** — README updates, examples, template selection guide. Users need to know templates exist
 
-### Could Defer (Post-v0.1)
-8. Type system for YAML (string/int/ip types)
-9. Template performance profiling in TUI
-10. Export trace logs from TUI
-11. Breakpoints in TUI debugger
-12. TOML format support
+### Add After Validation (v1.5.x)
 
-**Rationale for deferral:**
-- Type system adds complexity, can iterate post-launch
-- Advanced TUI features are nice-to-have, not blockers
-- TOML is lower priority than YAML (less common in network automation)
-- Focus on "complete + excellent" for core workflows vs "feature-complete + rough"
+Features to add once core is working.
 
----
+- [ ] **Expanded Template Library** — Add Juniper, Arista, other vendors. Triggered by user requests for specific platforms
+- [ ] **Template Authoring Guide** — Detailed YAML format documentation, FSM concept explanations, examples. Add when users ask "how do I create templates?"
+- [ ] **Troubleshooting Guide** — Common errors, solutions, debugging workflows. Add based on support requests
+- [ ] **TUI Template Browser** — Interactive template selection in TUI mode. Add when users want better discovery UX
+- [ ] **User Template Directory (XDG)** — ~/.config/cliscrape/templates/ for custom templates. Add when users ask "where do I put my templates?"
+- [ ] **Template Metadata** — Description, author, version, tags in YAML frontmatter. Add when library grows large enough to need searchability
 
-## Complexity Analysis
+### Future Consideration (v2.0+)
 
-### Low Complexity (1-2 days)
-- Regex compilation cache
-- Value capture
-- Basic actions (Record, Next, Clear)
-- JSON/CSV output
-- CLI interface
+Features to defer until product-market fit is established.
 
-### Medium Complexity (3-5 days)
-- State machine execution loop
-- Zero-copy string handling
-- TextFSM value options (Filldown, Required, Key, List)
-- YAML/TOML parsing
-- 4-pane TUI layout
-- Schema validation
+- [ ] **Template Versioning** — Semantic versioning for templates, backward compatibility tracking. Defer until breaking changes become problem
+- [ ] **Multi-format Output Validation** — Test templates against multiple output variations per command. Defer until variation issues reported
+- [ ] **Performance Benchmarks** — Templates/sec throughput testing. Defer until performance complaints
+- [ ] **Template Migration Tools** — .textfsm to .yaml converter. Defer until users request bulk migration
+- [ ] **Device Connectivity Integration** — SSH templates directly to devices (v2.0 milestone). Deferred by design
 
-### High Complexity (1-2 weeks)
-- Streaming mode for large files
-- Continue action (multi-rule matching)
-- Fillup action (upward propagation)
-- Live template editing with hot-reload
-- Step-through execution with breakpoints
-- Time-travel debugging
-- Regex match highlighting
+## Feature Prioritization Matrix
 
-**Total estimated effort for v0.1 MVP:** 6-8 weeks
-- Phase 1: 2 weeks
-- Phase 2: 1.5 weeks
-- Phase 3: 2.5 weeks
-- Phase 4: 1 week
-- Testing/polish: 1 week
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| Template Library (10-20 templates) | HIGH | MEDIUM | P1 |
+| Template Discovery by name | HIGH | MEDIUM | P1 |
+| Embedded Templates (rust-embed) | HIGH | LOW | P1 |
+| Index File | HIGH | LOW | P1 |
+| Basic Validation Tests | HIGH | MEDIUM | P1 |
+| Production Logging (RUST_LOG) | MEDIUM | LOW | P1 |
+| Usage Documentation | MEDIUM | LOW | P1 |
+| Template Authoring Guide | MEDIUM | MEDIUM | P2 |
+| Troubleshooting Guide | MEDIUM | MEDIUM | P2 |
+| TUI Template Browser | MEDIUM | MEDIUM | P2 |
+| User Template Directory (XDG) | MEDIUM | LOW | P2 |
+| Template Metadata | LOW | LOW | P2 |
+| Expanded Library (Juniper, Arista) | MEDIUM | MEDIUM | P2 |
+| Template Versioning | LOW | HIGH | P3 |
+| Performance Benchmarks | LOW | MEDIUM | P3 |
+| Template Migration Tools | LOW | MEDIUM | P3 |
 
----
+**Priority key:**
+- P1: Must have for v1.5 launch (template ecosystem viable)
+- P2: Should have, add in v1.5.x based on user feedback
+- P3: Nice to have, defer to v2.0+
 
-## Success Criteria
+## Competitor Feature Analysis
 
-v0.1 Alpha is successful when:
+| Feature | ntc-templates (TextFSM) | pyATS Genie | cliscrape Approach |
+|---------|-------------------------|-------------|-------------------|
+| **Template Library** | 280+ templates, community-driven | 2000+ parsers, Cisco official | Start small (10-20), curated for quality over quantity |
+| **Discovery Mechanism** | parse_output(platform, command, data) | device.parse(command) | --template flag with index file, embedded in binary |
+| **Template Format** | .textfsm only | Python parser classes | Both .textfsm (compat) and .yaml/.toml (modern) |
+| **Validation** | Unit tests with raw+parsed YAML pairs | Schema-driven self-testing | Golden file snapshot tests in CI/CD |
+| **Logging** | Python logging module | Python logging | Rust tracing crate with RUST_LOG + --verbose |
+| **Documentation** | Basic README, community wiki | Comprehensive DevNet docs | Focus on examples and troubleshooting |
+| **Embedded vs External** | Separate pip package | Separate pip package | Embedded in binary (zero-install) |
+| **User Templates** | Fork repo or local PATH | Custom parser registration | XDG directory + --template-path override |
+| **TUI Integration** | None | None | Unique: Live Lab + State Tracer with template library |
+| **Metadata** | Filename convention only | Python docstrings | YAML frontmatter (description, author, version, tags) |
 
-### Functional Success
-- [ ] Parses 95%+ of ntc-templates without modification
-- [ ] TUI allows template development without leaving terminal
-- [ ] YAML format is easier to read/write than TextFSM for new users
-- [ ] Zero crashes on valid input (Rust safety guarantees)
+## Implementation Notes by Category
 
-### Performance Success
-- [ ] 10x faster than Python TextFSM on 10k+ line outputs
-- [ ] Handles 100MB files without OOM
-- [ ] TUI remains responsive during parsing (async boundaries)
-- [ ] Step-through execution feels instant (<50ms per step)
+### 1. Template Library
 
-### User Experience Success
-- [ ] First-time user can parse CLI output in <5 minutes
-- [ ] Template author can debug failing template in TUI in <10 minutes
-- [ ] Error messages point to exact problem with suggested fix
-- [ ] Documentation covers 90% of common use cases
+**Structure:**
+```
+templates/
+  cisco_ios/
+    show_version.textfsm
+    show_version.yaml
+    show_interfaces.yaml
+    show_ip_route.yaml
+  juniper_junos/
+    show_version.yaml
+  arista_eos/
+    show_version.yaml
+```
 
-### Adoption Success
-- [ ] Python TextFSM users can migrate without rewriting templates
-- [ ] New users prefer YAML format over TextFSM DSL
-- [ ] Community contributes new templates in YAML format
-- [ ] GitHub stars > 100 within 2 months of launch
+**Naming Convention:** `{vendor_os}_{command_with_underscores}.{format}`
 
----
+**Initial Scope:** Focus on Cisco IOS (most common). 10-20 templates covering:
+- show version (device info)
+- show interfaces (link status)
+- show ip interface brief (quick status)
+- show ip route (routing table)
+- show running-config (config export)
+- show cdp neighbors (topology)
+- show vlan (switching)
+- show mac address-table (layer 2)
+- show inventory (hardware)
+- show logging (syslog)
 
-## Open Questions for Phase-Specific Research
+**Dependencies:** Must exist before discovery, validation, or documentation.
 
-These questions may require deeper investigation during implementation:
+### 2. Template Discovery
 
-### Phase 1: Engine
-- What's the optimal circular buffer size for streaming mode?
-- Should we use `RegexSet` or individual `Regex` instances?
-- How to make instrumentation zero-cost when disabled?
+**Index File Format (CSV):**
+```csv
+Platform,Command,Template
+cisco_ios,sh[[ow]] ver[[sion]],cisco_ios_show_version.yaml
+cisco_ios,sh[[ow]] int[[erfaces]],cisco_ios_show_interfaces.yaml
+juniper_junos,show version,juniper_junos_show_version.yaml
+```
 
-### Phase 2: TextFSM
-- Are there ntc-templates using undocumented TextFSM features?
-- What's the migration path for templates using Python-specific regex?
-- How to handle templates with implicit behaviors vs explicit?
+**CLI Usage:**
+```bash
+cliscrape --template cisco_ios_show_version input.txt
+cliscrape --platform cisco_ios --command "show version" input.txt
+```
 
-### Phase 3: TUI
-- What's the right balance between history depth and memory usage?
-- How to make regex highlighting fast for 100k+ line outputs?
-- Should we support multiple input files in one TUI session?
+**Implementation:**
+- Use rust-embed to compile index + templates into binary
+- Parser: given platform+command, lookup template in index
+- Fallback: if template has path separator, treat as file path (backward compat)
 
-### Phase 4: Modern Formats
-- Should variable interpolation support nested expressions?
-- What schema format: JSON Schema, custom DSL, or Rust types?
-- How to prevent "Norway problem" (YAML type coercion bugs)?
+**Dependencies:** Requires template library and index file.
 
----
+### 3. Validation Testing
+
+**Golden File Structure:**
+```
+tests/golden/
+  cisco_ios_show_version/
+    input_01.txt         # raw device output
+    expected_01.json     # expected parsed result
+    input_02.txt         # variation
+    expected_02.json
+```
+
+**Test Approach:**
+- Load template + input, run parser, compare to expected JSON
+- Use insta crate for snapshot testing (Rust standard)
+- Run in CI/CD on every commit
+- Fail build if templates produce unexpected output
+
+**Complexity:** HIGH — requires collecting real device outputs, validating correctness.
+
+**Dependencies:** Requires template library. Enhances template discovery by validating index mappings.
+
+### 4. Production Logging
+
+**Standard Rust Pattern:**
+```rust
+use tracing::{error, warn, info, debug, trace};
+use tracing_subscriber::EnvFilter;
+
+// Initialize
+tracing_subscriber::fmt()
+    .with_env_filter(EnvFilter::from_default_env())
+    .init();
+
+// Usage
+error!("Template not found: {}", name);
+warn!("Template produced no matches");
+info!("Parsed {} records from {}", count, template);
+debug!("FSM transition: {} -> {}", from_state, to_state);
+trace!("Regex match: {:?}", captures);
+```
+
+**CLI Flags:**
+```bash
+cliscrape --verbose           # -v: WARN level
+cliscrape -vv                 # INFO level
+cliscrape -vvv                # DEBUG level
+cliscrape -vvvv               # TRACE level
+RUST_LOG=debug cliscrape      # env var override
+```
+
+**Implementation:**
+- Replace println!/eprintln! with tracing macros
+- Add clap-verbosity-flag for CLI integration
+- File logging via tracing_appender (optional, P2)
+
+**Complexity:** LOW — standard Rust patterns, well-documented.
+
+**Dependencies:** None (standalone).
+
+### 5. Documentation
+
+**Required Sections:**
+
+1. **README Updates:**
+   - Template library existence announcement
+   - Discovery syntax examples
+   - Available templates list
+
+2. **Template Selection Guide:**
+   - How to list available templates
+   - Platform + command syntax
+   - Custom template path usage
+
+3. **Examples:**
+   - Common use cases per vendor
+   - Piped input workflows
+   - Batch processing multiple files
+
+4. **Template Authoring Guide (P2):**
+   - YAML format specification
+   - FSM concepts (states, rules, values)
+   - Regex tips and macro library usage
+   - Testing workflow
+
+5. **Troubleshooting (P2):**
+   - Template not found errors
+   - No matches produced
+   - FSM state debugging with TUI
+   - Regex debugging tips
+
+**Complexity:** LOW (basic), MEDIUM (authoring guide + troubleshooting).
+
+**Dependencies:** Requires template library and discovery mechanism.
 
 ## Sources
 
-**TextFSM Documentation (HIGH confidence):**
-- [TextFSM Wiki](https://github.com/google/textfsm/wiki/TextFSM)
-- [TextFSM template syntax - Python for network engineers](https://pyneng.readthedocs.io/en/latest/book/21_textfsm/textfsm_syntax.html)
-- [TextFSM Continue/Next/Error actions](https://anirudhkamath.github.io/network-automation-blog/notes/textfsm.html)
+**Template Libraries and Organization:**
+- [ntc-templates GitHub](https://github.com/networktocode/ntc-templates) — 280+ TextFSM templates, community-driven
+- [ntc-templates index file](https://github.com/networktocode/ntc-templates/blob/master/ntc_templates/templates/index) — CSV format for platform+command mapping
+- [pyATS Genie parser library](https://github.com/CiscoTestAutomation/genieparser) — 2000+ parsers with schema validation
+- [Network to Code: NTC Templates Best Practices](https://networktocode.com/blog/leveraging-ntc-templates-for-network-automation-2025-08-08/)
 
-**NTC Templates (HIGH confidence):**
-- [ntc-templates GitHub](https://github.com/networktocode/ntc-templates)
-- [Parsing Strategies - NTC Templates](https://networktocode.com/blog/parsing-strategies-ntc-templates/)
-- [Leveraging NTC-Templates 2025](https://networktocode.com/blog/leveraging-ntc-templates-for-network-automation-2025-08-08/)
+**Template Discovery and Selection:**
+- [TextFSM CLI Table](https://pyneng.readthedocs.io/en/latest/book/21_textfsm/textfsm_clitable.html) — Index file format and template selection
+- [ntc-templates Getting Started](https://ntc-templates.readthedocs.io/en/latest/user/lib_getting_started/) — parse_output() API
 
-**Ratatui Documentation (HIGH confidence):**
-- [Ratatui official site](https://ratatui.rs)
-- [Ratatui Architecture Patterns](https://ratatui.rs/concepts/architecture/)
+**Validation and Testing:**
+- [Snapshot Testing in Rust](https://blog.anp.lol/rust/2017/08/18/golden-master-regression-in-rust/) — Golden master testing approach
+- [Golden Testing Helm Charts](https://developerzen.com/golden-testing-helm-charts/) — Template validation patterns
+- [Network Validation with pyATS](https://netcraftsmen.com/network-validation-with-pyats/) — Parser testing frameworks
 
-**Performance & Profiling (HIGH confidence):**
-- [Rust Performance Book - Profiling](https://nnethercote.github.io/perf-book/profiling.html)
-- [Flamegraph for Rust](https://github.com/flamegraph-rs/flamegraph)
-- [How to Profile Rust Applications 2026](https://oneuptime.com/blog/post/2026-02-03-rust-profiling/view)
+**Production Logging:**
+- [Logging in Rust (2025)](https://www.shuttle.dev/blog/2023/09/20/logging-in-rust) — tracing vs log crate comparison
+- [Structured JSON Logs with tracing](https://oneuptime.com/blog/post/2026-01-25-structured-json-logs-tracing-rust/view) — Production logging best practices
+- [tracing EnvFilter documentation](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html) — RUST_LOG usage
+- [clap-verbosity-flag](https://docs.rs/clap-verbosity-flag) — CLI verbosity pattern
+- [Rust CLI: Communicating with Humans](https://rust-cli.github.io/book/in-depth/human-communication.html) — Logging best practices
 
-**Configuration Formats (MEDIUM confidence):**
-- [JSON vs YAML vs TOML 2026](https://devtoolbox.dedyn.io/blog/json-vs-yaml-vs-toml)
-- [YAML Schema Validation](https://json-schema-everywhere.github.io/yaml)
-- [TOML Schema Validation](https://json-schema-everywhere.github.io/toml)
+**Documentation Patterns:**
+- [Command Line Interface Guidelines](https://clig.dev/) — CLI UX best practices, help text, examples
+- [CLI Documentation Checklist](https://www.infrasity.com/blog/cli-docs-checklist) — Developer-first CLI docs
+- [Template Text Parser Guide](https://www.packetcoders.io/a-beginners-guide-to-textfsm-for-network-automation/) — Template authoring examples
 
-**TUI Best Practices (MEDIUM confidence):**
-- [TUI Debugging with GDB](https://sourceware.org/gdb/current/onlinedocs/gdb.html/TUI.html)
-- [Debug TUI Blog](https://www.dantleech.com/blog/2025/05/11/debug-tui/)
-- [Dev Process Tracker TUI](https://www.techedubyte.com/dev-process-tracker-cli-tui-service-management-debugging/)
+**Embedded Assets:**
+- [rust-embed crate](https://docs.rs/crate/rust-embed) — Compile-time asset embedding
+- [CLI Progress Indicators](https://evilmartians.com/chronicles/cli-ux-best-practices-3-patterns-for-improving-progress-displays) — UX patterns
 
-**UX Design Patterns 2026 (LOW confidence - general principles):**
-- [UI/UX Design Trends 2026](https://www.index.dev/blog/ui-ux-design-trends)
-- [Progressive Disclosure Patterns](https://www.onething.design/post/b2b-saas-ux-design)
+**Configuration and Directories:**
+- [xdg crate](https://docs.rs/xdg) — XDG Base Directory specification for Rust
+- [directories crate](https://lib.rs/crates/directories) — Platform-specific config/cache paths
+
+**Versioning and Compatibility:**
+- [Backward Compatibility: Versioning, Migrations, and Testing](https://medium.com/@QuarkAndCode/backward-compatibility-versioning-migrations-and-testing-b69637ca5e3d) — Migration strategies
+- [Semantic Versioning 2.0.0](https://semver.org/) — Version numbering standards
+
+---
+*Feature research for: CLI Parsing Tool Ecosystem (v1.5 Template Library)*
+*Researched: 2026-02-22*

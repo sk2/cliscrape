@@ -1,1055 +1,790 @@
-# Architecture Research: v0.1 Alpha Integration
+# Architecture Research
 
-**Domain:** CLI parsing tool (IR-based compiler architecture)
-**Researched:** 2026-02-17
+**Domain:** CLI Parser with Template Library and Production Features
+**Researched:** 2026-02-22
 **Confidence:** HIGH
 
-## Executive Summary
-
-The v0.1 Alpha architecture implements an **IR-based compiler design** where multiple frontend parsers (TextFSM, YAML, TOML) compile to a unified intermediate representation that feeds a generic FSM execution engine. This decoupling enables TextFSM compatibility while supporting modern formats, and critically allows the TUI debugger to observe engine internals through event tracing.
-
-The architecture follows a **modular pipeline**: `Frontend → IR → Engine → Output`, with each component having clear responsibilities and well-defined interfaces. The TUI integrates via an event-driven observer pattern, receiving trace events from the engine without blocking execution.
-
-This design draws from established compiler architecture patterns where IRs decouple language frontends from execution backends, enabling multi-language support without exponential complexity.
-
-## High-Level Architecture
-
-### System Overview
+## Integration Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        FRONTENDS (Parsers)                       │
-├──────────────┬───────────────────┬───────────────┬──────────────┤
-│  TextFSM     │   YAML Parser     │  TOML Parser  │   Future...  │
-│  Parser      │   (Phase 4)       │  (Phase 4)    │              │
-│  (Phase 2)   │                   │               │              │
-└──────┬───────┴─────────┬─────────┴───────┬───────┴──────────────┘
-       │                 │                 │
-       └─────────────────┼─────────────────┘
-                         ↓
-            ┌────────────────────────────┐
-            │  INTERMEDIATE REPRESENTATION │
-            │         (IR / AST)           │
-            │       (Phase 1)              │
-            └────────────┬─────────────────┘
-                         ↓
-            ┌────────────────────────────┐
-            │      FSM EXECUTION ENGINE    │
-            │      (State Machine)         │
-            │       (Phase 1)              │
-            └────┬──────────────────┬──────┘
-                 │                  │
-                 │ Events           │ Results
-                 ↓                  ↓
-        ┌────────────────┐   ┌──────────────┐
-        │  TUI DEBUGGER  │   │   CLI OUTPUT │
-        │   (Phase 3)    │   │   (JSON/CSV) │
-        └────────────────┘   └──────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                          CLI Layer (main.rs)                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
+│  │ Parse Command │  │Debug Command │  │Convert Command│              │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘              │
+│         │                  │                  │                       │
+├─────────┴──────────────────┴──────────────────┴───────────────────────┤
+│                    Template Discovery Layer (NEW)                    │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  Template Resolver: path → PathBuf | name → library lookup  │    │
+│  │  • Embedded Library Index (include_dir!)                     │    │
+│  │  • XDG User Templates ($XDG_DATA_HOME/cliscrape/templates)  │    │
+│  │  • CWD Fallback (existing behavior)                          │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+├─────────────────────────────────────────────────────────────────────┤
+│                    Template Loading Layer (EXISTING)                 │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
+│  │TextFsmLoader │  │ YAMLLoader   │  │  TOMLLoader  │              │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘              │
+│         └──────────────────┴──────────────────┘                      │
+│                             ↓                                        │
+│                        TemplateIR                                    │
+├─────────────────────────────────────────────────────────────────────┤
+│                         Engine Layer (EXISTING)                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  Template::from_ir() → Compiled FSM with macros resolved    │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  FsmParser::parse() → Vec<HashMap<String, serde_json::Value>>│    │
+│  └─────────────────────────────────────────────────────────────┘    │
+├─────────────────────────────────────────────────────────────────────┤
+│                    Observability Layer (NEW)                         │
+│  ┌──────────────────┐  ┌──────────────────┐                         │
+│  │ tracing::info!() │  │ Structured Logs  │                         │
+│  │ (spans for ops)  │  │ (JSON formatter) │                         │
+│  └──────────────────┘  └──────────────────┘                         │
+└─────────────────────────────────────────────────────────────────────┘
+
+      Supporting Systems (Independent, New Components)
+      ┌─────────────────────┐  ┌─────────────────────┐
+      │ Validation Suite    │  │ Documentation Gen   │
+      │ (templates/ tests)  │  │ (template catalog)  │
+      └─────────────────────┘  └─────────────────────┘
 ```
 
-### Component Responsibilities
+## Component Responsibilities
 
-| Component | Responsibility | Key Interfaces |
-|-----------|----------------|----------------|
-| **TextFSM Frontend** | Parse `.textfsm` files into IR | `fn parse_textfsm(path) -> Result<Template>` |
-| **YAML/TOML Frontend** | Parse modern config into IR | `fn parse_yaml(path) -> Result<Template>` |
-| **IR (Template)** | Unified representation of FSM | `struct Template { values, states }` |
-| **FSM Engine** | Execute IR against input text | `fn execute(&self, input) -> Results` |
-| **Event System** | Emit trace events for TUI | `trait TraceListener` |
-| **TUI Debugger** | Visualize FSM execution live | `struct DebuggerApp` |
+| Component | Responsibility | Integration Point | New/Modified |
+|-----------|----------------|-------------------|--------------|
+| **Template Resolver** | Resolve template spec (path/name) to PathBuf | `resolve_template_spec()` in main.rs | **MODIFIED** - extend existing function |
+| **Embedded Library** | Bundle pre-built templates into binary | Compile-time `include_dir!()` macro | **NEW** - static data |
+| **Library Index** | Map template names to files (vendor_os_command) | Read by Template Resolver | **NEW** - metadata structure |
+| **XDG Config Discovery** | Find user-installed templates | `dirs` crate for XDG paths | **NEW** - search path extension |
+| **Template Loaders** | Parse template formats into TemplateIR | Existing `template::loader` module | **EXISTING** - no changes |
+| **FsmParser** | Parse CLI output using compiled template | Existing `lib.rs` API | **EXISTING** - no changes |
+| **Validation Suite** | Automated tests for library templates | Separate test harness | **NEW** - independent test suite |
+| **Tracing Integration** | Structured logging for operations | `main.rs` spans, library log events | **NEW** - instrumentation layer |
+| **Error Formatter** | Format errors per `--error-format` | Existing `print_error()` | **EXISTING** - extend for new error types |
 
-## Phase 1: Core Engine & IR Design
+## Recommended Project Structure
 
-### IR Specification (Internal Representation)
+```
+cliscrape/
+├── src/
+│   ├── main.rs                      # MODIFIED: add tracing, extend resolve_template_spec
+│   ├── lib.rs                       # EXISTING: no changes
+│   ├── cli.rs                       # MODIFIED: add --template-library flag
+│   ├── engine/                      # EXISTING: no changes
+│   ├── template/
+│   │   ├── loader.rs                # EXISTING: no changes
+│   │   ├── modern.rs                # EXISTING: no changes
+│   │   ├── convert.rs               # EXISTING: no changes
+│   │   ├── library.rs               # NEW: embedded library + index parsing
+│   │   └── discovery.rs             # NEW: template resolution logic
+│   ├── transcript/                  # EXISTING: no changes
+│   ├── tui/                         # EXISTING: no changes (verify separately)
+│   └── output.rs                    # EXISTING: no changes
+├── templates/                       # EXTENDED: add comprehensive library
+│   ├── index                        # NEW: ntc-templates-style index file
+│   ├── cisco_ios/
+│   │   ├── show_version.textfsm
+│   │   ├── show_interfaces.yaml
+│   │   └── show_ip_route.yaml
+│   ├── cisco_nxos/
+│   ├── juniper_junos/
+│   └── arista_eos/
+├── tests/
+│   ├── validation/                  # NEW: validation test suite
+│   │   ├── test_library_templates.rs
+│   │   ├── fixtures/                # Real device outputs
+│   │   │   ├── cisco_ios_show_version.txt
+│   │   │   └── ...
+│   │   └── snapshots/               # Expected parsed output
+│   └── integration/                 # EXISTING: e2e CLI tests
+└── Cargo.toml                       # MODIFIED: add deps (include_dir, dirs, tracing)
+```
 
-The IR is the **contract** between frontends and the engine. All frontends must compile to this exact structure.
+### Structure Rationale
 
+- **template/library.rs:** Encapsulates embedded library logic, keeping main.rs clean
+- **template/discovery.rs:** Separates resolution logic from CLI parsing (testable in isolation)
+- **templates/index:** Follows ntc-templates convention (vendor_os_command mapping)
+- **tests/validation/:** Separate from unit tests, focuses on template correctness vs device outputs
+- **Validation fixtures:** Real device outputs ensure templates work in production
+
+## Architectural Patterns
+
+### Pattern 1: Compile-Time Template Embedding
+
+**What:** Bundle templates directory into binary at compile-time using `include_dir!()` macro
+
+**When to use:** Always for shipped library templates (guarantees availability without network/filesystem)
+
+**Trade-offs:**
+- **Pro:** Zero runtime dependencies, fast lookup, guaranteed availability
+- **Pro:** No installation step, works immediately after `cargo install`
+- **Con:** Binary size increases (~100KB for 50 templates, acceptable)
+- **Con:** Updates require recompile (mitigated by XDG user templates)
+
+**Example:**
 ```rust
-/// The complete intermediate representation of a parsing template
-pub struct Template {
-    /// Named values that can be captured
-    pub values: HashMap<String, ValueDef>,
-    /// FSM states with their rules
-    pub states: HashMap<String, State>,
-    /// Initial state name (defaults to "Start")
-    pub initial_state: String,
-}
+// src/template/library.rs
+use include_dir::{include_dir, Dir};
 
-/// Definition of a capturable value
-pub struct ValueDef {
-    /// Unique identifier
-    pub name: String,
-    /// Compiled regex for extraction
-    pub regex: Regex,
-    /// Carry value forward to next records
-    pub filldown: bool,
-    /// Accumulate multiple matches into list
-    pub is_list: bool,
-    /// Record only valid if this value captured
-    pub required: bool,
-}
+static TEMPLATE_LIBRARY: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/templates");
 
-/// A state in the FSM containing ordered rules
-pub struct State {
-    pub name: String,
-    pub rules: Vec<Rule>,
-}
-
-/// A single matching rule with actions and transitions
-pub struct Rule {
-    /// Pattern to match against current line
-    pub regex: Regex,
-    /// Actions to perform on match
-    pub actions: Vec<Action>,
-    /// Next state to transition to (None = stay in current)
-    pub next_state: Option<String>,
-    /// Captures mapping (TextFSM uses named groups)
-    pub captures: Vec<String>,
-}
-
-/// Actions executed when a rule matches
-#[derive(Debug, Clone)]
-pub enum Action {
-    /// Consume line, move to next input line
-    Next,
-    /// Don't consume line, try next rule
-    Continue,
-    /// Save current buffer to results
-    Record,
-    /// Clear current buffer
-    Clear,
-    /// Special: Clear all records (less common)
-    Clearall,
+pub fn get_embedded_template(name: &str) -> Option<&'static str> {
+    TEMPLATE_LIBRARY
+        .get_file(&format!("{}.textfsm", name))
+        .and_then(|f| f.contents_utf8())
 }
 ```
 
-**Design rationale:**
-- `HashMap` for O(1) state/value lookups by name
-- `Vec<Rule>` preserves rule evaluation order (critical for TextFSM)
-- Pre-compiled `Regex` objects (compile once, execute many times)
-- `Action` enum ensures type-safe action handling
+### Pattern 2: Layered Template Discovery (XDG-Aware)
 
-### Engine Architecture
+**What:** Multi-source template resolution with priority: CLI path → XDG user → embedded library → CWD
 
-The engine is a **stateless executor** that processes input line-by-line using the FSM defined in the IR.
+**When to use:** When users need to override shipped templates or add custom ones
 
+**Trade-offs:**
+- **Pro:** Follows Linux/macOS conventions (`~/.local/share/cliscrape/templates/`)
+- **Pro:** Users can shadow shipped templates without modifying binary
+- **Con:** More complex resolution logic (must check multiple locations)
+- **Con:** Platform-specific behavior (XDG on Linux, `~/Library` on macOS)
+
+**Example:**
 ```rust
-/// FSM execution engine
-pub struct FsmEngine {
-    template: Template,
-    /// Optional event emitter for tracing
-    trace_listener: Option<Arc<dyn TraceListener>>,
-}
+// src/template/discovery.rs
+use dirs::data_local_dir;
+use std::path::{Path, PathBuf};
 
-/// Execution state (ephemeral per parse)
-struct ExecutionContext {
-    /// Current FSM state
-    current_state: String,
-    /// Buffer for current record being built
-    current_record: HashMap<String, RecordValue>,
-    /// Completed records
-    results: Vec<HashMap<String, String>>,
-    /// Filldown values carried from previous records
-    filldown_values: HashMap<String, String>,
-    /// Current line number (for debugging)
-    line_number: usize,
-}
-
-/// A value that can be a scalar or list
-enum RecordValue {
-    Scalar(String),
-    List(Vec<String>),
-}
-
-impl FsmEngine {
-    pub fn new(template: Template) -> Self {
-        Self { template, trace_listener: None }
+pub fn resolve_template_path(spec: &str, format_filter: TemplateFormat) -> anyhow::Result<TemplateSource> {
+    // 1. If spec is existing path, use directly
+    if Path::new(spec).exists() {
+        return Ok(TemplateSource::Path(PathBuf::from(spec)));
     }
 
-    pub fn with_tracing(mut self, listener: Arc<dyn TraceListener>) -> Self {
-        self.trace_listener = Some(listener);
-        self
+    // 2. Check XDG user templates
+    if let Some(xdg_path) = resolve_xdg_template(spec, format_filter) {
+        return Ok(TemplateSource::Path(xdg_path));
     }
 
-    /// Execute the FSM against input text
-    pub fn execute(&self, input: &str) -> Result<Vec<HashMap<String, String>>> {
-        let mut ctx = ExecutionContext::new(&self.template);
+    // 3. Check embedded library
+    if let Some(embedded) = library::lookup_template(spec) {
+        return Ok(TemplateSource::Embedded(embedded));
+    }
 
-        for line in input.lines() {
-            ctx.line_number += 1;
-            self.process_line(line, &mut ctx)?;
+    // 4. Fallback: CWD identifier search (existing behavior)
+    resolve_cwd_identifier(spec, format_filter)
+}
+
+fn resolve_xdg_template(name: &str, format: TemplateFormat) -> Option<PathBuf> {
+    let data_dir = data_local_dir()?;
+    let template_dir = data_dir.join("cliscrape/templates");
+
+    for ext in format.extensions() {
+        let path = template_dir.join(format!("{}.{}", name, ext));
+        if path.exists() {
+            return Some(path);
         }
-
-        // Handle EOF (implicit Record if buffer has data)
-        if !ctx.current_record.is_empty() {
-            self.emit_trace(TraceEvent::ImplicitRecord);
-            ctx.finalize_record();
-        }
-
-        Ok(ctx.results)
     }
+    None
+}
+```
 
-    fn process_line(&self, line: &str, ctx: &mut ExecutionContext) -> Result<()> {
-        let state = self.template.states.get(&ctx.current_state)
-            .ok_or_else(|| ScraperError::InvalidState(ctx.current_state.clone()))?;
+### Pattern 3: Index-Based Template Lookup
 
-        for (rule_idx, rule) in state.rules.iter().enumerate() {
-            if let Some(captures) = rule.regex.captures(line) {
-                self.emit_trace(TraceEvent::RuleMatched {
-                    state: &ctx.current_state,
-                    rule_index: rule_idx,
-                    line_number: ctx.line_number,
-                    captures: captures.clone(),
-                });
+**What:** Central `templates/index` file mapping template names to files (ntc-templates pattern)
 
-                // Extract captures into current record
-                self.apply_captures(rule, captures, ctx)?;
+**When to use:** When you have many templates and need structured lookup
 
-                // Execute actions
-                let mut should_break = false;
-                for action in &rule.actions {
-                    self.emit_trace(TraceEvent::ActionExecuted { action: action.clone() });
-                    match action {
-                        Action::Record => ctx.finalize_record(),
-                        Action::Clear => ctx.current_record.clear(),
-                        Action::Clearall => {
-                            ctx.current_record.clear();
-                            ctx.results.clear();
-                        }
-                        Action::Next => should_break = true,
-                        Action::Continue => {} // Just continue to next rule
-                    }
+**Trade-offs:**
+- **Pro:** Explicit mapping, supports vendor/os/command hierarchy
+- **Pro:** Enables metadata (description, version, author)
+- **Con:** Extra maintenance (must update index when adding templates)
+- **Con:** Stale index if files added without updating
+
+**Example:**
+```rust
+// templates/index format (similar to ntc-templates)
+// vendor, os, command, template_file
+cisco, ios, show_version, cisco_ios_show_version.textfsm
+cisco, ios, show_interfaces, cisco_ios_show_interfaces.yaml
+cisco, nxos, show_version, cisco_nxos_show_version.textfsm
+juniper, junos, show_version, juniper_junos_show_version.yaml
+
+// src/template/library.rs
+pub struct TemplateIndex {
+    entries: Vec<IndexEntry>,
+}
+
+#[derive(Debug)]
+pub struct IndexEntry {
+    pub vendor: String,
+    pub os: String,
+    pub command: String,
+    pub file: String,
+}
+
+impl TemplateIndex {
+    pub fn from_embedded() -> Result<Self> {
+        let index_content = TEMPLATE_LIBRARY.get_file("index")
+            .and_then(|f| f.contents_utf8())
+            .ok_or_else(|| anyhow::anyhow!("Missing index file in embedded templates"))?;
+
+        let entries = index_content
+            .lines()
+            .filter(|l| !l.trim().is_empty() && !l.starts_with('#'))
+            .map(|l| {
+                let parts: Vec<_> = l.split(',').map(|s| s.trim()).collect();
+                IndexEntry {
+                    vendor: parts[0].to_string(),
+                    os: parts[1].to_string(),
+                    command: parts[2].to_string(),
+                    file: parts[3].to_string(),
                 }
+            })
+            .collect();
 
-                // Transition state if specified
-                if let Some(next_state) = &rule.next_state {
-                    self.emit_trace(TraceEvent::StateTransition {
-                        from: &ctx.current_state,
-                        to: next_state,
-                    });
-                    ctx.current_state = next_state.clone();
-                }
-
-                if should_break {
-                    break; // Next action: stop processing rules for this line
-                }
-            }
-        }
-
-        Ok(())
+        Ok(Self { entries })
     }
 
-    fn emit_trace(&self, event: TraceEvent) {
-        if let Some(listener) = &self.trace_listener {
-            listener.on_trace(event);
-        }
-    }
-}
-```
-
-**Design rationale:**
-- Engine is **stateless**: all execution state in `ExecutionContext`
-- Allows parallel parsing of multiple inputs (thread-safe with Arc<Template>)
-- `TraceListener` decouples observation from execution
-- Clear separation: engine logic vs tracing logic
-
-### Event System for TUI Integration
-
-```rust
-/// Events emitted during FSM execution
-#[derive(Clone, Debug)]
-pub enum TraceEvent {
-    /// FSM started execution
-    Started { initial_state: String },
-
-    /// Entered a new line
-    LineProcessed { line_number: usize, content: String },
-
-    /// Rule matched against current line
-    RuleMatched {
-        state: String,
-        rule_index: usize,
-        line_number: usize,
-        captures: regex::Captures,
-    },
-
-    /// Action was executed
-    ActionExecuted { action: Action },
-
-    /// State transition occurred
-    StateTransition { from: String, to: String },
-
-    /// Record was finalized and added to results
-    RecordCreated { record: HashMap<String, String> },
-
-    /// FSM finished execution
-    Completed { total_records: usize },
-}
-
-/// Observer trait for receiving trace events
-pub trait TraceListener: Send + Sync {
-    fn on_trace(&self, event: TraceEvent);
-}
-```
-
-**Integration pattern:**
-- TUI implements `TraceListener`
-- Engine calls `listener.on_trace(event)` at key points
-- Events sent via crossbeam channel to avoid blocking
-- TUI processes events asynchronously in render loop
-
-## Phase 2: TextFSM Frontend Integration
-
-### TextFSM Parser Architecture
-
-The TextFSM frontend is a **compiler frontend** that transforms `.textfsm` DSL into IR.
-
-```rust
-pub struct TextFsmFrontend;
-
-impl TextFsmFrontend {
-    /// Parse a .textfsm file into IR
-    pub fn parse<P: AsRef<Path>>(path: P) -> Result<Template> {
-        let content = std::fs::read_to_string(path)?;
-        Self::parse_content(&content)
-    }
-
-    fn parse_content(content: &str) -> Result<Template> {
-        // Two-pass parser
-        let (values, states) = Self::split_sections(content)?;
-
-        let value_defs = Self::parse_values_section(values)?;
-        let state_defs = Self::parse_states_section(states, &value_defs)?;
-
-        Ok(Template {
-            values: value_defs,
-            states: state_defs,
-            initial_state: "Start".to_string(),
+    pub fn lookup(&self, name: &str) -> Option<&IndexEntry> {
+        // Support both "cisco_ios_show_version" and hierarchical lookup
+        self.entries.iter().find(|e| {
+            let canonical = format!("{}_{}__{}", e.vendor, e.os, e.command.replace(' ', '_'));
+            canonical == name
         })
     }
-
-    fn parse_values_section(content: &str) -> Result<HashMap<String, ValueDef>> {
-        // Parse "Value" declarations
-        // Format: Value [options] name regex
-        // Example: Value Filldown,Required interface (\S+)
-    }
-
-    fn parse_states_section(
-        content: &str,
-        values: &HashMap<String, ValueDef>,
-    ) -> Result<HashMap<String, State>> {
-        // Parse state definitions
-        // Format:
-        //   StateName
-        //     ^regex -> Action NextState
-    }
 }
 ```
 
-**TextFSM Parsing Challenges:**
+### Pattern 4: Tracing-Based Structured Logging
 
-1. **Named Capture Groups**: TextFSM uses `$variable` syntax, not `(?P<name>)`
-   - Solution: Pre-process regex to convert `${variable}` → `(?P<variable>...)`
+**What:** Use `tracing` crate with spans for operation context, JSON output for production
 
-2. **Positional Value Matching**: Capture groups map to Values by order
-   - Solution: Track value order during parsing, map captures by position
+**When to use:** For CLI tools that need both human-readable dev logs and machine-parseable prod logs
 
-3. **Implicit Actions**: TextFSM has defaults (e.g., End state auto-Records)
-   - Solution: Normalize to explicit Action::Record in IR
+**Trade-offs:**
+- **Pro:** Unified API for logs and distributed tracing (future-proof for APM)
+- **Pro:** Automatic context propagation via spans (no manual threading of request IDs)
+- **Pro:** `RUST_LOG` env var for filtering (standard Rust convention)
+- **Con:** More complex than simple `eprintln!()` debugging
+- **Con:** JSON logs harder to read without `jq` or log aggregator
 
-**Integration with textfsm-rust crate:**
-
+**Example:**
 ```rust
-use textfsm_rust::TextFsm;
+// Cargo.toml additions
+// [dependencies]
+// tracing = "0.1"
+// tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
 
-impl TextFsmFrontend {
-    /// Leverage textfsm-rust for parsing, translate to our IR
-    pub fn parse_with_crate<P: AsRef<Path>>(path: P) -> Result<Template> {
-        let textfsm = TextFsm::from_file(path)?;
+// src/main.rs
+use tracing::{info, warn, error, instrument};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-        // Convert textfsm-rust's AST to our IR
-        Self::convert_from_textfsm_crate(textfsm)
+fn main() {
+    // Initialize tracing with JSON formatting if CLISCRAPE_LOG_JSON=1
+    let use_json = std::env::var("CLISCRAPE_LOG_JSON").is_ok();
+
+    if use_json {
+        tracing_subscriber::registry()
+            .with(EnvFilter::from_env("RUST_LOG"))
+            .with(tracing_subscriber::fmt::layer().json())
+            .init();
+    } else {
+        tracing_subscriber::registry()
+            .with(EnvFilter::from_env("RUST_LOG"))
+            .with(tracing_subscriber::fmt::layer())
+            .init();
     }
 
-    fn convert_from_textfsm_crate(fsm: TextFsm) -> Result<Template> {
-        // Translation layer: textfsm-rust types → our IR
-        // This allows us to use a battle-tested parser while maintaining our IR
-    }
-}
-```
-
-**Decision**: Use `textfsm-rust` crate for parsing, then translate to our IR. This gives us 99%+ compatibility immediately.
-
-### Frontend → IR Data Flow
-
-```
-.textfsm file
-    ↓ (parse)
-TextFsm (textfsm-rust types)
-    ↓ (convert)
-Template (our IR)
-    ↓ (pass to engine)
-FsmEngine::execute()
-```
-
-## Phase 3: TUI Integration Architecture
-
-### TUI Architecture Pattern: Component + Event-Driven
-
-The TUI follows the [Component Architecture pattern](https://ratatui.rs/concepts/application-patterns/component-architecture/) recommended by Ratatui, with an event-driven core inspired by [The Elm Architecture](https://ratatui.rs/concepts/application-patterns/the-elm-architecture/).
-
-```
-┌──────────────────────────────────────────────────┐
-│                   TUI Application                 │
-├─────────────┬─────────────────┬──────────────────┤
-│  Input Pane │  State Pane     │  Trace Log Pane  │
-│  (text)     │  (current FSM)  │  (events)        │
-└─────────────┴─────────────────┴──────────────────┘
-       ↑              ↑                  ↑
-       └──────────────┴──────────────────┘
-                      │
-             ┌────────┴────────┐
-             │  Event Bus      │
-             │ (crossbeam)     │
-             └────────┬────────┘
-                      │
-             ┌────────┴────────┐
-             │  FSM Engine     │
-             │  (worker thread)│
-             └─────────────────┘
-```
-
-### Component Structure
-
-```rust
-/// Root TUI application
-pub struct DebuggerApp {
-    /// Current template being debugged
-    template: Option<Template>,
-
-    /// UI components
-    input_viewer: InputViewer,
-    state_viewer: StateViewer,
-    trace_log: TraceLog,
-
-    /// Event receiver (from engine worker thread)
-    trace_rx: Receiver<TraceEvent>,
-
-    /// Current execution state (reconstructed from events)
-    execution_state: ExecutionSnapshot,
+    // ... rest of main
 }
 
-/// Component: Input text viewer with line highlighting
-pub struct InputViewer {
-    lines: Vec<String>,
-    current_line: usize,
-    scroll_offset: usize,
-}
+#[instrument(skip(parser))] // Don't log large parser in span
+fn run_command(cli: Cli) -> anyhow::Result<()> {
+    match cli.command {
+        Commands::Parse { template, .. } => {
+            let _parse_span = tracing::info_span!("parse_command", template = %template).entered();
 
-/// Component: FSM state visualization
-pub struct StateViewer {
-    current_state: String,
-    current_record: HashMap<String, String>,
-    filldown_values: HashMap<String, String>,
-}
+            info!("Resolving template");
+            let template_path = resolve_template_spec(&template, template_format)?;
 
-/// Component: Event trace log (scrollable)
-pub struct TraceLog {
-    events: VecDeque<TraceEvent>,
-    max_events: usize,
-    scroll_offset: usize,
-}
+            info!(path = %template_path.display(), "Loading template");
+            let (parser, warnings) = FsmParser::from_file_with_warnings(&template_path)?;
 
-/// Snapshot of execution state (for display)
-pub struct ExecutionSnapshot {
-    current_line: usize,
-    current_state: String,
-    record_buffer: HashMap<String, String>,
-    last_match: Option<String>,
-}
-```
-
-### Event Flow Architecture
-
-```rust
-/// TUI TraceListener implementation
-pub struct TuiTraceListener {
-    tx: Sender<TraceEvent>,
-}
-
-impl TraceListener for TuiTraceListener {
-    fn on_trace(&self, event: TraceEvent) {
-        // Non-blocking send to TUI event loop
-        let _ = self.tx.try_send(event);
-    }
-}
-
-impl DebuggerApp {
-    pub fn run(template: Template, input: String) -> Result<()> {
-        let (trace_tx, trace_rx) = crossbeam_channel::bounded(1000);
-        let listener = Arc::new(TuiTraceListener { tx: trace_tx });
-
-        // Spawn engine in worker thread
-        let engine_handle = std::thread::spawn(move || {
-            let engine = FsmEngine::new(template).with_tracing(listener);
-            engine.execute(&input)
-        });
-
-        // Run TUI event loop
-        let mut app = Self::new(trace_rx);
-        app.event_loop()?;
-
-        // Wait for engine completion
-        let _results = engine_handle.join().unwrap()?;
-
-        Ok(())
-    }
-
-    fn event_loop(&mut self) -> Result<()> {
-        let mut terminal = setup_terminal()?;
-
-        loop {
-            // Process all pending trace events
-            while let Ok(event) = self.trace_rx.try_recv() {
-                self.handle_trace_event(event);
+            for warning in &warnings {
+                warn!(kind = %warning.kind, message = %warning.message, "Template warning");
             }
 
-            // Render UI
-            terminal.draw(|f| self.render(f))?;
+            // ... parsing logic
 
-            // Handle user input (keyboard events)
-            if let Event::Key(key) = crossterm::event::read()? {
-                match key.code {
-                    KeyCode::Char('q') => break,
-                    KeyCode::Char('n') => self.next_step(),
-                    KeyCode::Up => self.scroll_up(),
-                    KeyCode::Down => self.scroll_down(),
-                    _ => {}
-                }
-            }
+            info!(records = all_results.len(), sources = input_sources.len(), "Parse complete");
         }
-
-        Ok(())
-    }
-
-    fn handle_trace_event(&mut self, event: TraceEvent) {
-        // Update execution snapshot
-        match event {
-            TraceEvent::LineProcessed { line_number, .. } => {
-                self.execution_state.current_line = line_number;
-            }
-            TraceEvent::StateTransition { to, .. } => {
-                self.execution_state.current_state = to;
-            }
-            TraceEvent::RuleMatched { captures, .. } => {
-                // Update record buffer with captures
-            }
-            _ => {}
-        }
-
-        // Add to trace log
-        self.trace_log.push(event);
-    }
-
-    fn render(&self, frame: &mut Frame) {
-        let layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Percentage(50), // Input + State
-                Constraint::Percentage(50), // Trace log
-            ])
-            .split(frame.area());
-
-        // Render components
-        self.input_viewer.render(frame, layout[0]);
-        self.state_viewer.render(frame, layout[0]);
-        self.trace_log.render(frame, layout[1]);
     }
 }
 ```
 
-**Key Design Decisions:**
+## Data Flow
 
-1. **Worker Thread Pattern**: Engine runs in background thread
-   - Prevents UI blocking during execution
-   - Uses bounded channel (backpressure if TUI can't keep up)
-
-2. **Event Replay**: TUI reconstructs state from events
-   - Enables "step backward" functionality later
-   - All state is derivable from event stream
-
-3. **Component Isolation**: Each pane is self-contained
-   - Easier testing (render each component independently)
-   - Clear responsibility boundaries
-
-### TUI Layout (Concrete)
+### Template Resolution Flow (NEW + EXISTING)
 
 ```
-╭─────────────────────────────────────────────╮
-│ Input Stream (Line: 42 / 150)               │
-├─────────────────────────────────────────────┤
-│  40: interface Vlan1                        │
-│  41:  ip address 10.0.0.1 255.255.255.0     │
-│→ 42: interface GigabitEthernet1/0/1         │ ← Current line
-│  43:  description Uplink to Core            │
-│  44:  switchport mode trunk                 │
-╰─────────────────────────────────────────────╯
-
-╭──────────────────────────────────────────────╮
-│ Current State: Interface                     │
-├──────────────────────────────────────────────┤
-│ Record Buffer:                               │
-│  interface: "GigabitEthernet1/0/1"           │
-│  description: <empty>                        │
-│  mode: <empty>                               │
-│                                              │
-│ Filldown Values:                             │
-│  vlan: "1"                                   │
-╰──────────────────────────────────────────────╯
-
-╭─────────────────────────────────────────────╮
-│ Trace Log                                    │
-├─────────────────────────────────────────────┤
-│ [42] RuleMatched: Interface.rule[0]         │
-│      Regex: ^interface (\S+)                 │
-│      Captured: interface="Gig1/0/1"          │
-│ [42] StateTransition: Start → Interface     │
-│ [43] RuleMatched: Interface.rule[1]         │
-│      Captured: description="Uplink to Core"  │
-╰─────────────────────────────────────────────╯
-
-[n] Next  [s] Step  [r] Run  [q] Quit
+User Input: cliscrape parse -t <spec> input.txt
+    ↓
+resolve_template_spec(spec, format_filter)
+    ↓
+┌─────────────────────────────────────┐
+│ 1. Is spec an existing file path?   │ → YES → Return PathBuf
+│    Path::new(spec).exists()          │
+└─────────────────┬───────────────────┘
+                  NO
+                  ↓
+┌─────────────────────────────────────┐
+│ 2. XDG user template?                │ → YES → Return PathBuf
+│    $XDG_DATA_HOME/cliscrape/templates│
+└─────────────────┬───────────────────┘
+                  NO
+                  ↓
+┌─────────────────────────────────────┐
+│ 3. Embedded library template?       │ → YES → Write to temp file, return PathBuf
+│    TEMPLATE_LIBRARY.get_file()       │        (or extend loader to accept &str)
+└─────────────────┬───────────────────┘
+                  NO
+                  ↓
+┌─────────────────────────────────────┐
+│ 4. CWD identifier search?            │ → YES → Return PathBuf
+│    Look for <spec>.{textfsm,yaml}    │
+└─────────────────┬───────────────────┘
+                  NO
+                  ↓
+            Error: template not found
 ```
 
-## Phase 4: Modern Frontend Integration
+### Validation Test Flow (NEW)
 
-### YAML/TOML Frontend Architecture
+```
+cargo test --test validation
 
-Modern frontends compile the same IR, but from structured config instead of DSL.
+For each template in templates/:
+    ↓
+    1. Load template via FsmParser::from_file()
+    ↓
+    2. Load corresponding fixture (tests/validation/fixtures/<name>.txt)
+    ↓
+    3. Parse fixture with template
+    ↓
+    4. Compare output to snapshot (tests/validation/snapshots/<name>.json)
+    ↓
+    5. Assert match (or update snapshot if INSTA_UPDATE=1)
+```
+
+### Logging Flow (NEW)
+
+```
+Operation Start (e.g., parse command)
+    ↓
+Create span: info_span!("parse_command", template = <name>)
+    ↓
+    ├→ info!("Resolving template")
+    ├→ info!("Loading template", path = <path>)
+    ├→ warn!("Template warning", kind = <kind>) [if warnings]
+    ├→ info!("Parsing input", source = <source>)
+    └→ info!("Parse complete", records = <count>, duration = <ms>)
+    ↓
+Span end (automatic timing)
+    ↓
+JSON output (if CLISCRAPE_LOG_JSON=1):
+{
+  "timestamp": "2026-02-22T13:45:00Z",
+  "level": "INFO",
+  "target": "cliscrape",
+  "span": {"name": "parse_command", "template": "cisco_ios_show_version"},
+  "fields": {"message": "Parse complete", "records": 5, "duration_ms": 12}
+}
+```
+
+## Integration Points
+
+### External Dependencies (New Crates)
+
+| Crate | Version | Purpose | Integration Notes |
+|-------|---------|---------|-------------------|
+| `include_dir` | 0.7+ | Embed templates at compile-time | Use `include_dir!("$CARGO_MANIFEST_DIR/templates")` |
+| `dirs` | 5.0+ | XDG directory resolution | `dirs::data_local_dir()` for user templates |
+| `tracing` | 0.1 | Structured logging | Replace `eprintln!()` in main.rs |
+| `tracing-subscriber` | 0.3 | Log formatting (JSON/text) | Initialize in main(), use `EnvFilter` |
+
+### Internal Module Boundaries
+
+| Boundary | Communication | Modification Required |
+|----------|---------------|----------------------|
+| **main.rs ↔ template::discovery** | `resolve_template_spec()` returns `TemplateSource` enum | **NEW** - create discovery module |
+| **template::discovery ↔ template::library** | `lookup_template(name)` returns `Option<&'static str>` | **NEW** - create library module |
+| **main.rs ↔ lib.rs** | `FsmParser::from_file()` (unchanged) | **EXISTING** - no changes |
+| **template::loader ↔ engine** | `TemplateIR → Template::from_ir()` (unchanged) | **EXISTING** - no changes |
+
+### New API Surface
 
 ```rust
-pub struct YamlFrontend;
+// src/template/discovery.rs (NEW)
+pub enum TemplateSource {
+    Path(PathBuf),           // File on disk
+    Embedded(&'static str),  // From include_dir!()
+}
 
-impl YamlFrontend {
-    pub fn parse<P: AsRef<Path>>(path: P) -> Result<Template> {
-        let content = std::fs::read_to_string(path)?;
-        let config: YamlConfig = serde_yml::from_str(&content)?;
-        Self::compile_to_ir(config)
+pub fn resolve_template_spec(spec: &str, format: TemplateFormat) -> anyhow::Result<TemplateSource>;
+
+// src/template/library.rs (NEW)
+pub struct TemplateLibrary {
+    index: TemplateIndex,
+}
+
+impl TemplateLibrary {
+    pub fn new() -> Result<Self>;
+    pub fn lookup(&self, name: &str) -> Option<&'static str>;
+    pub fn list_templates(&self) -> Vec<&IndexEntry>;
+}
+
+// Modification to lib.rs (EXTEND existing)
+impl FsmParser {
+    // Add new constructor for embedded templates
+    pub fn from_str_with_format(content: &str, format: TemplateFormat) -> Result<Self, ScraperError> {
+        let ir = match format {
+            TemplateFormat::Textfsm => TextFsmLoader::parse_str(content)?,
+            TemplateFormat::Yaml => modern::load_yaml_str(content)?,
+            TemplateFormat::Toml => modern::load_toml_str(content)?,
+            _ => anyhow::bail!("Auto format requires file path"),
+        };
+        let template = Template::from_ir(ir)?;
+        Ok(Self { template })
     }
-
-    fn compile_to_ir(config: YamlConfig) -> Result<Template> {
-        // Convert structured YAML → IR
-        // This is much simpler than TextFSM parsing because
-        // we control the schema
-    }
-}
-
-/// YAML schema for modern templates
-#[derive(Deserialize)]
-struct YamlConfig {
-    meta: TemplateMeta,
-    values: HashMap<String, ValueConfig>,
-    states: HashMap<String, StateConfig>,
-}
-
-#[derive(Deserialize)]
-struct ValueConfig {
-    /// Regex pattern (can use ${other_value} references)
-    pattern: String,
-    #[serde(default)]
-    filldown: bool,
-    #[serde(default)]
-    required: bool,
-    #[serde(default)]
-    is_list: bool,
-}
-
-#[derive(Deserialize)]
-struct StateConfig {
-    rules: Vec<RuleConfig>,
-}
-
-#[derive(Deserialize)]
-struct RuleConfig {
-    /// Match pattern (can use ${value} interpolation)
-    pattern: String,
-    /// Actions to execute
-    #[serde(default)]
-    actions: Vec<String>, // ["Record", "Clear"]
-    /// Next state transition
-    next_state: Option<String>,
 }
 ```
 
-**Example YAML Template:**
+## Build Order and Dependencies
 
-```yaml
-meta:
-  name: cisco_ios_show_interface
-  author: cliscrape
-  version: 1.0
+### Phase 1: Foundation (Template Library Infrastructure)
+**Goal:** Enable embedded templates without changing CLI behavior
 
-values:
-  interface:
-    pattern: "\\S+"
-    required: true
-  description:
-    pattern: ".+"
-    filldown: false
+1. **Add dependencies to Cargo.toml**
+   - `include_dir = "0.7"`
+   - `dirs = "5.0"`
+   - Not blocking anything
 
-states:
-  Start:
-    rules:
-      - pattern: "^interface ${interface}"
-        next_state: Interface
-        actions: []
+2. **Create template library structure**
+   - Create `templates/index` file
+   - Organize templates into `templates/cisco_ios/`, etc.
+   - Depends on: nothing (can be done in parallel)
 
-  Interface:
-    rules:
-      - pattern: "^ description ${description}"
-        actions: []
-      - pattern: "^interface ${interface}"
-        actions: ["Record", "Clear"]
-        next_state: Interface
-```
+3. **Implement `src/template/library.rs`**
+   - Parse index file
+   - Wrap `include_dir!()` macro
+   - Provide `lookup_template()` API
+   - Depends on: step 1 (deps), step 2 (template structure)
+   - Testable independently (unit tests for index parsing)
 
-**Frontend → IR Compilation:**
+4. **Implement `src/template/discovery.rs`**
+   - Extract existing `resolve_template_spec()` from main.rs
+   - Add XDG search path
+   - Add embedded library lookup
+   - Depends on: step 3 (library API)
+   - Testable independently (mock filesystem)
 
-1. Parse YAML/TOML into typed structs (serde)
-2. Compile `pattern` strings into `Regex` objects
-3. Resolve `${variable}` references
-4. Map action strings to `Action` enum
-5. Construct `Template` IR
+5. **Integrate into `main.rs`**
+   - Replace inline `resolve_template_spec()` with `discovery::resolve_template_spec()`
+   - Add `FsmParser::from_str_with_format()` call for embedded templates
+   - Depends on: step 4 (discovery API)
+   - Testable via existing CLI e2e tests
 
-**Advantage**: Modern frontends are **easier to implement** than TextFSM frontend because we control the schema.
+**Deliverable:** Users can run `cliscrape parse -t cisco_ios_show_version` without local files
 
-## End-to-End Data Flow
+### Phase 2: Validation Suite
+**Goal:** Ensure library templates work with real device outputs
 
-### Parse Mode (CLI)
+6. **Create validation test infrastructure**
+   - Create `tests/validation/` directory
+   - Add `insta` crate for snapshot testing
+   - Create `test_library_templates.rs` harness
+   - Depends on: step 5 (library templates accessible)
+   - Independent of other features
 
-```
-┌──────────────────┐
-│ User invokes:    │
-│ cliscrape parse  │
-│  -t template.fsm │
-│  input.txt       │
-└────────┬─────────┘
-         ↓
-┌────────────────────────┐
-│ TextFsmFrontend        │
-│ parses template.fsm    │
-└────────┬───────────────┘
-         ↓
-┌────────────────────────┐
-│ Template (IR)          │
-│ - values: {...}        │
-│ - states: {...}        │
-└────────┬───────────────┘
-         ↓
-┌────────────────────────┐
-│ FsmEngine::execute()   │
-│ processes input.txt    │
-└────────┬───────────────┘
-         ↓
-┌────────────────────────┐
-│ Vec<HashMap<>>         │
-│ (structured results)   │
-└────────┬───────────────┘
-         ↓
-┌────────────────────────┐
-│ Serialize to JSON/CSV  │
-│ Write to stdout        │
-└────────────────────────┘
-```
+7. **Add device output fixtures**
+   - Collect real device outputs for each template
+   - Store in `tests/validation/fixtures/`
+   - Create expected output snapshots
+   - Depends on: step 6 (test infrastructure)
+   - Can be populated incrementally
 
-### Debug Mode (TUI)
+**Deliverable:** `cargo test --test validation` passes for all library templates
 
-```
-┌──────────────────┐
-│ User invokes:    │
-│ cliscrape debug  │
-│  -t template.fsm │
-└────────┬─────────┘
-         ↓
-┌────────────────────────┐
-│ TextFsmFrontend        │
-│ parses template.fsm    │
-└────────┬───────────────┘
-         ↓
-┌────────────────────────┐
-│ Template (IR)          │
-└────────┬───────────────┘
-         ↓
-┌──────────────────────────────────────────┐
-│ DebuggerApp::run(template, input)       │
-│                                          │
-│  ┌────────────────────────────────────┐ │
-│  │ Worker Thread                      │ │
-│  │ ┌────────────────────────────────┐ │ │
-│  │ │ FsmEngine::execute()           │ │ │
-│  │ │  with TraceListener            │ │ │
-│  │ └─────────────┬──────────────────┘ │ │
-│  │               ↓ (events)            │ │
-│  └───────────────┼─────────────────────┘ │
-│                  ↓                        │
-│  ┌───────────────────────────────────┐   │
-│  │ crossbeam_channel                 │   │
-│  │ (bounded, non-blocking)           │   │
-│  └───────────────┬───────────────────┘   │
-│                  ↓                        │
-│  ┌───────────────────────────────────┐   │
-│  │ TUI Event Loop (main thread)     │   │
-│  │ - Receive trace events            │   │
-│  │ - Update execution snapshot       │   │
-│  │ - Render components               │   │
-│  │ - Handle keyboard input           │   │
-│  └───────────────────────────────────┘   │
-└──────────────────────────────────────────┘
-```
+### Phase 3: Production Logging
+**Goal:** Add observability without changing functionality
 
-## Critical Integration Points
+8. **Add tracing dependencies**
+   - `tracing = "0.1"`
+   - `tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }`
+   - Not blocking anything
 
-### 1. Frontend → IR Contract
+9. **Instrument main operations**
+   - Add `tracing_subscriber::init()` to main()
+   - Add spans to `parse`, `debug`, `convert` commands
+   - Add structured log events for key operations
+   - Depends on: step 8 (deps)
+   - Non-breaking (logs only if `RUST_LOG` set)
 
-**Interface:**
-```rust
-pub trait TemplateFrontend {
-    fn parse<P: AsRef<Path>>(path: P) -> Result<Template>;
-}
-```
+10. **Add CLI flag for JSON logging**
+    - Add `--log-format json` flag (or env var `CLISCRAPE_LOG_JSON`)
+    - Configure `tracing_subscriber` formatter
+    - Depends on: step 9 (tracing integrated)
+    - Testable via CLI tests checking JSON output
 
-**Requirements:**
-- All frontends must produce identical IR structure
-- Regex must be pre-compiled
-- Actions must be normalized (no frontend-specific actions)
-- State names must be valid identifiers
+**Deliverable:** `RUST_LOG=info cliscrape parse ...` produces structured logs
 
-**Validation:**
-- Engine validates IR on construction
-- Check for: undefined states in transitions, undefined values in captures, invalid regex
+### Phase 4: Documentation
+**Goal:** Document new features and template library
 
-### 2. Engine → TUI Event Contract
+11. **Template catalog documentation**
+    - Generate list of available templates from index
+    - Document template naming convention
+    - Provide examples of template usage
+    - Depends on: step 5 (library working)
+    - Can be manual or auto-generated
 
-**Interface:**
-```rust
-pub trait TraceListener: Send + Sync {
-    fn on_trace(&self, event: TraceEvent);
-}
-```
+12. **User guide updates**
+    - Document template discovery mechanism
+    - Document XDG user template installation
+    - Document logging configuration
+    - Depends on: steps 5, 10 (features complete)
+    - Independent task
 
-**Requirements:**
-- Listener must be `Send + Sync` (called from worker thread)
-- Events must be cloneable (sent across thread boundary)
-- Listener must not block (use try_send, not blocking send)
+**Deliverable:** README.md and docs/ updated with v1.5 features
 
-**Performance:**
-- Bounded channel prevents unbounded memory growth
-- Events dropped if TUI can't keep up (acceptable for debugging)
-
-### 3. IR → Engine Execution Contract
-
-**Interface:**
-```rust
-impl FsmEngine {
-    pub fn new(template: Template) -> Self;
-    pub fn execute(&self, input: &str) -> Result<Vec<HashMap<String, String>>>;
-}
-```
-
-**Requirements:**
-- Engine is stateless (safe to call execute() multiple times)
-- Template is immutable during execution
-- All regex compiled before execution starts (no runtime compilation)
-
-## Recommended Build Order
-
-### Phase 1: Foundation (Core Engine & IR)
-**What to build:**
-1. Define IR types (`Template`, `State`, `Rule`, `Action`)
-2. Implement `FsmEngine::execute()` (FSM loop)
-3. Basic error handling
-4. Unit tests with hand-constructed IR
-
-**Deliverable:** Engine that executes IR, tested with hardcoded templates
-
-**Duration:** 2-3 days
-
-**Dependencies:** None
-
-**Why first:** Everything else depends on IR being stable
-
-### Phase 2: TextFSM Frontend
-**What to build:**
-1. Integrate `textfsm-rust` crate
-2. Implement `TextFsmFrontend::parse()`
-3. Translation layer: textfsm-rust types → our IR
-4. Validation against `ntc-templates` test suite
-
-**Deliverable:** `cliscrape parse -t template.fsm input.txt` works
-
-**Duration:** 3-5 days
-
-**Dependencies:** Phase 1 complete
-
-**Why second:** Unlocks immediate utility, validates IR design
-
-**Reuse from Phase 1:** Engine, IR types, execution logic
-
-### Phase 3: TUI Debugger
-**What to build:**
-1. Event system (`TraceEvent`, `TraceListener`)
-2. Worker thread + channel setup
-3. Ratatui components (InputViewer, StateViewer, TraceLog)
-4. Keyboard controls (step, scroll, quit)
-5. Event → UI state mapping
-
-**Deliverable:** `cliscrape debug -t template.fsm` launches TUI
-
-**Duration:** 5-7 days
-
-**Dependencies:** Phase 1 + Phase 2 complete
-
-**Why third:** Needs working engine + TextFSM frontend to debug
-
-**Reuse from Phase 1+2:** Engine, IR, TextFSM parser, execution logic
-
-### Phase 4: Modern Frontends
-**What to build:**
-1. YAML schema design
-2. `YamlFrontend::parse()`
-3. TOML schema (same as YAML)
-4. `TomlFrontend::parse()`
-5. Documentation + examples
-
-**Deliverable:** `cliscrape parse -t template.yaml input.txt` works
-
-**Duration:** 2-3 days
-
-**Dependencies:** Phase 1 complete (can be parallel with Phase 2)
-
-**Why fourth:** Simpler than TextFSM, can wait until core features work
-
-**Reuse from Phase 1+2+3:** Engine, IR, TUI (modern templates work in debugger too)
-
-## Critical Dependencies (What Blocks What)
+### Dependency Graph
 
 ```
-Phase 1 (IR + Engine)
-    ↓ (provides IR contract)
-    ├→ Phase 2 (TextFSM Frontend)
-    │      ↓ (provides working templates)
-    │      └→ Phase 3 (TUI)
-    │              ↓ (TUI can debug any frontend)
-    └→ Phase 4 (Modern Frontends)
-            ↓
-        Phase 3 (TUI now supports YAML/TOML too)
+[1. Deps]     [2. Template Structure]
+    ↓               ↓
+    └─────┬─────────┘
+          ↓
+    [3. library.rs]
+          ↓
+    [4. discovery.rs]
+          ↓
+    [5. main.rs integration]
+          ↓
+    [6. Validation infrastructure]
+          ↓
+    [7. Fixtures] (parallel with 8-12)
+
+[8. Tracing deps]
+    ↓
+[9. Instrument main.rs]
+    ↓
+[10. Log format flag]
+
+[11. Template docs] (depends on 5)
+[12. User guide] (depends on 5, 10)
 ```
 
-**Critical path:** Phase 1 → Phase 2 → Phase 3
-**Parallel opportunity:** Phase 4 can start after Phase 1
+### Critical Path
 
-## Anti-Patterns to Avoid
+The fastest path to a working v1.5:
 
-### Anti-Pattern 1: Tightly Coupling Frontend to Engine
+1. Deps → 2. Template structure → 3. library.rs → 4. discovery.rs → 5. main.rs integration
 
-**What people do:** Put TextFSM parsing logic directly in engine
+Then in parallel:
+- Validation: 6 → 7
+- Logging: 8 → 9 → 10
+- Docs: 11, 12
+
+Estimated build order time: 3-5 days (assumes templates already authored)
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Downloading Templates at Runtime
+
+**What people do:** Fetch templates from GitHub/CDN on first use, cache locally
 
 **Why it's wrong:**
-- Impossible to add YAML/TOML support without rewriting engine
-- Engine becomes monolithic (harder to test)
-- Violates separation of concerns
+- Network dependency makes tool fragile (offline use broken)
+- Security risk (MITM attacks, compromised CDN)
+- Slower startup (latency on first use)
+- Violates "works immediately after install" principle
 
-**Do this instead:**
-- Define IR as strict contract
-- All frontends compile to IR
-- Engine only knows about IR
+**Do this instead:** Embed templates at compile-time with `include_dir!()`, let users override via XDG if needed
 
-### Anti-Pattern 2: Synchronous TUI Rendering
+### Anti-Pattern 2: Single-Source Template Resolution
 
-**What people do:** Call `engine.execute()` from TUI main thread
+**What people do:** Only check embedded library OR only check filesystem
 
 **Why it's wrong:**
-- Blocks UI during execution
-- Can't render progress or step through execution
-- Poor UX for large inputs
+- Embedded-only: Users can't customize or add templates
+- Filesystem-only: Requires installation step, breaks without templates/
+- Missing user expectations (Linux users expect XDG, macOS users expect ~/Library)
 
-**Do this instead:**
-- Worker thread pattern
-- Event-driven architecture
-- Non-blocking channels
+**Do this instead:** Layered resolution (explicit path → XDG → embedded → CWD) with clear precedence
 
-### Anti-Pattern 3: Runtime Regex Compilation
+### Anti-Pattern 3: Ignoring Logging in Library Code
 
-**What people do:** Compile regex during `execute()` loop
+**What people do:** Only add logging to main.rs, keep library print-free
 
 **Why it's wrong:**
-- Regex compilation is expensive (microseconds to milliseconds)
-- Called on every line (100k lines = 100k compilations)
-- Kills performance
+- Actually correct for libraries! But CLI binary should instrument library calls
+- Missing: span context showing which operation triggered library code
+- Users have no visibility into what's happening during parsing
 
-**Do this instead:**
-- Compile all regex during IR construction
-- Store compiled `Regex` objects in IR
-- Engine only calls `regex.captures()`, never `Regex::new()`
+**Do this instead:** Keep library print-free (correct), but wrap library calls in tracing spans from main.rs
 
-### Anti-Pattern 4: Mutable Global State
+### Anti-Pattern 4: Tightly Coupling Validation to Unit Tests
 
-**What people do:** Store execution state in engine struct
+**What people do:** Put validation tests in `src/engine/mod.rs` or `src/template/loader.rs`
 
 **Why it's wrong:**
-- Engine becomes stateful (can't execute() twice)
-- Breaks thread-safety
-- Hard to test (need to reset state between tests)
+- Mixes concerns (engine correctness vs template correctness)
+- Validation fixtures are large (real device outputs), bloat unit test runtime
+- Hard to update snapshots independently from code changes
+- Validation failures don't indicate code bugs, just template issues
 
-**Do this instead:**
-- Stateless engine (template is immutable)
-- All execution state in `ExecutionContext` (ephemeral per parse)
-- Engine safe to call from multiple threads
+**Do this instead:** Separate `tests/validation/` with fixtures and snapshots, use `insta` for snapshot testing
+
+### Anti-Pattern 5: Hardcoding Template Paths in Code
+
+**What people do:** `include_str!("../templates/cisco_ios_show_version.textfsm")` in multiple places
+
+**Why it's wrong:**
+- DRY violation (path repeated everywhere)
+- No central index (can't list available templates)
+- Adding templates requires code changes
+- Can't support metadata (description, version, author)
+
+**Do this instead:** Central `templates/index` file with lookup API, single source of truth
 
 ## Scaling Considerations
 
-This is a **single-user CLI tool**, not a web service. Scaling concerns are about **large inputs**, not concurrent users.
+| Scale | Architecture Adjustments |
+|-------|--------------------------|
+| **50-100 templates** | Current architecture sufficient. Embedded binary grows ~100-200KB (acceptable). Index file parsed once at startup (~1ms). |
+| **100-500 templates** | Consider lazy loading: don't parse all templates at startup, only when requested. Keep index in memory, load template content on demand from `TEMPLATE_LIBRARY`. Binary size ~500KB-1MB (still acceptable). |
+| **500+ templates** | Split library into vendor-specific crates (`cliscrape-cisco`, `cliscrape-juniper`). Users install only what they need. Still embed templates (don't move to runtime download). Binary size could reach 5MB+ with all vendors. |
 
-| Input Size | Performance Strategy |
-|------------|----------------------|
-| < 1k lines | Default (no optimization needed) |
-| 1k - 100k lines | Pre-compile regex, use RegexSet for multi-pattern matching |
-| 100k - 1M lines | Streaming parser (don't load entire input into memory) |
-| 1M+ lines | Parallel execution (split input, merge results) |
+### Scaling Priorities
 
-**First bottleneck:** Regex matching (solved with pre-compilation)
+1. **First bottleneck:** Index lookup performance (linear scan)
+   - **Fix:** Switch from `Vec<IndexEntry>` to `HashMap<String, IndexEntry>` when >100 templates
+   - **Impact:** O(n) → O(1) lookup, negligible memory increase
 
-**Second bottleneck:** Memory usage in TUI trace log (solved with bounded buffer)
+2. **Second bottleneck:** Binary size with 500+ templates
+   - **Fix:** Feature flags in Cargo.toml (`--features cisco,juniper`) to conditionally include vendors
+   - **Impact:** Users compile only what they need, reduces binary size 50-80%
+
+3. **Third bottleneck:** Validation test runtime with >200 templates
+   - **Fix:** Parallelize validation tests with `cargo-nextest`, group by vendor
+   - **Impact:** Test time grows sublinearly with template count
+
+## Production Deployment Considerations
+
+### Configuration Management
+
+Templates will be discovered in this order (first match wins):
+
+1. **Explicit CLI path:** `--template /path/to/template.yaml` (highest priority)
+2. **XDG user templates:** `$XDG_DATA_HOME/cliscrape/templates/` (Linux: `~/.local/share`, macOS: `~/Library/Application Support`)
+3. **Embedded library:** Compiled into binary via `include_dir!()`
+4. **CWD identifier:** `./template-name.{textfsm,yaml,toml}` (existing fallback, lowest priority)
+
+Users can install custom templates:
+
+```bash
+mkdir -p ~/.local/share/cliscrape/templates
+cp my_custom_template.yaml ~/.local/share/cliscrape/templates/
+cliscrape parse -t my_custom_template input.txt  # Picks up user template
+```
+
+### Logging Configuration
+
+Recommended production settings:
+
+```bash
+# Development: human-readable logs
+export RUST_LOG=cliscrape=debug,warn
+cliscrape parse -t template input.txt
+
+# Production: JSON logs to stdout, parse results to stdout
+export RUST_LOG=cliscrape=info,warn
+export CLISCRAPE_LOG_JSON=1
+cliscrape parse -t template input.txt 2>logs.jsonl >results.json
+
+# Filter logs with jq
+cat logs.jsonl | jq 'select(.level == "ERROR")'
+```
+
+Log events emitted:
+
+- `template_resolved`: Which template source was used (path/xdg/embedded/cwd)
+- `template_loaded`: Template parsing complete, warnings if any
+- `input_parsed`: Per-input-file parse complete with record count
+- `parse_complete`: Overall operation summary with timing
+
+### Error Handling Strategy
+
+New error types needed:
+
+```rust
+#[derive(Error, Debug)]
+pub enum DiscoveryError {
+    #[error("Template '{0}' not found in any search path")]
+    TemplateNotFound(String),
+
+    #[error("Ambiguous template '{0}': found in multiple locations: {1:?}")]
+    AmbiguousTemplate(String, Vec<String>),
+
+    #[error("Library index is corrupted: {0}")]
+    CorruptedIndex(String),
+}
+```
+
+Errors are formatted per existing `--error-format` flag (human/json), maintaining consistency with v1.0 behavior.
 
 ## Sources
 
-**Compiler Architecture & IR Design:**
-- [Intermediate representation - Wikipedia](https://en.wikipedia.org/wiki/Intermediate_representation)
-- [Introduction to Intermediate Representation(IR) - GeeksforGeeks](https://www.geeksforgeeks.org/compiler-design/introduction-to-intermediate-representationir/)
-- [How to Build a Compiler Frontend in Rust](https://oneuptime.com/blog/post/2026-01-30-rust-compiler-frontend/view)
-- [Intermediate representations (IR) in Compiler Design](https://iq.opengenus.org/intermediate-representations-in-compiler-design/)
+**Rust CLI Configuration and Discovery:**
+- [XDG Base Directory Specification - Rust](https://whitequark.github.io/rust-xdg/xdg/struct.BaseDirectories.html)
+- [Configuration - Rain's Rust CLI recommendations](https://rust-cli-recommendations.sunshowers.io/configuration.html)
+- [GitHub - rust-cli/confy](https://github.com/rust-cli/confy)
+- [Handle XDG Directories - Ratatui](https://ratatui.rs/recipes/apps/config-directories/)
 
-**FSM Implementation Patterns:**
-- [Generic Finite State Machines with Rust's Type State Pattern | Medium](https://medium.com/@alfred.weirich/generic-finite-state-machines-with-rusts-type-state-pattern-04593bba34a8)
-- [Pretty State Machine Patterns in Rust](https://hoverbear.org/blog/rust-state-machine-pattern/)
-- [Event-Based Finite State Machines in Rust — MoonBench](https://moonbench.xyz/projects/rust-event-driven-finite-state-machine/)
+**Compile-Time Resource Embedding:**
+- [include_dir - Rust](https://docs.rs/include_dir/latest/include_dir/)
+- [include_dir - crates.io](https://crates.io/crates/include_dir)
+- [Bundle Resource Files into a Rust Application](http://www.legendu.net/misc/blog/bundle-resource-files-into-a-rust-application/)
+- [rust-embed - crates.io](https://crates.io/crates/rust-embed)
 
-**Ratatui Architecture:**
-- [Component Architecture | Ratatui](https://ratatui.rs/concepts/application-patterns/component-architecture/)
-- [The Elm Architecture (TEA) | Ratatui](https://ratatui.rs/concepts/application-patterns/the-elm-architecture/)
-- [Flux Architecture | Ratatui](https://ratatui.rs/concepts/application-patterns/flux-architecture/)
+**Structured Logging with Tracing:**
+- [How to Structure Logs Properly in Rust with tracing and OpenTelemetry](https://oneuptime.com/blog/post/2026-01-07-rust-tracing-structured-logs/view)
+- [How to Create Structured JSON Logs with tracing in Rust](https://oneuptime.com/blog/post/2026-01-25-structured-json-logs-tracing-rust/view)
+- [Logging and Distributed Tracing in Rust Microservices - Calmops](https://calmops.com/programming/rust/logging-and-distributed-tracing-in-rust-microservices/)
+- [tracing - Rust](https://docs.rs/tracing)
+- [GitHub - tokio-rs/tracing](https://github.com/tokio-rs/tracing)
 
-**TextFSM & Parsing:**
-- [GitHub - google/textfsm](https://github.com/google/textfsm)
-- [TextFSM Wiki](https://github.com/google/textfsm/wiki/TextFSM)
-- [High Performance Text Parsing Using FSM | HackerNoon](https://hackernoon.com/high-performance-text-parsing-using-finite-state-machines-fsm-6d3m33j9)
+**Network Template Library Patterns:**
+- [GitHub - networktocode/ntc-templates](https://github.com/networktocode/ntc-templates)
+- [Leveraging NTC-Templates for Network Automation](https://networktocode.com/blog/leveraging-ntc-templates-for-network-automation-2025-08-08/)
+- [ntc-templates/ntc_templates/templates/index at master](https://github.com/networktocode/ntc-templates/blob/master/ntc_templates/templates/index)
+- [Getting Started - NTC Templates Documentation](https://ntc-templates.readthedocs.io/en/latest/user/lib_getting_started/)
 
-**Rust Regex Optimization:**
-- [regex - Rust](https://docs.rs/regex/latest/regex/)
-- [Regex engine internals as a library - Andrew Gallant's Blog](https://burntsushi.net/regex-internals/)
-- [GitHub - rust-lang/regex](https://github.com/rust-lang/regex)
+**Network Device Parser Validation:**
+- [Network Test Automation with NetBox + pyATS + Genie](https://netboxlabs.com/blog/network-test-automation-netbox-pyats-genie/)
+- [Parsing Strategies - PyATS Genie Parsers](https://networktocode.com/blog/parsing-strategies-pyats-genie/)
+- [Network Validation with pyATS - BlueAlly](https://www.blueally.com/network-validation-with-pyats/)
+- [Testing Device Configuration Templates - ipSpace.net blog](https://blog.ipspace.net/2024/05/netlab-integration-tests/)
+
+**pyATS Genie Parser Architecture:**
+- [index - Genie - Cisco DevNet](https://developer.cisco.com/docs/genie-docs/)
+- [Write a parser - pyATS Development Guide](https://pubhub.devnetcloud.com/media/pyats-development-guide/docs/writeparser/writeparser.html)
+- [GitHub - CiscoTestAutomation/genieparser](https://github.com/CiscoTestAutomation/genieparser)
 
 ---
-*Architecture research for: cliscrape v0.1 Alpha*
-*Researched: 2026-02-17*
-*Confidence: HIGH*
+*Architecture research for: cliscrape v1.5 Template Ecosystem & Production Hardening*
+*Researched: 2026-02-22*
