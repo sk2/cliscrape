@@ -2,7 +2,7 @@
 source: tests/validation.rs
 expression: records
 ---
-- serial: JPE12345678
+- version: 4.22.0F
+  serial: JPE12345678
   uptime: ""
-  version: 4.22.0F
   model: DCS-7050SX-128

@@ -3,8 +3,8 @@ source: tests/validation.rs
 expression: records
 ---
 - status: up
-  protocol: up
-  description: Uplink to Core
   bandwidth: ""
+  description: Uplink to Core
   mtu: ""
+  protocol: up
   interface: GigabitEthernet0/1

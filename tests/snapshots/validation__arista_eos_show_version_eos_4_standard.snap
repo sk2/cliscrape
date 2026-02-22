@@ -6,7 +6,7 @@ expression: results.clone()
   model: DCS-7050SX-64-R
   serial: SSJ12345678
   uptime: ""
-- serial: ""
-  model: ""
-  uptime: ""
+- model: ""
   version: 4.24.2F
+  serial: ""
+  uptime: ""

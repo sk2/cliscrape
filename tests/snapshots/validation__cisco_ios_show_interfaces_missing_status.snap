@@ -2,9 +2,9 @@
 source: tests/validation.rs
 expression: records
 ---
-- description: Invalid interface format
-  interface: ""
-  mtu: 1500
-  protocol: ""
+- protocol: ""
   status: ""
   bandwidth: 1000000
+  interface: ""
+  description: Invalid interface format
+  mtu: 1500

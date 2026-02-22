@@ -2,8 +2,8 @@
 source: tests/validation.rs
 expression: records
 ---
-- serial: ""
+- version: "15.0(2)SE11,"
   uptime: "5 weeks, 2 days, 3 hours, 45 minutes"
-  version: "15.0(2)SE11,"
-  hostname: Router1
   model: ""
+  hostname: Router1
+  serial: ""

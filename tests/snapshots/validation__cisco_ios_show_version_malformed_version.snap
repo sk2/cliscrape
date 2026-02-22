@@ -3,7 +3,7 @@ source: tests/validation.rs
 expression: records
 ---
 - hostname: Router1
-  serial: ""
   uptime: "5 weeks, 2 days, 3 hours, 45 minutes"
   version: ""
+  serial: ""
   model: WS-C2960-48TT-L
