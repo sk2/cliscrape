@@ -11,16 +11,16 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 7 of 11 (Compatibility Validation Suite)
-Plan: 4 of 5 in current phase (COMPLETE)
+Plan: 5 of 5 in current phase (COMPLETE)
 Status: Active
-Last Activity: 2026-02-23 — Completed 07-04 (field coverage validation)
+Last Activity: 2026-02-23 — Completed 07-05 (CI/CD integration)
 
-Progress: [█████░░░░░] 50% (v1.0 complete: 5/11 phases, v1.5: Phase 6 complete, Phase 7: 4/5 plans)
+Progress: [█████░░░░░] 50% (v1.0 complete: 5/11 phases, v1.5: Phase 6 complete, Phase 7: 5/5 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 32 (28 v1.0 + 4 v1.5 Phase 7)
+- Total plans completed: 33 (28 v1.0 + 5 v1.5 Phase 7)
 - Average duration: ~10 min (recent)
 - Total execution time: Not tracked
 
@@ -29,7 +29,7 @@ Progress: [█████░░░░░] 50% (v1.0 complete: 5/11 phases, v1.5
 | Milestone | Phases | Plans | Status |
 |-----------|--------|-------|--------|
 | v1.0 MVP | 5 | 28/28 | Complete (2026-02-22) |
-| v1.5 Template Ecosystem | 6 | 4/? | Phase 6 complete |
+| v1.5 Template Ecosystem | 6 | 5/? | Phase 6 complete |
 
 **Recent Trend:**
 - v1.0 shipped with 77 passing tests, 4.1M lines/sec throughput
@@ -47,6 +47,7 @@ Progress: [█████░░░░░] 50% (v1.0 complete: 5/11 phases, v1.5
 | Phase 07 P01 | 864 | 3 tasks | 13 files |
 | Phase 07 P03 | 296 | 2 tasks | 2 files |
 | Phase 07 P04 | 160 | 2 tasks | 1 files |
+| Phase 07 P05 | 42 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,8 @@ Recent decisions affecting current work:
 - **Vendor-First Fixture Organization:** Test fixtures organized by vendor/template hierarchy for maintainability (07-01)
 - **External Snapshot Storage:** Use tests/snapshots/ directory for better diff visualization vs inline snapshots (07-01)
 - **Test-time Coverage Validation:** Coverage calculated at test-time only for developer feedback; 80% default threshold (07-04)
+- **Modern Rust toolchain action:** Use dtolnay/rust-toolchain@stable instead of deprecated actions-rs for reliable CI (07-05)
+- **Locked cargo-insta installation:** Use --locked flag for deterministic CI behavior (07-05)
 
 ### Pending Todos
 
@@ -80,5 +83,5 @@ None currently. v1.5 starts fresh with research-informed architecture.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 07-03-PLAN.md (Performance benchmarking suite)
+Stopped at: Completed 07-05-PLAN.md (CI/CD integration)
 Resume file: None

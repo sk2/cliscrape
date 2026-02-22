@@ -21,7 +21,7 @@ Requirements for Template Ecosystem & Production Hardening milestone.
 - [x] **VAL-01**: Developer can run snapshot tests for all embedded templates
 - [x] **VAL-02**: Developer can add negative test cases (malformed input, errors, truncation)
 - [x] **VAL-03**: Developer can run performance benchmarks per template
-- [ ] **VAL-04**: Developer can verify validation suite passes in CI/CD
+- [x] **VAL-04**: Developer can verify validation suite passes in CI/CD
 - [x] **VAL-05**: User receives validation warnings when template captures <80% expected fields
 
 ### TUI Integration
@@ -95,7 +95,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VAL-01 | Phase 7 | Complete (07-01) |
 | VAL-02 | Phase 7 | Complete (07-02) |
 | VAL-03 | Phase 7 | Complete (07-03) |
-| VAL-04 | Phase 7 | Pending |
+| VAL-04 | Phase 7 | Complete |
 | VAL-05 | Phase 7 | Complete (07-04) |
 | TUI-01 | Phase 8 | Pending |
 | TUI-02 | Phase 8 | Pending |
