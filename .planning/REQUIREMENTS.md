@@ -86,13 +86,42 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (Populated by roadmapper) | | |
+| LIB-01 | Phase 6 | Pending |
+| LIB-02 | Phase 6 | Pending |
+| LIB-03 | Phase 6 | Pending |
+| LIB-04 | Phase 6 | Pending |
+| LIB-05 | Phase 6 | Pending |
+| LIB-06 | Phase 6 | Pending |
+| VAL-01 | Phase 7 | Pending |
+| VAL-02 | Phase 7 | Pending |
+| VAL-03 | Phase 7 | Pending |
+| VAL-04 | Phase 7 | Pending |
+| VAL-05 | Phase 7 | Pending |
+| TUI-01 | Phase 8 | Pending |
+| TUI-02 | Phase 8 | Pending |
+| TUI-03 | Phase 8 | Pending |
+| TUI-04 | Phase 8 | Pending |
+| HARD-01 | Phase 9 | Pending |
+| HARD-02 | Phase 9 | Pending |
+| HARD-03 | Phase 9 | Pending |
+| HARD-04 | Phase 9 | Pending |
+| HARD-05 | Phase 9 | Pending |
+| LOG-01 | Phase 10 | Pending |
+| LOG-02 | Phase 10 | Pending |
+| LOG-03 | Phase 10 | Pending |
+| LOG-04 | Phase 10 | Pending |
+| LOG-05 | Phase 10 | Pending |
+| DOC-01 | Phase 11 | Pending |
+| DOC-02 | Phase 11 | Pending |
+| DOC-03 | Phase 11 | Pending |
+| DOC-04 | Phase 11 | Pending |
+| DOC-05 | Phase 11 | Pending |
 
 **Coverage:**
 - v1.5 requirements: 30 total
-- Mapped to phases: (pending roadmap)
-- Unmapped: (pending roadmap)
+- Mapped to phases: 30/30 (100%)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-02-22 after initial definition*
+*Last updated: 2026-02-22 after roadmap creation*
