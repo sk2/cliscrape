@@ -64,7 +64,14 @@ Plans:
   3. Developer can verify negative test cases exist covering malformed input, truncation, and parser errors
   4. Developer sees CI validation suite pass before merge to main
   5. User receives actionable warning when template captures less than 80% of expected fields
-**Plans**: TBD
+**Plans**: 5 plans in 3 waves
+
+Plans:
+- [ ] 07-01-PLAN.md — Snapshot testing infrastructure (insta framework + fixtures)
+- [ ] 07-02-PLAN.md — Negative test coverage (error cases + edge cases)
+- [ ] 07-03-PLAN.md — Performance benchmarking (criterion integration)
+- [ ] 07-04-PLAN.md — Coverage validation system (field coverage analysis)
+- [ ] 07-05-PLAN.md — CI integration (GitHub Actions workflow)
 
 ### Phase 8: TUI Integration
 **Goal**: Users can discover and test embedded templates interactively from TUI Live Lab
