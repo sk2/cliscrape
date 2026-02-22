@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 ## Current Position
 
-Phase: 6 of 11 (Template Library Foundation)
-Plan: 4 of 4 in current phase (COMPLETE)
-Status: Phase complete
-Last Activity: 2026-02-22 — Completed 06-04 (template library population)
+Phase: 7 of 11 (Compatibility Validation Suite)
+Plan: 2 of 4 in current phase
+Status: Active
+Last Activity: 2026-02-23 — Completed 07-02 (negative test coverage)
 
-Progress: [████░░░░░░] 49% (v1.0 complete: 5/11 phases, v1.5: 4/4 plans in phase 6)
+Progress: [█████░░░░░] 50% (v1.0 complete: 5/11 phases, v1.5: Phase 6 complete, Phase 7: 2/4 plans)
 
 ## Performance Metrics
 
@@ -44,6 +44,7 @@ Progress: [████░░░░░░] 49% (v1.0 complete: 5/11 phases, v1.5
 | Phase 06 P02 | 244 | 2 tasks | 3 files |
 | Phase 06 P03 | 544 | 2 tasks | 4 files |
 | Phase 06 P04 | 413 | 3 tasks | 10 files |
+| Phase 07 P02 | 727 | 2 tasks | 25 files |
 
 ## Accumulated Context
 
@@ -61,6 +62,8 @@ Recent decisions affecting current work:
 - **Subdirectory Support in Template Names:** Template names allow forward slashes for organization while maintaining security (06-03)
 - **Field Introspection API:** FsmParser exposes field_names() for template inspection without breaking encapsulation (06-03)
 - **Metadata Field in Modern Templates:** ModernTemplateDoc accepts metadata field (skipped during serialization) to allow metadata sections (06-04)
+- **Snapshot-Based Negative Testing:** Document parser behavior via snapshots instead of strict error assertions - parser is lenient by design (07-02)
+- **Accept HashMap Field Ordering Variation:** Snapshot tests tolerate field ordering changes due to HashMap's randomized iteration (07-02)
 
 ### Pending Todos
 
@@ -73,6 +76,6 @@ None currently. v1.5 starts fresh with research-informed architecture.
 
 ## Session Continuity
 
-Last session: 2026-02-22
-Stopped at: Completed 06-04-PLAN.md (Template library population - Phase 6 complete)
+Last session: 2026-02-23
+Stopped at: Completed 07-02-PLAN.md (Negative test coverage - Phase 7 in progress)
 Resume file: None
