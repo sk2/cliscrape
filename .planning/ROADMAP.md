@@ -46,7 +46,13 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
   3. User can override embedded templates by placing custom versions in ~/.local/share/cliscrape/templates/
   4. User receives security validation error when attempting path traversal via template names
   5. User can view template source and metadata for any embedded template
-**Plans**: TBD
+**Plans**: 4 plans in 3 waves
+
+Plans:
+- [ ] 06-01-PLAN.md — Embedded library infrastructure (rust-embed + XDG resolver + security validation)
+- [ ] 06-02-PLAN.md — Template metadata extraction (YAML/TOML/TextFSM)
+- [ ] 06-03-PLAN.md — CLI integration (list-templates and show-template subcommands)
+- [ ] 06-04-PLAN.md — Initial template library creation and testing
 
 ### Phase 7: Compatibility Validation Suite
 **Goal**: All embedded templates verified against real device outputs with negative test coverage
@@ -124,7 +130,7 @@ Phases execute in numeric order: 6 → 7 → 8 → 9 → 10 → 11
 | 3. Modern Ergonomic Templates | v1.0 | 6/6 | Complete | 2026-02-20 |
 | 4. TUI Debugger Foundation | v1.0 | 5/5 | Complete | 2026-02-21 |
 | 5. TUI Advanced Debugging | v1.0 | 4/4 | Complete | 2026-02-21 |
-| 6. Template Library Foundation | v1.5 | 0/? | Not started | - |
+| 6. Template Library Foundation | v1.5 | 0/4 | Ready | - |
 | 7. Compatibility Validation Suite | v1.5 | 0/? | Not started | - |
 | 8. TUI Integration | v1.5 | 0/? | Not started | - |
 | 9. Edge Case Hardening | v1.5 | 0/? | Not started | - |
