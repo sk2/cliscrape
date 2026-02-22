@@ -84,11 +84,11 @@ pub enum Commands {
     #[command(name = "list-templates", alias = "templates")]
     ListTemplates {
         /// Filter templates by pattern (supports wildcards)
-        #[arg(short, long)]
+        #[arg(long)]
         filter: Option<String>,
 
         /// Output format for template listing
-        #[arg(short = 'f', long, value_enum, default_value_t = OutputFormat::Table)]
+        #[arg(short, long, value_enum, default_value_t = OutputFormat::Table)]
         format: OutputFormat,
     },
 

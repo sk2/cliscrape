@@ -7,11 +7,185 @@ use crate::cli::{Cli, Commands, ErrorFormat, OutputFormat, TemplateFormat as Cli
 use anyhow::Context;
 use clap::Parser;
 use cliscrape::FsmParser;
+use cliscrape::template::{library, metadata, resolver::{TemplateResolver, TemplateSource}};
+use comfy_table::{Table, presets};
 use dialoguer::{theme::ColorfulTheme, Confirm, Input, Select};
 use std::collections::HashSet;
 use std::io::{self, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
+
+/// Handle list-templates command
+fn handle_list_templates(filter: Option<&str>, format: OutputFormat) -> anyhow::Result<()> {
+    // Create template resolver (for future user template discovery)
+    let _resolver = TemplateResolver::new()
+        .map_err(|e| anyhow::anyhow!("Failed to initialize template resolver: {}", e))?;
+
+    // Collect all templates: embedded + user
+    let mut templates = Vec::new();
+
+    // Add embedded templates
+    for name in library::list_embedded() {
+        if let Some(embedded) = library::get_embedded(&name) {
+            let content = std::str::from_utf8(&embedded.data)
+                .unwrap_or("");
+            let template_format = format_from_extension(&name);
+            let meta = metadata::extract_metadata(content, template_format);
+            templates.push((name, meta, "Embedded".to_string()));
+        }
+    }
+
+    // Add user templates (check XDG directories)
+    // Note: We don't have a direct way to list user templates from TemplateResolver,
+    // so we'll rely on embedded templates for now. User overrides will be detected
+    // when resolving specific template names.
+
+    // Apply filter if provided
+    if let Some(pattern) = filter {
+        let glob_pattern = glob::Pattern::new(pattern)
+            .with_context(|| format!("Invalid filter pattern: {}", pattern))?;
+        templates.retain(|(name, _, _)| glob_pattern.matches(name));
+    }
+
+    // Sort by name for consistent output
+    templates.sort_by(|a, b| a.0.cmp(&b.0));
+
+    // Format output
+    match format {
+        OutputFormat::Table | OutputFormat::Auto => {
+            let mut table = Table::new();
+            table.load_preset(presets::UTF8_FULL);
+            table.set_header(vec!["Name", "Description", "Compatibility", "Version", "Source"]);
+
+            for (name, meta, source) in templates {
+                table.add_row(vec![
+                    &name,
+                    &meta.description,
+                    &meta.compatibility,
+                    &meta.version,
+                    &source,
+                ]);
+            }
+
+            println!("{}", table);
+        }
+        OutputFormat::Json => {
+            let json_output: Vec<_> = templates
+                .iter()
+                .map(|(name, meta, source)| {
+                    serde_json::json!({
+                        "name": name,
+                        "description": meta.description,
+                        "compatibility": meta.compatibility,
+                        "version": meta.version,
+                        "author": meta.author,
+                        "maintainer": meta.maintainer,
+                        "source": source,
+                    })
+                })
+                .collect();
+            println!("{}", serde_json::to_string_pretty(&json_output)?);
+        }
+        OutputFormat::Csv => {
+            anyhow::bail!("CSV format not supported for template listing");
+        }
+    }
+
+    Ok(())
+}
+
+/// Handle show-template command
+fn handle_show_template(name: &str, show_source: bool) -> anyhow::Result<()> {
+    // Create template resolver
+    let resolver = TemplateResolver::new()
+        .map_err(|e| anyhow::anyhow!("Failed to initialize template resolver: {}", e))?;
+
+    // Resolve template
+    let source = resolver.resolve(name)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+    // Load template content and determine source location
+    let (actual_content, actual_source) = match &source {
+        TemplateSource::UserFile(path) => {
+            let content = std::fs::read_to_string(path)
+                .with_context(|| format!("Failed to read template from {}", path.display()))?;
+            (content, format!("User Override ({})", path.display()))
+        }
+        TemplateSource::Embedded(embedded) => {
+            let content = std::str::from_utf8(&embedded.data)
+                .context("Embedded template contains invalid UTF-8")?
+                .to_string();
+            (content, "Embedded".to_string())
+        }
+    };
+
+    // Extract metadata
+    let template_format = format_from_extension(name);
+    let meta = metadata::extract_metadata(&actual_content, template_format);
+
+    // Load template to get field list
+    let parser = match &source {
+        TemplateSource::UserFile(path) => {
+            FsmParser::from_file(path)
+                .with_context(|| format!("Failed to load template from {}", path.display()))?
+        }
+        TemplateSource::Embedded(embedded) => {
+            // Create a temporary file to load the embedded template
+            let temp_dir = std::env::temp_dir();
+            // Replace forward slashes with underscores for temp filename
+            let safe_name = name.replace('/', "_");
+            let temp_path = temp_dir.join(format!("cliscrape-temp-{}", safe_name));
+            std::fs::write(&temp_path, &embedded.data)
+                .context("Failed to write temporary template file")?;
+            let result = FsmParser::from_file(&temp_path);
+            let _ = std::fs::remove_file(&temp_path); // Clean up temp file
+            result.context("Failed to load embedded template")?
+        }
+    };
+
+    // Get field names from template
+    let mut sorted_fields = parser.field_names();
+    sorted_fields.sort();
+
+    // Print formatted output
+    println!("Template: {}", name);
+    println!("Description: {}", meta.description);
+    println!("Compatibility: {}", meta.compatibility);
+    println!("Version: {}", meta.version);
+    println!("Author: {}", meta.author);
+    if let Some(maintainer) = &meta.maintainer {
+        println!("Maintainer: {}", maintainer);
+    }
+    println!("Source: {}", actual_source);
+    println!("\nFields Extracted:");
+    for field in sorted_fields {
+        println!("  - {}", field);
+    }
+
+    // Show source if requested
+    if show_source {
+        println!("\n{}", "=".repeat(80));
+        println!("Template Source:");
+        println!("{}", "=".repeat(80));
+        println!("{}", actual_content);
+    }
+
+    Ok(())
+}
+
+/// Helper function to determine template format from file extension
+fn format_from_extension(name: &str) -> cliscrape::TemplateFormat {
+    let ext = std::path::Path::new(name)
+        .extension()
+        .and_then(|s| s.to_str());
+
+    match ext {
+        Some("yaml") | Some("yml") => cliscrape::TemplateFormat::Yaml,
+        Some("toml") => cliscrape::TemplateFormat::Toml,
+        Some("textfsm") => cliscrape::TemplateFormat::Textfsm,
+        _ => cliscrape::TemplateFormat::Auto,
+    }
+}
 
 fn main() {
     // Pre-scan argv for --error-format to honor it even during clap parsing failures
@@ -315,6 +489,14 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
             })?;
 
             println!("Wrote converted template to {}", out_path.display());
+        }
+
+        Commands::ListTemplates { filter, format } => {
+            handle_list_templates(filter.as_deref(), format)?;
+        }
+
+        Commands::ShowTemplate { template, source } => {
+            handle_show_template(&template, source)?;
         }
     }
 

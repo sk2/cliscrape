@@ -106,6 +106,11 @@ impl FsmParser {
     pub fn debug_parse(&self, input: &str) -> Result<engine::debug::DebugReport, ScraperError> {
         self.template.debug_parse(input)
     }
+
+    /// Get the list of field names defined in the template
+    pub fn field_names(&self) -> Vec<String> {
+        self.template.values.keys().cloned().collect()
+    }
 }
 
 #[cfg(test)]
