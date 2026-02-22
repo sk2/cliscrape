@@ -1,13 +1,12 @@
 ---
 source: tests/validation.rs
-assertion_line: 12
-expression: results
+expression: results.clone()
 ---
-- uptime: ""
-  version: ""
+- version: ""
   model: DCS-7050SX-64-R
   serial: SSJ12345678
-- version: 4.24.2F
-  serial: ""
+  uptime: ""
+- serial: ""
   model: ""
   uptime: ""
+  version: 4.24.2F

@@ -1,13 +1,12 @@
 ---
 source: tests/validation.rs
-assertion_line: 12
-expression: results
+expression: results.clone()
 ---
-- serial: ""
-  junos_version: 12.3R11.2
+- hostname: MX-EDGE-01
+  serial: ""
   model: mx240
-  hostname: MX-EDGE-01
-- serial: JN1234567890
-  model: ""
-  junos_version: ""
+  junos_version: 12.3R11.2
+- junos_version: ""
+  serial: JN1234567890
   hostname: ""
+  model: ""

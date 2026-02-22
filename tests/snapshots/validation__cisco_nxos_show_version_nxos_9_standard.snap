@@ -1,20 +1,19 @@
 ---
 source: tests/validation.rs
-assertion_line: 12
-expression: results
+expression: results.clone()
 ---
-- model: ""
-  serial: ""
+- serial: ""
   version: 9.3(7)
   hostname: ""
   uptime: ""
+  model: ""
 - serial: 9ABCDEF0123
-  model: Nexus9000 9000v
   hostname: ""
   uptime: ""
+  model: Nexus9000 9000v
   version: ""
-- hostname: NEXUS-DC-CORE-01
-  version: ""
-  model: ""
+- model: ""
   uptime: "234 day(s), 12 hour(s), 45 minute(s), 30 second(s)"
+  hostname: NEXUS-DC-CORE-01
+  version: ""
   serial: ""

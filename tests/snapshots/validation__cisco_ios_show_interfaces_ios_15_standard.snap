@@ -1,23 +1,22 @@
 ---
 source: tests/validation.rs
-assertion_line: 12
-expression: results
+expression: results.clone()
 ---
-- protocol: ""
-  interface: ""
-  mtu: 1500
-  bandwidth: 1000000
-  status: ""
-  description: Uplink to Core Switch
-- mtu: 1500
-  interface: ""
-  description: ""
-  bandwidth: 100000
-  protocol: ""
-  status: ""
 - interface: ""
+  bandwidth: 1000000
   mtu: 1500
+  status: ""
+  protocol: ""
+  description: Uplink to Core Switch
+- status: ""
+  description: ""
+  protocol: ""
+  mtu: 1500
+  bandwidth: 100000
+  interface: ""
+- interface: ""
   status: ""
   description: Management VLAN
-  bandwidth: 1000000
   protocol: ""
+  bandwidth: 1000000
+  mtu: 1500

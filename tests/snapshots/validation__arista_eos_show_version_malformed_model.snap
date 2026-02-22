@@ -1,9 +1,8 @@
 ---
 source: tests/validation.rs
-assertion_line: 28
 expression: records
 ---
-- version: 4.22.0F
-  model: ""
+- serial: JPE12345678
+  version: 4.22.0F
   uptime: "15 weeks, 3 days, 8 hours, 22 minutes"
-  serial: JPE12345678
+  model: ""

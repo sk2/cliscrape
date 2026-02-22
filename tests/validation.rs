@@ -1,6 +1,9 @@
 use cliscrape::FsmParser;
 use insta::assert_yaml_snapshot;
 
+mod coverage;
+use coverage::calculate_coverage;
+
 /// Helper function for positive test cases
 /// Parses fixture input and snapshots the JSON output
 fn test_positive_case(snapshot_name: &str, template_path: &str, fixture_path: &str) {
@@ -9,7 +12,23 @@ fn test_positive_case(snapshot_name: &str, template_path: &str, fixture_path: &s
     let results = parser.parse(&input).unwrap();
 
     // Snapshot the JSON output for regression detection
-    assert_yaml_snapshot!(snapshot_name, results);
+    assert_yaml_snapshot!(snapshot_name, results.clone());
+
+    // Validate field coverage (80% threshold)
+    if !results.is_empty() {
+        let report = calculate_coverage(&results[0], &parser.field_names());
+        assert!(
+            report.percentage >= 80.0,
+            "Coverage {:.1}% below 80% threshold\n\
+             Missing fields: {:?}\n\
+             Captured: {}/{} fields\n\
+             Suggestions: Check regex patterns for missing fields",
+            report.percentage,
+            report.missing_fields,
+            report.captured_fields.len(),
+            report.total_expected
+        );
+    }
 }
 
 /// Helper function for negative test cases
