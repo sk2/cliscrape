@@ -43,10 +43,11 @@ impl std::fmt::Debug for TemplateSource {
 /// # Security validation rules
 ///
 /// - Name must not be empty
-/// - Name must not contain path separators (`/` or `\`)
+/// - Name must not contain backslashes (`\`)
 /// - Name must not contain parent directory references (`..`)
-/// - Name must not start with `/` or `\` (absolute path indicators)
-/// - Name must match allowlist pattern: `^[a-zA-Z0-9_\-\.]+$`
+/// - Name must not start with `/` (absolute path indicator)
+/// - Name must match allowlist pattern: `^[a-zA-Z0-9_\-\./]+$`
+/// - Forward slashes (`/`) are allowed for subdirectory organization
 ///
 /// # Arguments
 ///
@@ -66,12 +67,13 @@ impl std::fmt::Debug for TemplateSource {
 /// assert!(validate_template_name("cisco_ios_show_version.yaml").is_ok());
 /// assert!(validate_template_name("template-name.toml").is_ok());
 /// assert!(validate_template_name("simple.textfsm").is_ok());
+/// assert!(validate_template_name("modern/template.yaml").is_ok()); // subdirectories OK
 ///
 /// // Invalid names (path traversal attempts)
 /// assert!(validate_template_name("../etc/passwd").is_err());
 /// assert!(validate_template_name("../../secret").is_err());
 /// assert!(validate_template_name("/etc/passwd").is_err());
-/// assert!(validate_template_name("path/to/file").is_err());
+/// assert!(validate_template_name("path\\to\\file").is_err()); // backslashes not allowed
 /// assert!(validate_template_name("").is_err());
 /// ```
 pub fn validate_template_name(name: &str) -> Result<(), String> {
@@ -96,19 +98,19 @@ pub fn validate_template_name(name: &str) -> Result<(), String> {
         ));
     }
 
-    // Path separator check
-    if name.contains('/') || name.contains('\\') {
+    // Path separator check - reject backslashes but allow forward slashes for subdirectories
+    if name.contains('\\') {
         return Err(format!(
-            "Invalid template name '{}': path separators not allowed",
+            "Invalid template name '{}': backslash not allowed",
             name
         ));
     }
 
-    // Allowlist pattern check - only alphanumeric, underscore, hyphen, dot
-    let valid_pattern = regex::Regex::new(r"^[a-zA-Z0-9_\-\.]+$").unwrap();
+    // Allowlist pattern check - allow alphanumeric, underscore, hyphen, dot, and forward slash
+    let valid_pattern = regex::Regex::new(r"^[a-zA-Z0-9_\-\./]+$").unwrap();
     if !valid_pattern.is_match(name) {
         return Err(format!(
-            "Invalid template name '{}': only alphanumeric, underscore, hyphen, and dot allowed",
+            "Invalid template name '{}': only alphanumeric, underscore, hyphen, dot, and forward slash allowed",
             name
         ));
     }
@@ -223,6 +225,8 @@ mod tests {
         assert!(validate_template_name("simple.textfsm").is_ok());
         assert!(validate_template_name("123.yaml").is_ok());
         assert!(validate_template_name("a_b-c.d").is_ok());
+        assert!(validate_template_name("modern/template.yaml").is_ok());
+        assert!(validate_template_name("vendor/device/template.toml").is_ok());
     }
 
     #[test]
@@ -249,7 +253,9 @@ mod tests {
 
     #[test]
     fn test_validate_template_name_path_separators() {
-        assert!(validate_template_name("path/to/file").is_err());
+        // Forward slashes are allowed for subdirectories
+        assert!(validate_template_name("path/to/file").is_ok());
+        // Backslashes are not allowed
         assert!(validate_template_name("path\\to\\file").is_err());
     }
 
