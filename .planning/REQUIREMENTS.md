@@ -9,12 +9,12 @@ Requirements for Template Ecosystem & Production Hardening milestone.
 
 ### Template Library
 
-- [ ] **LIB-01**: User can parse with embedded templates without providing file paths
-- [ ] **LIB-02**: User can reference templates by name (e.g., `--template cisco_ios_show_version`)
+- [x] **LIB-01**: User can parse with embedded templates without providing file paths
+- [x] **LIB-02**: User can reference templates by name (e.g., `--template cisco_ios_show_version`)
 - [ ] **LIB-03**: User can add custom templates to XDG user directory (~/.local/share/cliscrape/templates/)
 - [x] **LIB-04**: User can view template metadata including version, description, and compatibility
 - [ ] **LIB-05**: User can override embedded templates with custom versions via XDG directory
-- [ ] **LIB-06**: User receives security validation errors for invalid template names (path traversal protection)
+- [x] **LIB-06**: User receives security validation errors for invalid template names (path traversal protection)
 
 ### Compatibility Validation
 
@@ -86,12 +86,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LIB-01 | Phase 6 | Pending |
-| LIB-02 | Phase 6 | Pending |
+| LIB-01 | Phase 6 | Complete |
+| LIB-02 | Phase 6 | Complete |
 | LIB-03 | Phase 6 | Pending |
 | LIB-04 | Phase 6 | Complete |
 | LIB-05 | Phase 6 | Pending |
-| LIB-06 | Phase 6 | Pending |
+| LIB-06 | Phase 6 | Complete |
 | VAL-01 | Phase 7 | Pending |
 | VAL-02 | Phase 7 | Pending |
 | VAL-03 | Phase 7 | Pending |
