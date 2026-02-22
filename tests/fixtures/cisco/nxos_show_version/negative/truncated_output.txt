@@ -1,0 +1,3 @@
+  NXOS: version 9.3(7)
+  Device name: NX-Switch1
+  Processor Board ID JAE12345678

@@ -1,0 +1,2 @@
+Router1 uptime is 5 weeks, 2 days, 3 hours, 45 minutes
+Cisco IOS Software, C2960 Software (C2960-LANBASEK9-M), Version 15.0(2)SE11, RELEASE SOFTWARE (fc3)

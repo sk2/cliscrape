@@ -1,0 +1,2 @@
+GigabitEthernet0/1 is up, line protocol is up
+  Description: Uplink to Core

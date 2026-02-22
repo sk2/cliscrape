@@ -1,0 +1,4 @@
+GigabitEthernet0/1
+  Description: Invalid interface format
+  MTU 1500 bytes, BW 1000000 Kbit
+

@@ -1,0 +1,6 @@
+  NXOS: version 9.3(7)
+  cisco Nexus9000 C9396PX Chassis
+  Device name: NX-Switch1
+  Processor Board ID InvalidSerialFormat!@#$
+Kernel uptime is 45 days, 12 hours, 30 minutes, 15 seconds
+

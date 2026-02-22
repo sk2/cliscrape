@@ -1,0 +1,3 @@
+Arista DCS-7050SX-128
+  Software image version: 4.22.0F
+  System MAC address: 001c.7300.abcd  Serial number: JPE12345678

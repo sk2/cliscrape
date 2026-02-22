@@ -1,0 +1,4 @@
+Model: EX4200-48T
+JUNOS Base OS boot [12.3R12.4]
+Chassis Serial Number: ABC1234567
+

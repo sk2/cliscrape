@@ -1,0 +1,4 @@
+Router1 uptime is 5 weeks, 2 days, 3 hours, 45 minutes
+Cisco IOS Software, C2960 Software (C2960-LANBASEK9-M), InvalidVersionFormat
+System serial number: FOC1234ABCD
+cisco WS-C2960-48TT-L (PowerPC405) processor (revision V02) with 65536K bytes of memory.
