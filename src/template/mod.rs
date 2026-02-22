@@ -1,6 +1,7 @@
-pub mod loader;
-pub mod modern;
 pub mod convert;
+pub mod loader;
+pub mod metadata;
+pub mod modern;
 
 use pest_derive::Parser;
 
