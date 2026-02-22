@@ -27,7 +27,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 
 **Milestone Goal:** Transform cliscrape into production-ready tool with comprehensive template library, discovery mechanism, validation framework, and hardened edge case handling.
 
-- [ ] **Phase 6: Template Library Foundation** - Embedded templates with XDG discovery
+- [x] **Phase 6: Template Library Foundation** - Embedded templates with XDG discovery (Complete)
 - [ ] **Phase 7: Compatibility Validation Suite** - Snapshot testing and negative cases
 - [ ] **Phase 8: TUI Integration** - Template browser and Live Lab integration
 - [ ] **Phase 9: Edge Case Hardening** - Timeout enforcement and graceful degradation
@@ -49,10 +49,10 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 **Plans**: 4 plans in 3 waves
 
 Plans:
-- [ ] 06-01-PLAN.md — Embedded library infrastructure (rust-embed + XDG resolver + security validation)
-- [ ] 06-02-PLAN.md — Template metadata extraction (YAML/TOML/TextFSM)
-- [ ] 06-03-PLAN.md — CLI integration (list-templates and show-template subcommands)
-- [ ] 06-04-PLAN.md — Initial template library creation and testing
+- [x] 06-01-PLAN.md — Embedded library infrastructure (rust-embed + XDG resolver + security validation)
+- [x] 06-02-PLAN.md — Template metadata extraction (YAML/TOML/TextFSM)
+- [x] 06-03-PLAN.md — CLI integration (list-templates and show-template subcommands)
+- [x] 06-04-PLAN.md — Initial template library creation and testing
 
 ### Phase 7: Compatibility Validation Suite
 **Goal**: All embedded templates verified against real device outputs with negative test coverage
