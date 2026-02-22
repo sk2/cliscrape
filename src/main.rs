@@ -528,7 +528,7 @@ fn resolve_template_spec(
         return Ok(spec_path);
     }
 
-    // Otherwise treat as identifier and search CWD
+    // Otherwise treat as identifier and search CWD first
     let extensions = match format_filter {
         CliTemplateFormat::Auto => vec!["textfsm", "yaml", "yml", "toml"],
         CliTemplateFormat::Textfsm => vec!["textfsm"],
@@ -545,11 +545,32 @@ fn resolve_template_spec(
     }
 
     match candidates.len() {
-        0 => anyhow::bail!(
-            "Template '{}' not found (tried {} and identifier search in CWD)",
-            spec,
-            spec_path.display()
-        ),
+        0 => {
+            // No local file found, try template resolver (embedded/XDG)
+            use cliscrape::template::resolver::{TemplateResolver, TemplateSource};
+
+            let resolver = TemplateResolver::new()
+                .map_err(|e| anyhow::anyhow!("Failed to initialize template resolver: {}", e))?;
+
+            match resolver.resolve(spec) {
+                Ok(TemplateSource::UserFile(path)) => Ok(path),
+                Ok(TemplateSource::Embedded(file)) => {
+                    // Write embedded template to temp file for FsmParser to load
+                    let temp_dir = std::env::temp_dir();
+                    let safe_name = spec.replace('/', "_");
+                    let temp_path = temp_dir.join(format!("cliscrape_template_{}", safe_name));
+                    std::fs::write(&temp_path, file.data.as_ref())
+                        .with_context(|| format!("Failed to write embedded template to temp file"))?;
+                    Ok(temp_path)
+                }
+                Err(e) => anyhow::bail!(
+                    "Template '{}' not found (tried {} and identifier search in CWD, embedded templates, and XDG directories): {}",
+                    spec,
+                    spec_path.display(),
+                    e
+                ),
+            }
+        }
         1 => Ok(candidates.into_iter().next().unwrap()),
         _ => {
             let names: Vec<_> = candidates.iter().map(|p| p.display().to_string()).collect();
