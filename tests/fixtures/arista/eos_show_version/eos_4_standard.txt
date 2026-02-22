@@ -1,0 +1,14 @@
+Arista DCS-7050SX-64-R
+Hardware version:    01.00
+Serial number:       SSJ12345678
+System MAC address:  001c.7300.1234  Serial number:  SSJ12345678
+
+Software image version: 4.24.2F
+Architecture:           i686
+Internal build version: 4.24.2F-16270098.4242F
+Internal build ID:      da8d6269-c25f-4a12-9c37-7cef26f3cdbb
+
+Uptime:                 42 weeks, 3 days, 14 hours and 23 minutes
+Total memory:           8165340 kB
+Free memory:            4923456 kB
+

@@ -1,0 +1,31 @@
+Cisco IOS Software, C3560 Software (C3560-IPSERVICESK9-M), Version 12.2(55)SE12, RELEASE SOFTWARE (fc2)
+Technical Support: http://www.cisco.com/techsupport
+Copyright (c) 1986-2015 by Cisco Systems, Inc.
+Compiled Thu 09-Jul-15 18:39 by prod_rel_team
+
+ROM: Bootstrap program is C3560 boot loader
+BOOTLDR: C3560 Boot Loader (C3560-HBOOT-M) Version 12.2(44)SE5, RELEASE SOFTWARE (fc1)
+
+DC-SWITCH-01 uptime is 3 years, 28 weeks, 4 days, 17 hours, 22 minutes
+System returned to ROM by power-on
+System image file is "flash:c3560-ipservicesk9-mz.122-55.SE12.bin"
+
+cisco WS-C3560G-24TS (PowerPC405) processor (revision E0) with 131072K bytes of memory.
+Processor board ID CAT0123X4YZ
+Last reset from power-on
+4 Virtual Ethernet interfaces
+24 Gigabit Ethernet interfaces
+4 Ten Gigabit Ethernet interfaces
+The password-recovery mechanism is enabled.
+
+512K bytes of flash-simulated non-volatile configuration memory.
+Base ethernet MAC Address       : 00:23:EA:C1:2A:00
+Motherboard assembly number     : 73-9676-09
+Power supply part number        : 341-0049-02
+Motherboard serial number       : CAT0123456
+Power supply serial number      : LIT0123ABC
+Model revision number           : E0
+Motherboard revision number     : A0
+Model number                    : WS-C3560G-24TS
+System serial number            : CAT0123X4YZ
+

@@ -1,0 +1,25 @@
+Hostname: MX-EDGE-01
+Model: mx240
+Junos: 12.3R11.2
+JUNOS Base OS boot [12.3R11.2]
+JUNOS Base OS Software Suite [12.3R11.2]
+JUNOS Kernel Software Suite [12.3R11.2]
+JUNOS Crypto Software Suite [12.3R11.2]
+JUNOS Packet Forwarding Engine Support (M/T Common) [12.3R11.2]
+JUNOS Packet Forwarding Engine Support (MX Common) [12.3R11.2]
+JUNOS Online Documentation [12.3R11.2]
+JUNOS Voice Services Container package [12.3R11.2]
+JUNOS Border Gateway Function package [12.3R11.2]
+JUNOS Services AACL Container package [12.3R11.2]
+JUNOS AppId Services Container package [12.3R11.2]
+JUNOS Captive Portal and Content Delivery Container package [12.3R11.2]
+JUNOS IDP Services Container package [12.3R11.2]
+JUNOS RPD Application Software Suite [12.3R11.2]
+JUNOS Routing Software Suite [12.3R11.2]
+JUNOS Enterprise Software Suite [12.3R11.2]
+JUNOS Web Management Platform Package [12.3R11.2]
+JUNOS py-base-i386 [12.3R11.2]
+JUNOS py-extensions-i386 [12.3R11.2]
+
+Chassis                                 : JN1234567890
+
