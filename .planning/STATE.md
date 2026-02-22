@@ -11,17 +11,17 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 6 of 11 (Template Library Foundation)
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last Activity: 2026-02-22 — Completed 06-02 (metadata extraction)
+Last Activity: 2026-02-22 — Completed 06-03 (template discovery CLI commands)
 
-Progress: [████░░░░░░] 47% (v1.0 complete: 5/11 phases, v1.5: 2/4 plans in phase 6)
+Progress: [████░░░░░░] 48% (v1.0 complete: 5/11 phases, v1.5: 3/4 plans in phase 6)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30 (28 v1.0 + 2 v1.5)
-- Average duration: ~4 min (recent)
+- Total plans completed: 31 (28 v1.0 + 3 v1.5)
+- Average duration: ~5 min (recent)
 - Total execution time: Not tracked
 
 **By Milestone:**
@@ -29,15 +29,20 @@ Progress: [████░░░░░░] 47% (v1.0 complete: 5/11 phases, v1.5
 | Milestone | Phases | Plans | Status |
 |-----------|--------|-------|--------|
 | v1.0 MVP | 5 | 28/28 | Complete (2026-02-22) |
-| v1.5 Template Ecosystem | 6 | 2/? | In progress |
+| v1.5 Template Ecosystem | 6 | 3/? | In progress |
 
 **Recent Trend:**
 - v1.0 shipped with 77 passing tests, 4.1M lines/sec throughput
-- v1.5 Phase 6: 2/4 plans complete (metadata extraction, template library foundation)
+- v1.5 Phase 6: 3/4 plans complete (library foundation, metadata extraction, CLI discovery)
 - Trend: Building template ecosystem
 
-*Updated after each plan completion*
+**Recent Plan Metrics:**
+
+| Plan | Duration (s) | Tasks | Files |
+|------|--------------|-------|-------|
+| Phase 06 P01 | 502 | 4 tasks | 2 files |
 | Phase 06 P02 | 244 | 2 tasks | 3 files |
+| Phase 06 P03 | 544 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -52,6 +57,8 @@ Recent decisions affecting current work:
 - **Embed-time Type Conversion:** Convert captured strings to typed JSON at record emission with heuristics
 - **Fault-Tolerant Metadata:** Metadata extraction never blocks template usage - always returns valid struct with defaults (06-02)
 - **Library Type Consistency:** Use crate::TemplateFormat from lib.rs for library API consistency (06-02)
+- **Subdirectory Support in Template Names:** Template names allow forward slashes for organization while maintaining security (06-03)
+- **Field Introspection API:** FsmParser exposes field_names() for template inspection without breaking encapsulation (06-03)
 
 ### Pending Todos
 
@@ -65,5 +72,5 @@ None currently. v1.5 starts fresh with research-informed architecture.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 06-02-PLAN.md (Template metadata extraction)
+Stopped at: Completed 06-03-PLAN.md (Template discovery CLI commands)
 Resume file: None
