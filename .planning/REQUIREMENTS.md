@@ -18,7 +18,7 @@ Requirements for Template Ecosystem & Production Hardening milestone.
 
 ### Compatibility Validation
 
-- [ ] **VAL-01**: Developer can run snapshot tests for all embedded templates
+- [x] **VAL-01**: Developer can run snapshot tests for all embedded templates
 - [x] **VAL-02**: Developer can add negative test cases (malformed input, errors, truncation)
 - [ ] **VAL-03**: Developer can run performance benchmarks per template
 - [ ] **VAL-04**: Developer can verify validation suite passes in CI/CD
@@ -92,7 +92,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LIB-04 | Phase 6 | Complete |
 | LIB-05 | Phase 6 | Complete |
 | LIB-06 | Phase 6 | Complete |
-| VAL-01 | Phase 7 | Pending |
+| VAL-01 | Phase 7 | Complete (07-01) |
 | VAL-02 | Phase 7 | Complete (07-02) |
 | VAL-03 | Phase 7 | Pending |
 | VAL-04 | Phase 7 | Pending |
