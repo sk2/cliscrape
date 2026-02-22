@@ -79,6 +79,29 @@ pub enum Commands {
         #[arg(long)]
         defaults: bool,
     },
+
+    /// List available templates
+    #[command(name = "list-templates", alias = "templates")]
+    ListTemplates {
+        /// Filter templates by pattern (supports wildcards)
+        #[arg(short, long)]
+        filter: Option<String>,
+
+        /// Output format for template listing
+        #[arg(short = 'f', long, value_enum, default_value_t = OutputFormat::Table)]
+        format: OutputFormat,
+    },
+
+    /// Show detailed information about a specific template
+    #[command(name = "show-template")]
+    ShowTemplate {
+        /// Template name to display
+        template: String,
+
+        /// Show template source code
+        #[arg(long)]
+        source: bool,
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
