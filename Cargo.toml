@@ -23,7 +23,9 @@ dialoguer = "0.12.0"
 notify = "8.2"
 notify-debouncer-mini = "0.7"
 glob = "0.3"
+rust-embed = { version = "8.11.0", features = ["compression"] }
 strip-ansi-escapes = "0.2"
+xdg = "3.0.0"
 
 [dev-dependencies]
 criterion = "0.5"
