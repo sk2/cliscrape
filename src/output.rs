@@ -3,11 +3,14 @@ use anyhow::{Context, Result};
 use comfy_table::Table;
 use csv::WriterBuilder;
 use serde_json::Value;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet};
 
-pub fn serialize(results: &[HashMap<String, Value>], format: OutputFormat) -> Result<String> {
+pub fn serialize(results: &[BTreeMap<String, Value>], format: OutputFormat) -> Result<String> {
     if results.is_empty() {
-        return Ok(String::new());
+        return match format {
+            OutputFormat::Json | OutputFormat::Auto => Ok("[]".to_string()),
+            OutputFormat::Csv | OutputFormat::Table => Ok(String::new()),
+        };
     }
 
     match format {

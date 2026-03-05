@@ -19,8 +19,36 @@ use std::io::{self, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+fn template_format_label(f: CliTemplateFormat) -> &'static str {
+    match f {
+        CliTemplateFormat::Auto => "auto",
+        CliTemplateFormat::Textfsm => "textfsm",
+        CliTemplateFormat::Yaml => "yaml",
+        CliTemplateFormat::Toml => "toml",
+    }
+}
+
+fn output_format_label(f: OutputFormat) -> &'static str {
+    match f {
+        OutputFormat::Auto => "auto",
+        OutputFormat::Json => "json",
+        OutputFormat::Csv => "csv",
+        OutputFormat::Table => "table",
+    }
+}
+
 /// Handle list-templates command
 fn handle_list_templates(filter: Option<&str>, format: OutputFormat) -> anyhow::Result<()> {
+    let span = tracing::info_span!(
+        target: "cliscrape",
+        "cmd.list_templates",
+        filter = ?filter,
+        format = output_format_label(format)
+    );
+    let _guard = span.enter();
+
+    tracing::debug!(target: "cliscrape::cli", event = "list_templates_start");
+
     // Create template resolver (for future user template discovery)
     let _resolver = TemplateResolver::new()
         .map_err(|e| anyhow::anyhow!("Failed to initialize template resolver: {}", e))?;
@@ -52,6 +80,12 @@ fn handle_list_templates(filter: Option<&str>, format: OutputFormat) -> anyhow::
 
     // Sort by name for consistent output
     templates.sort_by(|a, b| a.0.cmp(&b.0));
+
+    tracing::info!(
+        target: "cliscrape::cli",
+        event = "list_templates_finish",
+        template_count = templates.len()
+    );
 
     // Format output
     match format {
@@ -105,6 +139,16 @@ fn handle_list_templates(filter: Option<&str>, format: OutputFormat) -> anyhow::
 
 /// Handle show-template command
 fn handle_show_template(name: &str, show_source: bool) -> anyhow::Result<()> {
+    let span = tracing::info_span!(
+        target: "cliscrape",
+        "cmd.show_template",
+        template = %name,
+        show_source
+    );
+    let _guard = span.enter();
+
+    tracing::info!(target: "cliscrape::cli", event = "show_template_start");
+
     // Create template resolver
     let resolver = TemplateResolver::new()
         .map_err(|e| anyhow::anyhow!("Failed to initialize template resolver: {}", e))?;
@@ -115,17 +159,21 @@ fn handle_show_template(name: &str, show_source: bool) -> anyhow::Result<()> {
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     // Load template content and determine source location
-    let (actual_content, actual_source) = match &source {
+    let (actual_content, actual_source, source_kind) = match &source {
         TemplateSource::UserFile(path) => {
             let content = std::fs::read_to_string(path)
                 .with_context(|| format!("Failed to read template from {}", path.display()))?;
-            (content, format!("User Override ({})", path.display()))
+            (
+                content,
+                format!("User Override ({})", path.display()),
+                "user",
+            )
         }
         TemplateSource::Embedded(embedded) => {
             let content = std::str::from_utf8(&embedded.data)
                 .context("Embedded template contains invalid UTF-8")?
                 .to_string();
-            (content, "Embedded".to_string())
+            (content, "Embedded".to_string(), "embedded")
         }
     };
 
@@ -142,7 +190,11 @@ fn handle_show_template(name: &str, show_source: bool) -> anyhow::Result<()> {
             let temp_dir = std::env::temp_dir();
             // Replace forward slashes with underscores for temp filename
             let safe_name = name.replace('/', "_");
-            let temp_path = temp_dir.join(format!("cliscrape-temp-{}", safe_name));
+            let temp_path = temp_dir.join(format!(
+                "cliscrape-temp-{}-{}",
+                std::process::id(),
+                safe_name
+            ));
             std::fs::write(&temp_path, &embedded.data)
                 .context("Failed to write temporary template file")?;
             let result = FsmParser::from_file(&temp_path);
@@ -154,6 +206,13 @@ fn handle_show_template(name: &str, show_source: bool) -> anyhow::Result<()> {
     // Get field names from template
     let mut sorted_fields = parser.field_names();
     sorted_fields.sort();
+
+    tracing::info!(
+        target: "cliscrape::cli",
+        event = "show_template_resolved",
+        source_kind,
+        field_count = sorted_fields.len()
+    );
 
     // Print formatted output
     println!("Template: {}", name);
@@ -177,6 +236,8 @@ fn handle_show_template(name: &str, show_source: bool) -> anyhow::Result<()> {
         println!("{}", "=".repeat(80));
         println!("{}", actual_content);
     }
+
+    tracing::info!(target: "cliscrape::cli", event = "show_template_finish");
 
     Ok(())
 }
@@ -280,12 +341,15 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
             stdin,
             format,
             quiet,
+            strict,
+            threshold,
+            timeout,
         } => {
             let start_time = Instant::now();
             // Template resolution: path vs identifier
             let template_path = resolve_template_spec(&template, template_format)?;
 
-            let (parser, warnings) = match template_format {
+            let (parser, loader_warnings) = match template_format {
                 CliTemplateFormat::Auto => FsmParser::from_file_with_warnings(&template_path)
                     .with_context(|| {
                         format!("Failed to load template from {}", template_path.display())
@@ -322,17 +386,53 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
                 }
             };
 
-            // Print template loader warnings to stderr
-            for warning in &warnings {
-                eprintln!("Warning ({}): {}", warning.kind, warning.message);
-            }
-
             // Resolve multi-input: files + globs + stdin
             let input_sources = resolve_input_sources(&inputs, &input, &input_glob, stdin)?;
 
+            let span = tracing::info_span!(
+                target: "cliscrape",
+                "cmd.parse",
+                template_spec = %template,
+                template_format = template_format_label(template_format),
+                input_source_count = input_sources.len(),
+                strict,
+                threshold,
+                timeout_ms = ?timeout,
+                quiet,
+                output_format = output_format_label(format)
+            );
+            let _guard = span.enter();
+
+            tracing::info!(
+                target: "cliscrape::cli",
+                event = "parse_start",
+                template_spec = %template,
+                template_format = template_format_label(template_format),
+                input_source_count = input_sources.len(),
+                strict,
+                threshold,
+                timeout_ms = ?timeout
+            );
+
+            // Convert template loader warnings into structured log events
+            for warning in &loader_warnings {
+                tracing::warn!(
+                    target: "cliscrape::cli",
+                    event = "template_loader_warning",
+                    kind = %warning.kind,
+                    message = %warning.message
+                );
+            }
+
             // Fail-fast parsing: collect all records before writing to stdout
             let mut all_results = Vec::new();
-            let mut all_transcript_warnings = Vec::new();
+            let mut all_warnings = Vec::new();
+
+            let parse_options = cliscrape::ParseOptions {
+                strict,
+                threshold,
+                timeout_ms: timeout,
+            };
 
             for source in &input_sources {
                 let content = match source {
@@ -349,24 +449,41 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
 
                 let (blocks, transcript_warnings) =
                     transcript::preprocess_ios_transcript_with_warnings(&content);
-                all_transcript_warnings.extend(transcript_warnings);
+                for w in transcript_warnings {
+                    all_warnings.push(cliscrape::TemplateWarning {
+                        kind: "transcript".to_string(),
+                        message: w,
+                        line_idx: None,
+                    });
+                }
 
                 for (idx, block) in blocks.iter().enumerate() {
-                    let mut parsed = parser.parse(block).with_context(|| {
-                        format!(
-                            "Failed to parse block {} from {}",
-                            idx + 1,
-                            source.display()
-                        )
-                    })?;
+                    let (mut parsed, warnings) = parser
+                        .results_with_warnings(block, parse_options.clone())
+                        .with_context(|| {
+                            format!(
+                                "Failed to parse block {} from {}",
+                                idx + 1,
+                                source.display()
+                            )
+                        })?;
                     all_results.append(&mut parsed);
+                    all_warnings.extend(warnings);
                 }
             }
 
-            // Print transcript warnings to stderr
-            for warning in all_transcript_warnings {
-                eprintln!("Warning: {}", warning);
+            // Convert warnings into structured log events
+            for warning in &all_warnings {
+                let one_based_line = warning.line_idx.map(|idx| idx + 1);
+                tracing::warn!(
+                    target: "cliscrape::cli",
+                    event = "parse_warning",
+                    kind = %warning.kind,
+                    line_idx = ?one_based_line,
+                    message = %warning.message
+                );
             }
+            let warning_count = all_warnings.len();
 
             // Resolve format=auto based on TTY
             let final_format = if format == OutputFormat::Auto {
@@ -382,14 +499,16 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
             let output = output::serialize(&all_results, final_format)?;
             println!("{}", output);
 
-            // Print success status to stderr (unless --quiet)
+            // Convert success status to a structured info event (unless --quiet)
             if !quiet {
-                let duration = start_time.elapsed();
-                eprintln!(
-                    "Parsed {} record(s) from {} source(s) in {:.2}s",
-                    all_results.len(),
-                    input_sources.len(),
-                    duration.as_secs_f64()
+                let elapsed = start_time.elapsed();
+                tracing::info!(
+                    target: "cliscrape::cli",
+                    event = "parse_finish",
+                    records = all_results.len(),
+                    warnings = warning_count,
+                    sources = input_sources.len(),
+                    elapsed_ms = elapsed.as_millis() as u64
                 );
             }
         }
@@ -542,7 +661,7 @@ fn resolve_template_spec(spec: &str, format_filter: CliTemplateFormat) -> anyhow
     }
 
     // Otherwise treat as identifier and search CWD first
-    let extensions = match format_filter {
+    let extensions: Vec<&str> = match format_filter {
         CliTemplateFormat::Auto => vec!["textfsm", "yaml", "yml", "toml"],
         CliTemplateFormat::Textfsm => vec!["textfsm"],
         CliTemplateFormat::Yaml => vec!["yaml", "yml"],
@@ -550,7 +669,7 @@ fn resolve_template_spec(spec: &str, format_filter: CliTemplateFormat) -> anyhow
     };
 
     let mut candidates = Vec::new();
-    for ext in extensions {
+    for ext in &extensions {
         let candidate = PathBuf::from(format!("{}.{}", spec, ext));
         if candidate.exists() {
             candidates.push(candidate);
@@ -565,15 +684,54 @@ fn resolve_template_spec(spec: &str, format_filter: CliTemplateFormat) -> anyhow
             let resolver = TemplateResolver::new()
                 .map_err(|e| anyhow::anyhow!("Failed to initialize template resolver: {}", e))?;
 
+            // Allow embedded templates to be referenced by identifier without extension.
+            // Try resolving with the same extension set used for local identifier search.
+            let mut resolved = Vec::new();
+            for ext in &extensions {
+                let name = format!("{}.{}", spec, ext);
+                if let Ok(source) = resolver.resolve(&name) {
+                    resolved.push((name, source));
+                }
+            }
+
+            if resolved.len() > 1 {
+                let names: Vec<_> = resolved.into_iter().map(|(n, _)| n).collect();
+                anyhow::bail!(
+                    "Ambiguous template identifier '{}': found multiple embedded/user matches: {}. Use an explicit template name (with extension) or --template-format to disambiguate.",
+                    spec,
+                    names.join(", ")
+                );
+            }
+
+            if resolved.len() == 1 {
+                let (resolved_name, source) = resolved.pop().unwrap();
+                return match source {
+                    TemplateSource::UserFile(path) => Ok(path),
+                    TemplateSource::Embedded(file) => {
+                        // Write embedded template to temp file for FsmParser to load
+                        let temp_dir = std::env::temp_dir();
+                        let safe_name = resolved_name.replace('/', "_");
+                        let temp_path = temp_dir.join(format!(
+                            "cliscrape_template_{}_{}",
+                            std::process::id(),
+                            safe_name
+                        ));
+                        std::fs::write(&temp_path, file.data.as_ref())
+                            .with_context(|| "Failed to write embedded template to temp file")?;
+                        Ok(temp_path)
+                    }
+                };
+            }
+
             match resolver.resolve(spec) {
                 Ok(TemplateSource::UserFile(path)) => Ok(path),
                 Ok(TemplateSource::Embedded(file)) => {
                     // Write embedded template to temp file for FsmParser to load
                     let temp_dir = std::env::temp_dir();
                     let safe_name = spec.replace('/', "_");
-                    let temp_path = temp_dir.join(format!("cliscrape_template_{}", safe_name));
+                    let temp_path = temp_dir.join(format!("cliscrape_template_{}_{}", std::process::id(), safe_name));
                     std::fs::write(&temp_path, file.data.as_ref())
-                        .with_context(|| format!("Failed to write embedded template to temp file"))?;
+                        .with_context(|| "Failed to write embedded template to temp file")?;
                     Ok(temp_path)
                 }
                 Err(e) => anyhow::bail!(
