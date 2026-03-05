@@ -23,5 +23,3 @@ patterns:
   - regex: '^Cisco IOS Software,.+Version (?P<version>\S+)'
   - regex: '^\s*(?:Processor board ID|System serial number)\s+(?P<serial>\S+)'
   - regex: '^cisco (?P<model>\S+).+processor'
-  - regex: '^$'
-    record: true

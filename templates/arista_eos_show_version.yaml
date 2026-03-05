@@ -20,6 +20,4 @@ patterns:
   - regex: '^Arista (?P<model>\S+)$'
   - regex: '^\s*Software image version:\s+(?P<version>\S+)$'
   - regex: '^\s*System MAC address:\s+\S+\s+Serial number:\s+(?P<serial>\S+)$'
-  - regex: '^.+uptime is (?P<uptime>.+)$'
-  - regex: '^$'
-    record: true
+  - regex: '^\s*(?:Uptime:\s+|System uptime is )(?P<uptime>.+)$'

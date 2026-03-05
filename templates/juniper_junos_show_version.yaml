@@ -21,5 +21,3 @@ patterns:
   - regex: '^Model:\s+(?P<model>.+)$'
   - regex: '^JUNOS.*\[(?P<junos_version>[^\]]+)\]'
   - regex: '^Chassis.*:\s+(?P<serial>\S+)$'
-  - regex: '^$'
-    record: true

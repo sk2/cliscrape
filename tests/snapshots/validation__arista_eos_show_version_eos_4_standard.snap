@@ -2,11 +2,7 @@
 source: tests/validation.rs
 expression: results.clone()
 ---
-- version: ""
-  model: DCS-7050SX-64-R
+- model: DCS-7050SX-64-R
   serial: SSJ12345678
-  uptime: ""
-- model: ""
+  uptime: "42 weeks, 3 days, 14 hours and 23 minutes"
   version: 4.24.2F
-  serial: ""
-  uptime: ""

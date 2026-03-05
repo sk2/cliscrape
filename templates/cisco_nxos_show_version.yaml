@@ -24,5 +24,3 @@ patterns:
   - regex: '^\s+Device name:\s+(?P<hostname>\S+)$'
   - regex: '^\s+Processor Board ID\s+(?P<serial>\S+)$'
   - regex: '^.+uptime is (?P<uptime>.+)$'
-  - regex: '^$'
-    record: true

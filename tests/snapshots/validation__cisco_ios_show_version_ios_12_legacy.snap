@@ -2,23 +2,8 @@
 source: tests/validation.rs
 expression: results.clone()
 ---
-- uptime: ""
-  version: "12.2(55)SE12,"
-  model: ""
-  serial: ""
-  hostname: ""
 - hostname: DC-SWITCH-01
-  uptime: "3 years, 28 weeks, 4 days, 17 hours, 22 minutes"
-  model: ""
-  version: ""
-  serial: ""
-- version: ""
-  serial: CAT0123X4YZ
-  hostname: ""
   model: WS-C3560G-24TS
-  uptime: ""
-- model: ""
-  hostname: ""
-  version: ""
   serial: ":"
-  uptime: ""
+  uptime: "3 years, 28 weeks, 4 days, 17 hours, 22 minutes"
+  version: "12.2(55)SE12,"

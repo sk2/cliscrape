@@ -2,23 +2,8 @@
 source: tests/validation.rs
 expression: results.clone()
 ---
-- serial: ""
-  hostname: ""
-  version: "15.0(2)SE11,"
-  model: ""
-  uptime: ""
-- version: ""
-  model: ""
-  hostname: SW-CORE-01
-  serial: ""
+- hostname: SW-CORE-01
+  model: WS-C2960-48TT-L
+  serial: ":"
   uptime: "5 weeks, 2 days, 3 hours, 45 minutes"
-- model: WS-C2960-48TT-L
-  serial: FOC1234ABCD
-  version: ""
-  hostname: ""
-  uptime: ""
-- serial: ":"
-  hostname: ""
-  version: ""
-  model: ""
-  uptime: ""
+  version: "15.0(2)SE11,"

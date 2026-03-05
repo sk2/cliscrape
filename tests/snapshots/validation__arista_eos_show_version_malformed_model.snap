@@ -3,6 +3,6 @@ source: tests/validation.rs
 expression: records
 ---
 - model: ""
-  uptime: "15 weeks, 3 days, 8 hours, 22 minutes"
   serial: JPE12345678
+  uptime: "15 weeks, 3 days, 8 hours, 22 minutes"
   version: 4.22.0F

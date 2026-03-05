@@ -22,7 +22,7 @@ fields:
 
 states:
   Start:
-    - regex: '^(?P<interface>\S+) is (?P<status>\S+),.*protocol is (?P<protocol>\S+)$'
+    - regex: '^(?P<interface>\S+) is (?P<status>[^,]+),.*protocol is (?P<protocol>\S+)(?:\s*\(.*\))?$'
       action:
         line: next
     - regex: '^\s+Description: (?P<description>.+)$'
