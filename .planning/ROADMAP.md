@@ -31,7 +31,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 - [x] **Phase 7: Compatibility Validation Suite** - Snapshot testing and negative cases (completed 2026-02-22)
 - [x] **Phase 8: TUI Integration** - Template browser and Live Lab integration (completed 2026-03-04)
 - [x] **Phase 9: Edge Case Hardening** - Timeout enforcement and graceful degradation (completed 2026-03-04)
-- [ ] **Phase 10: Production Logging** - Structured observability with tracing
+- [x] **Phase 10: Production Logging** - Structured observability with tracing (completed 2026-03-05)
 - [ ] **Phase 11: Documentation & Authoring Guide** - User guide and template catalog
 
 ## Phase Details
@@ -71,7 +71,7 @@ Plans:
 - [x] 07-02-PLAN.md — Negative test coverage (error cases + edge cases)
 - [x] 07-03-PLAN.md — Performance benchmarking (criterion integration)
 - [x] 07-04-PLAN.md — Coverage validation system (field coverage analysis)
-- [ ] 07-05-PLAN.md — CI integration (GitHub Actions workflow)
+- [x] 07-05-PLAN.md — CI integration (GitHub Actions workflow)
 
 ### Phase 8: TUI Integration
 **Goal**: Users can discover and test embedded templates interactively from TUI Live Lab
@@ -110,8 +110,8 @@ Plans:
 
 Plans:
 - [x] 10-01-PLAN.md — Tracing subscriber init + CLI flags (RUST_LOG, -v defaults, JSON logs to stderr)
-- [ ] 10-02-PLAN.md — High-level instrumentation (template resolution + parse lifecycle + warnings/errors)
-- [ ] 10-03-PLAN.md — Benchmark overhead verification (tracing off vs on, text vs JSON)
+- [x] 10-02-PLAN.md — High-level instrumentation (template resolution + parse lifecycle + warnings/errors)
+- [x] 10-03-PLAN.md — Benchmark overhead verification (tracing off vs on, text vs JSON)
 
 ### Phase 11: Documentation & Authoring Guide
 **Goal**: Users can discover templates, understand usage, author new templates, and troubleshoot errors
@@ -146,9 +146,9 @@ Phases execute in numeric order: 6 → 7 → 8 → 9 → 10 → 11
 | 7. Compatibility Validation Suite | v1.5 | 5/5 | Complete | 2026-02-22 |
 | 8. TUI Integration | v1.5 | 4/4 | Complete | 2026-03-04 |
 | 9. Edge Case Hardening | v1.5 | 3/3 | Complete | 2026-03-04 |
-| 10. Production Logging | v1.5 | 1/3 | In progress | 2026-03-05 |
+| 10. Production Logging | v1.5 | 3/3 | Complete | 2026-03-05 |
 | 11. Documentation & Authoring Guide | v1.5 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-02-22*
-*Last updated: 2026-02-23*
+*Last updated: 2026-03-05*
