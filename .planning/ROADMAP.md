@@ -29,8 +29,8 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 
 - [x] **Phase 6: Template Library Foundation** - Embedded templates with XDG discovery (Complete)
 - [x] **Phase 7: Compatibility Validation Suite** - Snapshot testing and negative cases (completed 2026-02-22)
-- [ ] **Phase 8: TUI Integration** - Template browser and Live Lab integration
-- [ ] **Phase 9: Edge Case Hardening** - Timeout enforcement and graceful degradation
+- [x] **Phase 8: TUI Integration** - Template browser and Live Lab integration (completed 2026-03-04)
+- [x] **Phase 9: Edge Case Hardening** - Timeout enforcement and graceful degradation (completed 2026-03-04)
 - [ ] **Phase 10: Production Logging** - Structured observability with tracing
 - [ ] **Phase 11: Documentation & Authoring Guide** - User guide and template catalog
 
@@ -106,7 +106,12 @@ Plans:
   3. User can increase CLI verbosity with -v (info), -vv (debug), -vvv (trace), -vvvv (all modules trace)
   4. User can output logs in JSON format for production observability pipelines
   5. Developer verifies logging overhead is less than 5% performance impact via benchmarks
-**Plans**: TBD
+**Plans**: 3 plans in 3 waves
+
+Plans:
+- [x] 10-01-PLAN.md — Tracing subscriber init + CLI flags (RUST_LOG, -v defaults, JSON logs to stderr)
+- [ ] 10-02-PLAN.md — High-level instrumentation (template resolution + parse lifecycle + warnings/errors)
+- [ ] 10-03-PLAN.md — Benchmark overhead verification (tracing off vs on, text vs JSON)
 
 ### Phase 11: Documentation & Authoring Guide
 **Goal**: Users can discover templates, understand usage, author new templates, and troubleshoot errors
@@ -138,10 +143,10 @@ Phases execute in numeric order: 6 → 7 → 8 → 9 → 10 → 11
 | 4. TUI Debugger Foundation | v1.0 | 5/5 | Complete | 2026-02-21 |
 | 5. TUI Advanced Debugging | v1.0 | 4/4 | Complete | 2026-02-21 |
 | 6. Template Library Foundation | v1.5 | 4/4 | Complete | 2026-02-22 |
-| 7. Compatibility Validation Suite | 5/5 | Complete   | 2026-02-22 | - |
-| 8. TUI Integration | v1.5 | 0/? | Not started | - |
-| 9. Edge Case Hardening | v1.5 | 0/? | Not started | - |
-| 10. Production Logging | v1.5 | 0/? | Not started | - |
+| 7. Compatibility Validation Suite | v1.5 | 5/5 | Complete | 2026-02-22 |
+| 8. TUI Integration | v1.5 | 4/4 | Complete | 2026-03-04 |
+| 9. Edge Case Hardening | v1.5 | 3/3 | Complete | 2026-03-04 |
+| 10. Production Logging | v1.5 | 1/3 | In progress | 2026-03-05 |
 | 11. Documentation & Authoring Guide | v1.5 | 0/? | Not started | - |
 
 ---
