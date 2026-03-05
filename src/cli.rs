@@ -1,3 +1,4 @@
+use crate::logging::LogFormat;
 use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
@@ -6,6 +7,14 @@ use std::path::PathBuf;
 #[command(about = "High-performance CLI scraping and parsing tool", long_about = None)]
 #[command(version)]
 pub struct Cli {
+    /// Increase logging verbosity (-v info, -vv debug, -vvv trace, -vvvv trace all targets)
+    #[arg(short, long, action = clap::ArgAction::Count, global = true)]
+    pub verbose: u8,
+
+    /// Log output format (stderr)
+    #[arg(long, value_enum, default_value_t = LogFormat::Text, global = true)]
+    pub log_format: LogFormat,
+
     /// Error output format
     #[arg(long, value_enum, default_value_t = ErrorFormat::Human, global = true)]
     pub error_format: ErrorFormat,

@@ -1,4 +1,5 @@
 mod cli;
+mod logging;
 mod output;
 mod transcript;
 mod tui;
@@ -6,9 +7,12 @@ mod tui;
 use crate::cli::{Cli, Commands, ErrorFormat, OutputFormat, TemplateFormat as CliTemplateFormat};
 use anyhow::Context;
 use clap::Parser;
+use cliscrape::template::{
+    library, metadata,
+    resolver::{TemplateResolver, TemplateSource},
+};
 use cliscrape::FsmParser;
-use cliscrape::template::{library, metadata, resolver::{TemplateResolver, TemplateSource}};
-use comfy_table::{Table, presets};
+use comfy_table::{presets, Table};
 use dialoguer::{theme::ColorfulTheme, Confirm, Input, Select};
 use std::collections::HashSet;
 use std::io::{self, IsTerminal, Read, Write};
@@ -27,8 +31,7 @@ fn handle_list_templates(filter: Option<&str>, format: OutputFormat) -> anyhow::
     // Add embedded templates
     for name in library::list_embedded() {
         if let Some(embedded) = library::get_embedded(&name) {
-            let content = std::str::from_utf8(&embedded.data)
-                .unwrap_or("");
+            let content = std::str::from_utf8(&embedded.data).unwrap_or("");
             let template_format = format_from_extension(&name);
             let meta = metadata::extract_metadata(content, template_format);
             templates.push((name, meta, "Embedded".to_string()));
@@ -55,7 +58,13 @@ fn handle_list_templates(filter: Option<&str>, format: OutputFormat) -> anyhow::
         OutputFormat::Table | OutputFormat::Auto => {
             let mut table = Table::new();
             table.load_preset(presets::UTF8_FULL);
-            table.set_header(vec!["Name", "Description", "Compatibility", "Version", "Source"]);
+            table.set_header(vec![
+                "Name",
+                "Description",
+                "Compatibility",
+                "Version",
+                "Source",
+            ]);
 
             for (name, meta, source) in templates {
                 table.add_row(vec![
@@ -101,7 +110,8 @@ fn handle_show_template(name: &str, show_source: bool) -> anyhow::Result<()> {
         .map_err(|e| anyhow::anyhow!("Failed to initialize template resolver: {}", e))?;
 
     // Resolve template
-    let source = resolver.resolve(name)
+    let source = resolver
+        .resolve(name)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     // Load template content and determine source location
@@ -125,10 +135,8 @@ fn handle_show_template(name: &str, show_source: bool) -> anyhow::Result<()> {
 
     // Load template to get field list
     let parser = match &source {
-        TemplateSource::UserFile(path) => {
-            FsmParser::from_file(path)
-                .with_context(|| format!("Failed to load template from {}", path.display()))?
-        }
+        TemplateSource::UserFile(path) => FsmParser::from_file(path)
+            .with_context(|| format!("Failed to load template from {}", path.display()))?,
         TemplateSource::Embedded(embedded) => {
             // Create a temporary file to load the embedded template
             let temp_dir = std::env::temp_dir();
@@ -210,6 +218,8 @@ fn main() {
         }
     };
 
+    logging::init_logging(cli.verbose, cli.log_format);
+
     let error_format = cli.error_format;
     if let Err(e) = run_command(cli) {
         print_error(&format!("{:#}", e), error_format);
@@ -276,16 +286,18 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
             let template_path = resolve_template_spec(&template, template_format)?;
 
             let (parser, warnings) = match template_format {
-                CliTemplateFormat::Auto => {
-                    FsmParser::from_file_with_warnings(&template_path)
-                        .with_context(|| format!("Failed to load template from {}", template_path.display()))?
-                }
+                CliTemplateFormat::Auto => FsmParser::from_file_with_warnings(&template_path)
+                    .with_context(|| {
+                        format!("Failed to load template from {}", template_path.display())
+                    })?,
                 CliTemplateFormat::Textfsm => {
                     let p = FsmParser::from_file_with_format(
                         &template_path,
                         cliscrape::TemplateFormat::Textfsm,
                     )
-                    .with_context(|| format!("Failed to load template from {}", template_path.display()))?;
+                    .with_context(|| {
+                        format!("Failed to load template from {}", template_path.display())
+                    })?;
                     (p, Vec::new())
                 }
                 CliTemplateFormat::Yaml => {
@@ -293,7 +305,9 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
                         &template_path,
                         cliscrape::TemplateFormat::Yaml,
                     )
-                    .with_context(|| format!("Failed to load template from {}", template_path.display()))?;
+                    .with_context(|| {
+                        format!("Failed to load template from {}", template_path.display())
+                    })?;
                     (p, Vec::new())
                 }
                 CliTemplateFormat::Toml => {
@@ -301,7 +315,9 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
                         &template_path,
                         cliscrape::TemplateFormat::Toml,
                     )
-                    .with_context(|| format!("Failed to load template from {}", template_path.display()))?;
+                    .with_context(|| {
+                        format!("Failed to load template from {}", template_path.display())
+                    })?;
                     (p, Vec::new())
                 }
             };
@@ -517,10 +533,7 @@ fn default_output_path(input: &Path, format: crate::cli::ConvertFormat) -> PathB
 }
 
 /// Resolve template spec: if it's a path, use it; otherwise search CWD for identifier
-fn resolve_template_spec(
-    spec: &str,
-    format_filter: CliTemplateFormat,
-) -> anyhow::Result<PathBuf> {
+fn resolve_template_spec(spec: &str, format_filter: CliTemplateFormat) -> anyhow::Result<PathBuf> {
     let spec_path = PathBuf::from(spec);
 
     // If spec points to an existing path, use it directly
@@ -633,10 +646,7 @@ fn resolve_input_sources(
         }
     }
 
-    let mut sources: Vec<InputSource> = file_paths
-        .into_iter()
-        .map(InputSource::File)
-        .collect();
+    let mut sources: Vec<InputSource> = file_paths.into_iter().map(InputSource::File).collect();
 
     // Sort file sources deterministically
     sources.sort_by(|a, b| match (a, b) {
