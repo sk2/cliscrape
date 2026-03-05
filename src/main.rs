@@ -47,7 +47,7 @@ fn handle_list_templates(filter: Option<&str>, format: OutputFormat) -> anyhow::
     );
     let _guard = span.enter();
 
-    tracing::debug!(target: "cliscrape::cli", event = "list_templates_start");
+    tracing::debug!(target: "cliscrape::template", event = "list_templates_start");
 
     // Create template resolver (for future user template discovery)
     let _resolver = TemplateResolver::new()
@@ -82,7 +82,7 @@ fn handle_list_templates(filter: Option<&str>, format: OutputFormat) -> anyhow::
     templates.sort_by(|a, b| a.0.cmp(&b.0));
 
     tracing::info!(
-        target: "cliscrape::cli",
+        target: "cliscrape::template",
         event = "list_templates_finish",
         template_count = templates.len()
     );

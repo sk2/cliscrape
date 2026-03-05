@@ -13,8 +13,8 @@
 //! Template names are validated BEFORE any filesystem operations to prevent path traversal attacks.
 //! Only alphanumeric characters, underscores, hyphens, and dots are allowed.
 
-use std::path::PathBuf;
 use rust_embed::EmbeddedFile;
+use std::path::PathBuf;
 use xdg::BaseDirectories;
 
 use super::library;
@@ -191,17 +191,36 @@ impl TemplateResolver {
     /// }
     /// ```
     pub fn resolve(&self, template_name: &str) -> Result<TemplateSource, String> {
+        tracing::debug!(
+            target: "cliscrape::template",
+            event = "template_resolve_start",
+            name = template_name
+        );
+
         // CRITICAL: Validate template name FIRST, before any filesystem operations
         // This prevents TOCTOU vulnerabilities and path traversal attacks
         validate_template_name(template_name)?;
 
         // Check XDG user directory (highest priority)
         if let Some(path) = self.find_user_template(template_name) {
+            tracing::info!(
+                target: "cliscrape::template",
+                event = "template_resolved",
+                name = template_name,
+                source_kind = "user",
+                path = %path.display()
+            );
             return Ok(TemplateSource::UserFile(path));
         }
 
         // Fallback to embedded templates (lowest priority)
         if let Some(embedded) = library::get_embedded(template_name) {
+            tracing::info!(
+                target: "cliscrape::template",
+                event = "template_resolved",
+                name = template_name,
+                source_kind = "embedded"
+            );
             return Ok(TemplateSource::Embedded(embedded));
         }
 

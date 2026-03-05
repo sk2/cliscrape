@@ -2,9 +2,9 @@ use crate::engine::macros::expand_macros;
 use crate::engine::records::RecordBuffer;
 use crate::engine::types::*;
 use crate::engine::{convert::convert_scalar, debug::*};
-use crate::ScraperError;
+use crate::{DetailedParseError, ParseOptions, ScraperError, TemplateWarning};
 use regex::Regex;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 impl Template {
     pub fn from_ir(ir: TemplateIR) -> Result<Self, ScraperError> {
@@ -16,10 +16,10 @@ impl Template {
                 // 1. Expand macros {{name}}
                 let expanded_macros = expand_macros(&rule.regex, &ir.macros).map_err(|e| {
                     let msg = match e {
-                        ScraperError::Parse(m) => m,
+                        ScraperError::Template(m) => m,
                         other => other.to_string(),
                     };
-                    ScraperError::Parse(format!(
+                    ScraperError::Template(format!(
                         "Macro expansion error in state '{}': {}",
                         state_name, msg
                     ))
@@ -34,13 +34,13 @@ impl Template {
                 }
 
                 // 2b. Validate no undefined tokens remain
-                static LEFTOVER_TOKEN_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
-                let token_re = LEFTOVER_TOKEN_RE.get_or_init(|| {
-                    regex::Regex::new(r"\$\{([^}]+)\}|\{\{([^}]+)\}\}").unwrap()
-                });
+                static LEFTOVER_TOKEN_RE: std::sync::OnceLock<regex::Regex> =
+                    std::sync::OnceLock::new();
+                let token_re = LEFTOVER_TOKEN_RE
+                    .get_or_init(|| regex::Regex::new(r"\$\{([^}]+)\}|\{\{([^}]+)\}\}").unwrap());
                 if let Some(cap) = token_re.captures(&final_regex_str) {
                     let token = cap.get(0).unwrap().as_str();
-                    return Err(ScraperError::Parse(format!(
+                    return Err(ScraperError::Template(format!(
                         "Undefined token '{}' in state '{}' - all placeholders and macros must be defined",
                         token, state_name
                     )));
@@ -48,7 +48,7 @@ impl Template {
 
                 // 3. Compile regex
                 let regex = Regex::new(&final_regex_str).map_err(|e| {
-                    ScraperError::Parse(format!(
+                    ScraperError::Template(format!(
                         "Invalid regex '{}' in state '{}': {}",
                         final_regex_str, state_name, e
                     ))
@@ -57,7 +57,7 @@ impl Template {
                 // 4. Validate next_state
                 if let Some(ref next) = rule.next_state {
                     if !ir.states.contains_key(next) && next != "End" {
-                        return Err(ScraperError::Parse(format!(
+                        return Err(ScraperError::Template(format!(
                             "State '{}' transitions to unknown state '{}'",
                             state_name, next
                         )));
@@ -76,7 +76,7 @@ impl Template {
 
         // Validate that "Start" state exists
         if !compiled_states.contains_key("Start") {
-            return Err(ScraperError::Parse(
+            return Err(ScraperError::Template(
                 "Template missing 'Start' state".to_string(),
             ));
         }
@@ -87,28 +87,64 @@ impl Template {
         })
     }
 
-    fn parse_internal(
+    pub fn parse_internal(
         &self,
         input: &str,
         mut debug: Option<&mut DebugReport>,
-    ) -> Result<Vec<HashMap<String, serde_json::Value>>, ScraperError> {
+        options: ParseOptions,
+    ) -> Result<
+        (
+            Vec<BTreeMap<String, serde_json::Value>>,
+            Vec<TemplateWarning>,
+        ),
+        ScraperError,
+    > {
         let mut current_state = "Start".to_string();
         let mut results = Vec::new();
         let mut record_buffer = RecordBuffer::new();
+        let mut warnings = Vec::new();
 
+        let start_time = std::time::Instant::now();
         let want_debug = debug.is_some();
 
         let lines: Vec<&str> = input.lines().collect();
+        let emit_parse_summary =
+            |results: &Vec<BTreeMap<String, serde_json::Value>>,
+             warnings: &Vec<TemplateWarning>| {
+                let elapsed = start_time.elapsed();
+                tracing::debug!(
+                    target: "cliscrape::engine",
+                    event = "parse_summary",
+                    line_count = lines.len(),
+                    record_count = results.len(),
+                    warning_count = warnings.len(),
+                    elapsed_ms = elapsed.as_millis() as u64
+                );
+            };
         let mut line_idx = 0;
 
         while line_idx < lines.len() {
+            // Check for timeout
+            if let Some(timeout_ms) = options.timeout_ms {
+                if start_time.elapsed().as_millis() > timeout_ms as u128 {
+                    return Err(ScraperError::Timeout(format!(
+                        "Parsing exceeded timeout of {}ms",
+                        timeout_ms
+                    )));
+                }
+            }
+
             let line = lines[line_idx];
             let mut rule_idx = 0;
             let state_before = current_state.clone();
 
             loop {
                 let rules = self.states.get(&current_state).ok_or_else(|| {
-                    ScraperError::Parse(format!("Entered invalid state: {}", current_state))
+                    ScraperError::Parse(DetailedParseError {
+                        line_idx,
+                        line_content: line.to_string(),
+                        message: format!("Entered invalid state: {}", current_state),
+                    })
                 })?;
 
                 if rule_idx >= rules.len() {
@@ -148,6 +184,35 @@ impl Template {
                     match rule.record_action {
                         Action::Record => {
                             if let Some(record) = record_buffer.emit(&self.values) {
+                                // Validate threshold
+                                let template_fields: Vec<String> =
+                                    self.values.keys().cloned().collect();
+                                let coverage = crate::engine::coverage::calculate_coverage(
+                                    &record,
+                                    &template_fields,
+                                );
+                                if coverage.percentage < options.threshold {
+                                    let msg = format!(
+                                        "Field coverage threshold not met: {:.1}% < {:.1}% (Missing: {})",
+                                        coverage.percentage,
+                                        options.threshold,
+                                        coverage.missing_fields.join(", ")
+                                    );
+                                    if options.strict {
+                                        return Err(ScraperError::Parse(DetailedParseError {
+                                            line_idx,
+                                            line_content: line.to_string(),
+                                            message: msg,
+                                        }));
+                                    } else {
+                                        warnings.push(TemplateWarning {
+                                            kind: "low_coverage".to_string(),
+                                            message: msg,
+                                            line_idx: Some(line_idx),
+                                        });
+                                    }
+                                }
+
                                 if want_debug {
                                     if let Some(d) = debug.as_mut() {
                                         d.records.push(EmittedRecord {
@@ -166,10 +231,11 @@ impl Template {
                             record_buffer.clear_all();
                         }
                         Action::Error => {
-                            return Err(ScraperError::Parse(format!(
-                                "TextFSM Error action triggered at line {}",
-                                line_idx + 1
-                            )));
+                            return Err(ScraperError::Parse(DetailedParseError {
+                                line_idx,
+                                line_content: line.to_string(),
+                                message: "TextFSM Error action triggered".to_string(),
+                            }));
                         }
                         _ => {}
                     }
@@ -204,7 +270,8 @@ impl Template {
                     }
 
                     if rule.next_state.as_deref() == Some("End") {
-                        return Ok(results);
+                        emit_parse_summary(&results, &warnings);
+                        return Ok((results, warnings));
                     }
 
                     // Record trace event after all actions for this match
@@ -265,26 +332,16 @@ impl Template {
                 let eof_line = "";
                 for (_rule_idx, rule) in eof_rules.iter().enumerate() {
                     if let Some(caps) = rule.regex.captures(eof_line) {
-                        let mut capture_spans: Vec<CaptureSpan> = Vec::new();
-
                         // Capture named groups into record buffer
                         for name in rule.regex.capture_names().flatten() {
                             if let Some(m) = caps.name(name) {
                                 let def = self.values.get(name);
                                 let is_list = def.map(|v| v.list).unwrap_or(false);
-                                record_buffer.insert(name.to_string(), m.as_str().to_string(), is_list);
-
-                                if want_debug {
-                                    let typed = convert_scalar(m.as_str(), def.and_then(|v| v.type_hint));
-                                    capture_spans.push(CaptureSpan {
-                                        name: name.to_string(),
-                                        start_byte: m.start(),
-                                        end_byte: m.end(),
-                                        raw: m.as_str().to_string(),
-                                        typed,
-                                        is_list,
-                                    });
-                                }
+                                record_buffer.insert(
+                                    name.to_string(),
+                                    m.as_str().to_string(),
+                                    is_list,
+                                );
                             }
                         }
 
@@ -292,6 +349,35 @@ impl Template {
                         match rule.record_action {
                             Action::Record => {
                                 if let Some(record) = record_buffer.emit(&self.values) {
+                                    // Validate threshold
+                                    let template_fields: Vec<String> =
+                                        self.values.keys().cloned().collect();
+                                    let coverage = crate::engine::coverage::calculate_coverage(
+                                        &record,
+                                        &template_fields,
+                                    );
+                                    if coverage.percentage < options.threshold {
+                                        let msg = format!(
+                                            "Field coverage threshold not met: {:.1}% < {:.1}% (Missing: {})",
+                                            coverage.percentage,
+                                            options.threshold,
+                                            coverage.missing_fields.join(", ")
+                                        );
+                                        if options.strict {
+                                            return Err(ScraperError::Parse(DetailedParseError {
+                                                line_idx: lines.len(),
+                                                line_content: "<EOF>".to_string(),
+                                                message: msg,
+                                            }));
+                                        } else {
+                                            warnings.push(TemplateWarning {
+                                                kind: "low_coverage".to_string(),
+                                                message: msg,
+                                                line_idx: Some(lines.len()),
+                                            });
+                                        }
+                                    }
+
                                     if want_debug {
                                         if let Some(d) = debug.as_mut() {
                                             d.records.push(EmittedRecord {
@@ -310,31 +396,13 @@ impl Template {
                                 record_buffer.clear_all();
                             }
                             Action::Error => {
-                                return Err(ScraperError::Parse(
-                                    "TextFSM Error action triggered at EOF".to_string()
-                                ));
+                                return Err(ScraperError::Parse(DetailedParseError {
+                                    line_idx: lines.len(),
+                                    line_content: "<EOF>".to_string(),
+                                    message: "TextFSM Error action triggered at EOF".to_string(),
+                                }));
                             }
                             _ => {}
-                        }
-
-                        // Record successful match for EOF
-                        if want_debug {
-                            if let Some(d) = debug.as_mut() {
-                                let trace_event = TraceEvent {
-                                    line_idx: lines.len(),
-                                    state_before: "EOF".to_string(),
-                                    state_after: "EOF".to_string(),
-                                    variables: record_buffer.current_values(&self.values),
-                                    event_type: if rule.record_action == Action::Record {
-                                        TraceEventType::RecordEmitted
-                                    } else if matches!(rule.record_action, Action::Clear | Action::ClearAll) {
-                                        TraceEventType::RecordCleared
-                                    } else {
-                                        TraceEventType::LineProcessed
-                                    },
-                                };
-                                d.trace.push(trace_event);
-                            }
                         }
 
                         // EOF rules don't support Continue or state transitions
@@ -345,6 +413,32 @@ impl Template {
         } else {
             // No explicit EOF state: use implicit EOF record emission
             if let Some(record) = record_buffer.emit(&self.values) {
+                // Validate threshold
+                let template_fields: Vec<String> = self.values.keys().cloned().collect();
+                let coverage =
+                    crate::engine::coverage::calculate_coverage(&record, &template_fields);
+                if coverage.percentage < options.threshold {
+                    let msg = format!(
+                        "Field coverage threshold not met: {:.1}% < {:.1}% (Missing: {})",
+                        coverage.percentage,
+                        options.threshold,
+                        coverage.missing_fields.join(", ")
+                    );
+                    if options.strict {
+                        return Err(ScraperError::Parse(DetailedParseError {
+                            line_idx: lines.len(),
+                            line_content: "<EOF>".to_string(),
+                            message: msg,
+                        }));
+                    } else {
+                        warnings.push(TemplateWarning {
+                            kind: "low_coverage".to_string(),
+                            message: msg,
+                            line_idx: Some(lines.len()),
+                        });
+                    }
+                }
+
                 if want_debug {
                     if let Some(d) = debug.as_mut() {
                         d.records.push(EmittedRecord {
@@ -367,20 +461,22 @@ impl Template {
             }
         }
 
-        Ok(results)
+        emit_parse_summary(&results, &warnings);
+        Ok((results, warnings))
     }
 
     pub fn parse(
         &self,
         input: &str,
-    ) -> Result<Vec<HashMap<String, serde_json::Value>>, ScraperError> {
-        self.parse_internal(input, None)
+    ) -> Result<Vec<BTreeMap<String, serde_json::Value>>, ScraperError> {
+        let (results, _warnings) = self.parse_internal(input, None, ParseOptions::default())?;
+        Ok(results)
     }
 
     pub fn debug_parse(&self, input: &str) -> Result<DebugReport, ScraperError> {
         let lines: Vec<String> = input.lines().map(|s| s.to_string()).collect();
         let mut report = DebugReport::new(lines);
-        let _ = self.parse_internal(input, Some(&mut report))?;
+        let _ = self.parse_internal(input, Some(&mut report), ParseOptions::default())?;
         Ok(report)
     }
 }
