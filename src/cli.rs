@@ -58,6 +58,18 @@ pub enum Commands {
         /// Suppress the success status line (warnings still print)
         #[arg(long)]
         quiet: bool,
+
+        /// Abort on first parsing error or if match threshold is not met
+        #[arg(long)]
+        strict: bool,
+
+        /// Minimum required field capture percentage (default: 80.0)
+        #[arg(long, default_value_t = 80.0)]
+        threshold: f64,
+
+        /// Maximum parsing time in milliseconds
+        #[arg(long)]
+        timeout: Option<u64>,
     },
     /// Launch the TUI debugger
     Debug {

@@ -46,9 +46,7 @@ pub struct EmbeddedTemplates;
 /// }
 /// ```
 pub fn list_embedded() -> Vec<String> {
-    EmbeddedTemplates::iter()
-        .map(|s| s.to_string())
-        .collect()
+    EmbeddedTemplates::iter().map(|s| s.to_string()).collect()
 }
 
 /// Get an embedded template by name

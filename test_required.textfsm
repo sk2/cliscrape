@@ -1,0 +1,7 @@
+Value Required ID (\d+)
+Value DATA (\w+)
+
+Start
+  ^ID ${ID}
+  ^Data ${DATA}
+  ^Emit -> Record

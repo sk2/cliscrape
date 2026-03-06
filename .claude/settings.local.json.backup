@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:crates.io)",
+      "WebFetch(domain:ratatui.rs)",
+      "WebFetch(domain:docs.rs)",
+      "Bash(ls:*)",
+      "Bash(node /Users/simonknight/.claude/get-shit-done/bin/gsd-tools.cjs:*)",
+      "Bash(cargo check:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(# Extract one-liners from phase summaries \\(one per phase\\) echo \"\"=== Phase 1 ===\"\" grep -h \"\"one_liner:\"\" .planning/phases/01-*/*-SUMMARY.md)",
+      "Bash(echo \"No one_liner found\" echo \"=== Phase 2 ===\" grep -h \"one_liner:\" .planning/phases/02-*/*-SUMMARY.md)",
+      "Bash(echo \"No one_liner found\" echo \"=== Phase 3 ===\" grep -h \"one_liner:\" .planning/phases/03-*/*-SUMMARY.md)",
+      "Bash(echo \"No one_liner found\" echo \"=== Phase 4 ===\" grep -h \"one_liner:\" .planning/phases/04-*/*-SUMMARY.md)",
+      "Bash(echo \"No one_liner found\" echo \"=== Phase 5 ===\" grep -h \"one_liner:\" .planning/phases/05-*/*-SUMMARY.md)",
+      "Bash(git tag:*)",
+      "Bash(git push:*)",
+      "Bash(gh repo create:*)",
+      "Skill(gsd:research-phase)",
+      "WebFetch(domain:ntc-templates.readthedocs.io)",
+      "Bash(cargo test:*)",
+      "Bash(cargo insta review:*)",
+      "Bash(cargo insta accept:*)",
+      "Bash(cargo insta test:*)"
+    ]
+  }
+}

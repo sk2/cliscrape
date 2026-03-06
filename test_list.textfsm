@@ -1,0 +1,5 @@
+Value List ITEMS (\d+)
+
+Start
+  ^Item ${ITEMS} -> Continue
+  ^End -> Record

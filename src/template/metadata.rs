@@ -36,7 +36,8 @@ fn extract_from_modern(content: &str, format: TemplateFormat) -> TemplateMetadat
                 Ok(doc) => {
                     if let Some(metadata_value) = doc.get("metadata") {
                         // Try to deserialize metadata section
-                        match serde_yaml_ng::from_value::<TemplateMetadata>(metadata_value.clone()) {
+                        match serde_yaml_ng::from_value::<TemplateMetadata>(metadata_value.clone())
+                        {
                             Ok(metadata) => metadata,
                             Err(_) => default_metadata(),
                         }
@@ -196,7 +197,10 @@ Start
         assert_eq!(metadata.compatibility, "Arista EOS 4.x");
         assert_eq!(metadata.version, "3.0.1");
         assert_eq!(metadata.author, "BGP Team");
-        assert_eq!(metadata.maintainer, Some("network-ops@example.com".to_string()));
+        assert_eq!(
+            metadata.maintainer,
+            Some("network-ops@example.com".to_string())
+        );
     }
 
     #[test]

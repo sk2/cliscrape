@@ -123,7 +123,12 @@ Plans:
   3. User can follow template authoring guide explaining YAML format, FSM concepts, and regex best practices
   4. User can consult troubleshooting guide for common parsing errors with resolution steps
   5. Developer verifies all documentation code examples pass CI validation (doc tests)
-**Plans**: TBD
+**Plans**: 3 plans in 2 waves
+
+Plans:
+- [ ] 11-01-PLAN.md — README entrypoint + CLI usage guide (with fixtures)
+- [ ] 11-02-PLAN.md — Template authoring + migration guides (modern + legacy + troubleshooting)
+- [ ] 11-03-PLAN.md — Generated template catalog + docs-as-tests (trycmd) + CI enforcement
 
 ## Progress Tracking
 

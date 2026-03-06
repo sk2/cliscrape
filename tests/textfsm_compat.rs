@@ -44,8 +44,8 @@ Start
   ^Interface ${INTERFACE} status ${MISSING}
 "#;
 
-    use cliscrape::template::loader::TextFsmLoader;
     use cliscrape::engine::Template;
+    use cliscrape::template::loader::TextFsmLoader;
     let ir = TextFsmLoader::parse_str(template).expect("parse should succeed");
     let err = Template::from_ir(ir).expect_err("template with undefined placeholder should error");
     let msg = err.to_string();
@@ -63,8 +63,8 @@ Start
   ^Interface ${INTERFACE} is {{missing_macro}}
 "#;
 
-    use cliscrape::template::loader::TextFsmLoader;
     use cliscrape::engine::Template;
+    use cliscrape::template::loader::TextFsmLoader;
     let ir = TextFsmLoader::parse_str(template).expect("parse should succeed");
     let err = Template::from_ir(ir).expect_err("template with undefined macro should error");
     let msg = err.to_string();
@@ -100,15 +100,19 @@ fn explicit_eof_rules_execute_once() {
     let results = parser.parse(input).expect("parse should succeed");
 
     // Should emit one record at EOF containing the last captured COUNT
-    assert_eq!(results.len(), 1, "EOF rules should execute once at end of input");
+    assert_eq!(
+        results.len(),
+        1,
+        "EOF rules should execute once at end of input"
+    );
     assert_eq!(results[0]["COUNT"], serde_json::json!(3));
 }
 
 #[test]
 fn warn_skip_constructs_returns_warnings_and_parses() {
-    let (parser, warnings) = FsmParser::from_file_with_warnings(
-        "tests/fixtures/textfsm/warn_skip_constructs.textfsm"
-    ).expect("fixture template should load with warnings");
+    let (parser, warnings) =
+        FsmParser::from_file_with_warnings("tests/fixtures/textfsm/warn_skip_constructs.textfsm")
+            .expect("fixture template should load with warnings");
 
     // Should have warnings for unknown flag and unknown action
     assert!(
@@ -117,21 +121,23 @@ fn warn_skip_constructs_returns_warnings_and_parses() {
     );
 
     // Check for unknown flag warning
-    let has_flag_warning = warnings.iter().any(|w|
-        w.kind == "unknown_value_flag" && w.message.contains("UnknownFlag")
-    );
+    let has_flag_warning = warnings
+        .iter()
+        .any(|w| w.kind == "unknown_value_flag" && w.message.contains("UnknownFlag"));
     assert!(has_flag_warning, "should warn about unknown Value flag");
 
     // Check for unknown action warning
-    let has_action_warning = warnings.iter().any(|w|
+    let has_action_warning = warnings.iter().any(|w| {
         (w.kind == "unknown_record_action" || w.kind == "unknown_line_action")
-        && w.message.contains("UnknownAction")
-    );
+            && w.message.contains("UnknownAction")
+    });
     assert!(has_action_warning, "should warn about unknown action");
 
     // Template should still parse input correctly (skipping bad rule)
     let input = "Data value\nTrigger\n";
-    let results = parser.parse(input).expect("parse should succeed despite warnings");
+    let results = parser
+        .parse(input)
+        .expect("parse should succeed despite warnings");
 
     assert_eq!(results.len(), 1, "should emit one record from valid rule");
     assert_eq!(results[0]["DATA"], "value");

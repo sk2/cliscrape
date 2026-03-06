@@ -7,13 +7,13 @@ mod tui;
 use crate::cli::{Cli, Commands, ErrorFormat, OutputFormat, TemplateFormat as CliTemplateFormat};
 use anyhow::Context;
 use clap::Parser;
+use cliscrape::FsmParser;
 use cliscrape::template::{
     library, metadata,
     resolver::{TemplateResolver, TemplateSource},
 };
-use cliscrape::FsmParser;
-use comfy_table::{presets, Table};
-use dialoguer::{theme::ColorfulTheme, Confirm, Input, Select};
+use comfy_table::{Table, presets};
+use dialoguer::{Confirm, Input, Select, theme::ColorfulTheme};
 use std::collections::HashSet;
 use std::io::{self, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
@@ -729,7 +729,11 @@ fn resolve_template_spec(spec: &str, format_filter: CliTemplateFormat) -> anyhow
                     // Write embedded template to temp file for FsmParser to load
                     let temp_dir = std::env::temp_dir();
                     let safe_name = spec.replace('/', "_");
-                    let temp_path = temp_dir.join(format!("cliscrape_template_{}_{}", std::process::id(), safe_name));
+                    let temp_path = temp_dir.join(format!(
+                        "cliscrape_template_{}_{}",
+                        std::process::id(),
+                        safe_name
+                    ));
                     std::fs::write(&temp_path, file.data.as_ref())
                         .with_context(|| "Failed to write embedded template to temp file")?;
                     Ok(temp_path)

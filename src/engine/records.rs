@@ -1,7 +1,7 @@
 use crate::engine::convert::convert_scalar;
 use crate::engine::types::Value;
 use serde_json;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 #[derive(Debug, Default)]
 pub struct RecordBuffer {
@@ -45,7 +45,7 @@ impl RecordBuffer {
     pub fn emit(
         &mut self,
         values: &HashMap<String, Value>,
-    ) -> Option<HashMap<String, serde_json::Value>> {
+    ) -> Option<BTreeMap<String, serde_json::Value>> {
         if !self.dirty {
             return None;
         }
@@ -61,7 +61,7 @@ impl RecordBuffer {
             }
         }
 
-        let mut record = HashMap::new();
+        let mut record = BTreeMap::new();
         for (name, val_def) in values {
             if let Some(vals) = self.buffer.get(name) {
                 if val_def.list {
@@ -116,8 +116,8 @@ impl RecordBuffer {
     pub fn current_values(
         &self,
         values: &HashMap<String, Value>,
-    ) -> HashMap<String, serde_json::Value> {
-        let mut snapshot = HashMap::new();
+    ) -> BTreeMap<String, serde_json::Value> {
+        let mut snapshot = BTreeMap::new();
         for (name, val_def) in values {
             if let Some(vals) = self.buffer.get(name) {
                 if val_def.list {

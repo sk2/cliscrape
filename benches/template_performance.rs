@@ -1,5 +1,5 @@
 use cliscrape::FsmParser;
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use tracing::Dispatch;
 use tracing_subscriber::filter::LevelFilter;
 

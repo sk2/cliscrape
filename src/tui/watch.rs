@@ -1,7 +1,7 @@
 use crate::tui::{FsWhich, Message};
 use anyhow::Context;
 use notify::RecursiveMode;
-use notify_debouncer_mini::{new_debouncer, DebounceEventResult};
+use notify_debouncer_mini::{DebounceEventResult, new_debouncer};
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};

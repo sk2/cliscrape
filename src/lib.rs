@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 use thiserror::Error;
 
@@ -15,14 +15,45 @@ use crate::template::modern;
 pub struct TemplateWarning {
     pub kind: String,
     pub message: String,
+    pub line_idx: Option<usize>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DetailedParseError {
+    pub line_idx: usize,
+    pub line_content: String,
+    pub message: String,
 }
 
 #[derive(Error, Debug)]
 pub enum ScraperError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    #[error("Parsing error: {0}")]
-    Parse(String),
+    #[error("Parsing error at line {}: {} (content: '{}')", .0.line_idx + 1, .0.message, .0.line_content)]
+    Parse(DetailedParseError),
+    #[error("Template error: {0}")]
+    Template(String),
+    #[error("Generic error: {0}")]
+    Generic(String),
+    #[error("Timeout error: {0}")]
+    Timeout(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct ParseOptions {
+    pub strict: bool,
+    pub threshold: f64,
+    pub timeout_ms: Option<u64>,
+}
+
+impl Default for ParseOptions {
+    fn default() -> Self {
+        Self {
+            strict: false,
+            threshold: 80.0,
+            timeout_ms: None,
+        }
+    }
 }
 
 pub struct FsmParser {
@@ -66,7 +97,7 @@ impl FsmParser {
                 (ir, Vec::new())
             }
             _ => {
-                return Err(ScraperError::Parse(format!(
+                return Err(ScraperError::Template(format!(
                     "Unsupported template extension '{ext_display}'. Supported: .textfsm, .yaml, .yml, .toml"
                 )));
             }
@@ -99,12 +130,34 @@ impl FsmParser {
     pub fn parse(
         &self,
         input: &str,
-    ) -> Result<Vec<HashMap<String, serde_json::Value>>, ScraperError> {
-        self.template.parse(input)
+    ) -> Result<Vec<BTreeMap<String, serde_json::Value>>, ScraperError> {
+        let (results, _warnings) =
+            self.template
+                .parse_internal(input, None, ParseOptions::default())?;
+        Ok(results)
+    }
+
+    pub fn results_with_warnings(
+        &self,
+        input: &str,
+        options: ParseOptions,
+    ) -> Result<
+        (
+            Vec<BTreeMap<String, serde_json::Value>>,
+            Vec<TemplateWarning>,
+        ),
+        ScraperError,
+    > {
+        self.template.parse_internal(input, None, options)
     }
 
     pub fn debug_parse(&self, input: &str) -> Result<engine::debug::DebugReport, ScraperError> {
-        self.template.debug_parse(input)
+        let lines: Vec<String> = input.lines().map(|s| s.to_string()).collect();
+        let mut report = engine::debug::DebugReport::new(lines);
+        let _ = self
+            .template
+            .parse_internal(input, Some(&mut report), ParseOptions::default())?;
+        Ok(report)
     }
 
     /// Get the list of field names defined in the template

@@ -6,7 +6,7 @@ use ratatui::{
     text::{Line, Span, Text},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
 };
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 fn display_value_compact(v: &serde_json::Value) -> String {
     match v {
@@ -15,17 +15,13 @@ fn display_value_compact(v: &serde_json::Value) -> String {
     }
 }
 
-fn record_preview(record: &HashMap<String, serde_json::Value>, max_len: usize) -> String {
+fn record_preview(record: &BTreeMap<String, serde_json::Value>, max_len: usize) -> String {
     if record.is_empty() {
         return "(empty)".to_string();
     }
 
-    let mut keys: Vec<&String> = record.keys().collect();
-    keys.sort();
-
     let mut out = String::new();
-    for (i, k) in keys.iter().enumerate() {
-        let v = record.get(*k).unwrap();
+    for (i, (k, v)) in record.iter().enumerate() {
         let part = format!("{}={}", k, display_value_compact(v));
         if i > 0 {
             if out.len() + 1 > max_len {
@@ -113,6 +109,11 @@ pub fn draw(frame: &mut Frame, app: &AppState) {
         return;
     }
 
+    if app.mode == Mode::TemplateBrowser {
+        draw_template_browser(frame, app);
+        return;
+    }
+
     let root = frame.area();
 
     let rows = Layout::default()
@@ -148,6 +149,158 @@ pub fn draw(frame: &mut Frame, app: &AppState) {
     }
 
     render_status_pane(frame, status, app);
+}
+
+fn draw_template_browser(frame: &mut Frame, app: &AppState) {
+    let root = frame.area();
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(3)])
+        .split(root);
+
+    let main = rows[0];
+    let footer = rows[1];
+
+    let cols = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(30), Constraint::Percentage(70)])
+        .split(main);
+
+    let left = cols[0];
+    let right = cols[1];
+
+    let right_rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
+        .split(right);
+
+    render_browser_list(frame, left, app);
+    render_browser_details(frame, right_rows[0], app);
+    render_browser_preview(frame, right_rows[1], app);
+    render_browser_footer(frame, footer, app);
+}
+
+fn render_browser_list(frame: &mut Frame, area: Rect, app: &AppState) {
+    let Some(browser) = &app.browser else {
+        return;
+    };
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title("Templates (↑/↓ browse, Enter select, q/Esc exit)");
+
+    let items: Vec<ListItem> = browser
+        .entries
+        .iter()
+        .enumerate()
+        .map(|(i, entry)| {
+            let style = if i == browser.selected_idx {
+                Style::default().bg(Color::Blue).fg(Color::White)
+            } else {
+                Style::default()
+            };
+
+            let label = match entry.location {
+                crate::tui::browser::TemplateLocation::Embedded => entry.name.clone(),
+                crate::tui::browser::TemplateLocation::User(_) => format!("{} [User]", entry.name),
+            };
+
+            ListItem::new(label).style(style)
+        })
+        .collect();
+
+    let list = List::new(items).block(block);
+    frame.render_widget(list, area);
+}
+
+fn render_browser_details(frame: &mut Frame, area: Rect, app: &AppState) {
+    let Some(browser) = &app.browser else {
+        return;
+    };
+    let Some(entry) = browser.selected_entry() else {
+        return;
+    };
+
+    let block = Block::default().borders(Borders::ALL).title("Details");
+    let mut text = Vec::new();
+
+    text.push(Line::from(vec![
+        Span::styled("Name: ", Style::default().add_modifier(Modifier::BOLD)),
+        Span::raw(&entry.name),
+    ]));
+
+    let location = match entry.location {
+        crate::tui::browser::TemplateLocation::Embedded => "Embedded",
+        crate::tui::browser::TemplateLocation::User(_) => "User Directory",
+    };
+    text.push(Line::from(vec![
+        Span::styled("Location: ", Style::default().add_modifier(Modifier::BOLD)),
+        Span::raw(location),
+    ]));
+
+    text.push(Line::from(vec![
+        Span::styled(
+            "Description: ",
+            Style::default().add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(&entry.metadata.description),
+    ]));
+
+    text.push(Line::from(vec![
+        Span::styled(
+            "Compatibility: ",
+            Style::default().add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(&entry.metadata.compatibility),
+    ]));
+
+    text.push(Line::from(vec![
+        Span::styled("Version: ", Style::default().add_modifier(Modifier::BOLD)),
+        Span::raw(&entry.metadata.version),
+    ]));
+
+    text.push(Line::from(vec![
+        Span::styled("Author: ", Style::default().add_modifier(Modifier::BOLD)),
+        Span::raw(&entry.metadata.author),
+    ]));
+
+    frame.render_widget(
+        Paragraph::new(text).block(block).wrap(Wrap { trim: true }),
+        area,
+    );
+}
+
+fn render_browser_preview(frame: &mut Frame, area: Rect, app: &AppState) {
+    let Some(browser) = &app.browser else {
+        return;
+    };
+    let Some(entry) = browser.selected_entry() else {
+        return;
+    };
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title("Template Preview (first 20 lines)");
+    frame.render_widget(Paragraph::new(entry.preview.clone()).block(block), area);
+}
+
+fn render_browser_footer(frame: &mut Frame, area: Rect, app: &AppState) {
+    let block = Block::default().borders(Borders::ALL);
+    let mut text = vec![
+        Line::from(
+            "Use ↑/↓ to navigate the template list. Press Enter to load the selected template.",
+        ),
+        Line::from(
+            "Templates are discovered from embedded resources and ~/.local/share/cliscrape/templates/.",
+        ),
+    ];
+    if let Some(err) = &app.current_error {
+        text.push(Line::from(Span::styled(
+            err,
+            Style::default().fg(Color::Red),
+        )));
+    }
+    frame.render_widget(Paragraph::new(text).block(block), area);
 }
 
 fn draw_picker(frame: &mut Frame, app: &AppState) {
@@ -836,7 +989,11 @@ fn render_variables_pane(frame: &mut Frame, area: Rect, app: &AppState) {
                     display_value_compact(current_val)
                 )
             } else {
-                format!("{} = {} (new)", var_name, display_value_compact(current_val))
+                format!(
+                    "{} = {} (new)",
+                    var_name,
+                    display_value_compact(current_val)
+                )
             };
             (
                 change_text,
@@ -909,6 +1066,7 @@ fn render_status_pane(frame: &mut Frame, area: Rect, app: &AppState) {
         Mode::Picker => "picker",
         Mode::Browse => "browse",
         Mode::EditTemplate => "edit-template",
+        Mode::TemplateBrowser => "template-browser",
     };
     lines.push(Line::from(format!("mode:     {}", mode_str)));
 
@@ -971,8 +1129,12 @@ fn render_status_pane(frame: &mut Frame, area: Rect, app: &AppState) {
             "State Tracer Keys:",
             Style::default().add_modifier(Modifier::BOLD),
         )));
-        lines.push(Line::from("  PgUp/PgDn: step forward/backward | Ctrl+N/P: jump record"));
-        lines.push(Line::from("  m: toggle stepping mode | f1-f4: toggle filters | w: watch var"));
+        lines.push(Line::from(
+            "  PgUp/PgDn: step forward/backward | Ctrl+N/P: jump record",
+        ));
+        lines.push(Line::from(
+            "  m: toggle stepping mode | f1-f4: toggle filters | w: watch var",
+        ));
     }
 
     let title = if app.current_error.is_some() {

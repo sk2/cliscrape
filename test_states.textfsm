@@ -1,0 +1,7 @@
+Value DATA (\w+)
+
+Start
+  ^GoToOther -> OtherState
+
+OtherState
+  ^Data ${DATA} -> Record

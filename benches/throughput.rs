@@ -1,6 +1,6 @@
 use cliscrape::engine::types::Template;
 use cliscrape::engine::types::*;
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use std::collections::HashMap;
 use tracing::Dispatch;
 use tracing_subscriber::filter::LevelFilter;

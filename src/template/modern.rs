@@ -1,5 +1,5 @@
-use crate::engine::types::{Action, FieldType, Rule, State, TemplateIR, Value};
 use crate::ScraperError;
+use crate::engine::types::{Action, FieldType, Rule, State, TemplateIR, Value};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -116,14 +116,14 @@ pub fn load_str(format: ModernFormat, input: &str) -> Result<TemplateIR, Scraper
     let doc: ModernTemplateDoc = match format {
         ModernFormat::Toml => {
             let de = toml::de::Deserializer::parse(input)
-                .map_err(|e| ScraperError::Parse(format!("TOML parse error: {e}")))?;
+                .map_err(|e| ScraperError::Template(format!("TOML parse error: {e}")))?;
             serde_path_to_error::deserialize(de)
-                .map_err(|e| ScraperError::Parse(format!("TOML schema error: {e}")))?
+                .map_err(|e| ScraperError::Template(format!("TOML schema error: {e}")))?
         }
         ModernFormat::Yaml => {
             let de = serde_yaml_ng::Deserializer::from_str(input);
             serde_path_to_error::deserialize(de)
-                .map_err(|e| ScraperError::Parse(format!("YAML schema error: {e}")))?
+                .map_err(|e| ScraperError::Template(format!("YAML schema error: {e}")))?
         }
     };
 
@@ -141,18 +141,18 @@ pub fn load_yaml_str(input: &str) -> Result<TemplateIR, ScraperError> {
 
 pub fn to_yaml_string(doc: &ModernTemplateDoc) -> Result<String, ScraperError> {
     serde_yaml_ng::to_string(doc)
-        .map_err(|e| ScraperError::Parse(format!("YAML serialize error: {e}")))
+        .map_err(|e| ScraperError::Template(format!("YAML serialize error: {e}")))
 }
 
 pub fn to_toml_string(doc: &ModernTemplateDoc) -> Result<String, ScraperError> {
     toml::to_string_pretty(doc)
-        .map_err(|e| ScraperError::Parse(format!("TOML serialize error: {e}")))
+        .map_err(|e| ScraperError::Template(format!("TOML serialize error: {e}")))
 }
 
 impl ModernTemplateDoc {
     fn validate(&self) -> Result<(), ScraperError> {
         if self.version != 1 {
-            return Err(ScraperError::Parse(format!(
+            return Err(ScraperError::Template(format!(
                 "Unsupported modern template version {} (supported: 1)",
                 self.version
             )));
@@ -164,7 +164,7 @@ impl ModernTemplateDoc {
             (true, false) => {
                 let states = self.states.as_ref().unwrap();
                 if !states.contains_key("Start") {
-                    return Err(ScraperError::Parse(
+                    return Err(ScraperError::Template(
                         "Modern templates with explicit states must define a 'Start' state"
                             .to_string(),
                     ));
@@ -172,12 +172,12 @@ impl ModernTemplateDoc {
             }
             (false, true) => {}
             (true, true) => {
-                return Err(ScraperError::Parse(
+                return Err(ScraperError::Template(
                     "Modern template must define exactly one of 'states' or 'patterns'".to_string(),
                 ));
             }
             (false, false) => {
-                return Err(ScraperError::Parse(
+                return Err(ScraperError::Template(
                     "Modern template must define either 'states' or 'patterns'".to_string(),
                 ));
             }
@@ -205,7 +205,7 @@ impl ModernTemplateDoc {
 
         for name in placeholders.iter() {
             let def = self.fields.get(name).ok_or_else(|| {
-                ScraperError::Parse(format!(
+                ScraperError::Template(format!(
                     "Rule references placeholder '${{{}}}' but 'fields.{}' is not defined",
                     name, name
                 ))
@@ -216,7 +216,7 @@ impl ModernTemplateDoc {
                 .map(|p| p.trim().is_empty())
                 .unwrap_or(true);
             if missing_pattern {
-                return Err(ScraperError::Parse(format!(
+                return Err(ScraperError::Template(format!(
                     "Rule references placeholder '${{{}}}' but 'fields.{}.pattern' is missing",
                     name, name
                 )));
@@ -225,7 +225,7 @@ impl ModernTemplateDoc {
 
         for name in named_groups.iter() {
             if !self.fields.contains_key(name) {
-                return Err(ScraperError::Parse(format!(
+                return Err(ScraperError::Template(format!(
                     "Rule contains named capture group '{name}' but 'fields.{name}' is not defined"
                 )));
             }
@@ -358,8 +358,8 @@ fn collect_named_groups(s: &str, out: &mut HashSet<String>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::types::FieldType;
     use crate::engine::Template;
+    use crate::engine::types::FieldType;
 
     #[test]
     fn modern_toml_explicit_int_type_emits_json_number() {

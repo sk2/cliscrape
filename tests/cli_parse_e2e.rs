@@ -16,8 +16,8 @@ fn parse_file_input_emits_json_with_hostname() {
     assert!(output.status.success(), "parse file input should succeed");
 
     let stdout = String::from_utf8(output.stdout).expect("stdout is valid UTF-8");
-    let json: serde_json::Value = serde_json::from_str(stdout.trim())
-        .expect("stdout is valid JSON");
+    let json: serde_json::Value =
+        serde_json::from_str(stdout.trim()).expect("stdout is valid JSON");
 
     let records = json.as_array().expect("JSON is array");
     assert_eq!(records.len(), 1, "should have 1 record");
@@ -45,8 +45,8 @@ fn parse_piped_stdin_emits_json_with_hostname() {
     assert!(output.status.success(), "parse stdin should succeed");
 
     let stdout = String::from_utf8(output.stdout).expect("stdout is valid UTF-8");
-    let json: serde_json::Value = serde_json::from_str(stdout.trim())
-        .expect("stdout is valid JSON");
+    let json: serde_json::Value =
+        serde_json::from_str(stdout.trim()).expect("stdout is valid JSON");
 
     let records = json.as_array().expect("JSON is array");
     assert_eq!(records.len(), 1, "should have 1 record");
@@ -72,18 +72,15 @@ fn parse_stdin_plus_file_ordering_file_first_stdin_last() {
         .output()
         .expect("run cliscrape parse with file + stdin");
 
-    assert!(
-        output.status.success(),
-        "parse file + stdin should succeed"
-    );
+    assert!(output.status.success(), "parse file + stdin should succeed");
 
     let stdout = String::from_utf8(output.stdout).expect("stdout is valid UTF-8");
-    let json: serde_json::Value = serde_json::from_str(stdout.trim())
-        .expect("stdout is valid JSON");
+    let json: serde_json::Value =
+        serde_json::from_str(stdout.trim()).expect("stdout is valid JSON");
 
     let records = json.as_array().expect("JSON is array");
     assert_eq!(records.len(), 2, "should have 2 records");
-    
+
     // Phase-2 contract: files first, stdin last
     assert_eq!(
         records[0]["hostname"],
@@ -116,8 +113,8 @@ fn parse_textfsm_required_filldown_interaction() {
     );
 
     let stdout = String::from_utf8(output.stdout).expect("stdout is valid UTF-8");
-    let json: serde_json::Value = serde_json::from_str(stdout.trim())
-        .expect("stdout is valid JSON");
+    let json: serde_json::Value =
+        serde_json::from_str(stdout.trim()).expect("stdout is valid JSON");
 
     let records = json.as_array().expect("JSON is array");
     assert!(records.len() >= 2, "should have at least 2 records");
@@ -155,12 +152,12 @@ fn parse_identifier_resolution_via_cwd_only_search() {
     );
 
     let stdout = String::from_utf8(output.stdout).expect("stdout is valid UTF-8");
-    let json: serde_json::Value = serde_json::from_str(stdout.trim())
-        .expect("stdout is valid JSON");
+    let json: serde_json::Value =
+        serde_json::from_str(stdout.trim()).expect("stdout is valid JSON");
 
     let records = json.as_array().expect("JSON is array");
     assert!(records.len() >= 2, "should have at least 2 records");
-    
+
     // Verify it's the same result as explicit path test
     assert!(
         records[1].get("INTERFACE").is_some(),

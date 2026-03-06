@@ -25,7 +25,10 @@ fn test_list_embedded_templates() {
     // Check that our templates are present
     let names: Vec<String> = templates
         .iter()
-        .filter_map(|t| t.get("name").and_then(|n| n.as_str().map(|s| s.to_string())))
+        .filter_map(|t| {
+            t.get("name")
+                .and_then(|n| n.as_str().map(|s| s.to_string()))
+        })
         .collect();
 
     assert!(
@@ -78,8 +81,7 @@ fn test_list_embedded_templates() {
 #[test]
 fn test_show_template_details() {
     let mut cmd = Command::cargo_bin("cliscrape").unwrap();
-    cmd.arg("show-template")
-        .arg("cisco_ios_show_version.yaml");
+    cmd.arg("show-template").arg("cisco_ios_show_version.yaml");
 
     cmd.assert()
         .success()
@@ -184,10 +186,7 @@ fn test_filter_templates() {
 
     // All results should be Cisco templates
     for template in templates {
-        let name = template
-            .get("name")
-            .and_then(|n| n.as_str())
-            .unwrap_or("");
+        let name = template.get("name").and_then(|n| n.as_str()).unwrap_or("");
         assert!(
             name.starts_with("cisco"),
             "Filtered template name should start with 'cisco', found: {}",
@@ -198,7 +197,10 @@ fn test_filter_templates() {
     // Verify Juniper and Arista templates are NOT in output
     let names: Vec<String> = templates
         .iter()
-        .filter_map(|t| t.get("name").and_then(|n| n.as_str().map(|s| s.to_string())))
+        .filter_map(|t| {
+            t.get("name")
+                .and_then(|n| n.as_str().map(|s| s.to_string()))
+        })
         .collect();
 
     assert!(
@@ -242,9 +244,7 @@ fn test_nonexistent_template_error() {
 #[test]
 fn test_list_templates_csv_format_error() {
     let mut cmd = Command::cargo_bin("cliscrape").unwrap();
-    cmd.arg("list-templates")
-        .arg("--format")
-        .arg("csv");
+    cmd.arg("list-templates").arg("--format").arg("csv");
 
     cmd.assert()
         .failure()
@@ -266,11 +266,7 @@ fn test_embedded_template_metadata() {
     // Find cisco_ios_show_version.yaml and verify its metadata
     let cisco_ios = templates
         .iter()
-        .find(|t| {
-            t.get("name")
-                .and_then(|n| n.as_str())
-                == Some("cisco_ios_show_version.yaml")
-        })
+        .find(|t| t.get("name").and_then(|n| n.as_str()) == Some("cisco_ios_show_version.yaml"))
         .expect("Should find cisco_ios_show_version.yaml");
 
     assert_eq!(
@@ -308,7 +304,10 @@ fn test_template_list_sorted() {
     let templates = templates.as_array().unwrap();
     let names: Vec<String> = templates
         .iter()
-        .filter_map(|t| t.get("name").and_then(|n| n.as_str().map(|s| s.to_string())))
+        .filter_map(|t| {
+            t.get("name")
+                .and_then(|n| n.as_str().map(|s| s.to_string()))
+        })
         .collect();
 
     let mut sorted_names = names.clone();

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DebugReport {
@@ -49,7 +49,7 @@ pub struct CaptureSpan {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EmittedRecord {
     pub line_idx: usize,
-    pub record: HashMap<String, serde_json::Value>,
+    pub record: BTreeMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -57,7 +57,7 @@ pub struct TraceEvent {
     pub line_idx: usize,
     pub state_before: String,
     pub state_after: String,
-    pub variables: HashMap<String, serde_json::Value>,
+    pub variables: BTreeMap<String, serde_json::Value>,
     pub event_type: TraceEventType,
 }
 

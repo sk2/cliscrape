@@ -22,6 +22,7 @@ pub enum Mode {
     Picker,
     Browse,
     EditTemplate,
+    TemplateBrowser,
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +40,7 @@ pub struct AppState {
     pub mode: Mode,
     pub editor: Option<crate::tui::editor::EditorState>,
     pub picker: Option<crate::tui::picker::PickerState>,
+    pub browser: Option<crate::tui::browser::TemplateBrowserState>,
     pub trace_index: usize,
     pub stepping_mode: crate::tui::trace::SteppingMode,
     pub filter_state: crate::tui::trace::FilterState,
@@ -89,11 +91,22 @@ impl AppState {
             mode,
             editor: None,
             picker,
+            browser: None,
             trace_index: 0,
             stepping_mode: crate::tui::trace::SteppingMode::LineByLine,
             filter_state: crate::tui::trace::FilterState::default(),
             watch_list: HashSet::new(),
         }
+    }
+
+    pub fn enter_template_browser(&mut self) {
+        self.browser = Some(crate::tui::browser::TemplateBrowserState::new());
+        self.mode = Mode::TemplateBrowser;
+    }
+
+    pub fn exit_template_browser(&mut self) {
+        self.mode = Mode::Browse;
+        self.browser = None;
     }
 
     pub fn enter_edit_template(&mut self) {
@@ -510,7 +523,7 @@ impl AppState {
 mod tests {
     use super::*;
     use cliscrape::engine::debug::{DebugReport, TraceEvent, TraceEventType};
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
     #[test]
     fn test_stepping_line_by_line() {
@@ -523,21 +536,21 @@ mod tests {
                 line_idx: 0,
                 state_before: "Start".into(),
                 state_after: "Start".into(),
-                variables: HashMap::new(),
+                variables: BTreeMap::new(),
                 event_type: TraceEventType::LineProcessed,
             },
             TraceEvent {
                 line_idx: 1,
                 state_before: "Start".into(),
                 state_after: "Header".into(),
-                variables: HashMap::new(),
+                variables: BTreeMap::new(),
                 event_type: TraceEventType::StateChange,
             },
             TraceEvent {
                 line_idx: 2,
                 state_before: "Header".into(),
                 state_after: "Header".into(),
-                variables: HashMap::new(),
+                variables: BTreeMap::new(),
                 event_type: TraceEventType::RecordEmitted,
             },
         ];
@@ -572,28 +585,28 @@ mod tests {
                 line_idx: 0,
                 state_before: "Start".into(),
                 state_after: "Start".into(),
-                variables: HashMap::new(),
+                variables: BTreeMap::new(),
                 event_type: TraceEventType::LineProcessed,
             },
             TraceEvent {
                 line_idx: 1,
                 state_before: "Start".into(),
                 state_after: "Header".into(),
-                variables: HashMap::new(),
+                variables: BTreeMap::new(),
                 event_type: TraceEventType::StateChange,
             },
             TraceEvent {
                 line_idx: 2,
                 state_before: "Header".into(),
                 state_after: "Header".into(),
-                variables: HashMap::new(),
+                variables: BTreeMap::new(),
                 event_type: TraceEventType::LineProcessed,
             },
             TraceEvent {
                 line_idx: 3,
                 state_before: "Header".into(),
                 state_after: "Body".into(),
-                variables: HashMap::new(),
+                variables: BTreeMap::new(),
                 event_type: TraceEventType::StateChange,
             },
         ];
@@ -632,35 +645,35 @@ mod tests {
                 line_idx: 0,
                 state_before: "Start".into(),
                 state_after: "Start".into(),
-                variables: HashMap::new(),
+                variables: BTreeMap::new(),
                 event_type: TraceEventType::LineProcessed,
             },
             TraceEvent {
                 line_idx: 1,
                 state_before: "Start".into(),
                 state_after: "Header".into(),
-                variables: HashMap::new(),
+                variables: BTreeMap::new(),
                 event_type: TraceEventType::StateChange,
             },
             TraceEvent {
                 line_idx: 2,
                 state_before: "Header".into(),
                 state_after: "Header".into(),
-                variables: HashMap::new(),
+                variables: BTreeMap::new(),
                 event_type: TraceEventType::RecordEmitted,
             },
             TraceEvent {
                 line_idx: 3,
                 state_before: "Header".into(),
                 state_after: "Header".into(),
-                variables: HashMap::new(),
+                variables: BTreeMap::new(),
                 event_type: TraceEventType::LineProcessed,
             },
             TraceEvent {
                 line_idx: 4,
                 state_before: "Header".into(),
                 state_after: "Header".into(),
-                variables: HashMap::new(),
+                variables: BTreeMap::new(),
                 event_type: TraceEventType::RecordEmitted,
             },
         ];

@@ -1,0 +1,6 @@
+Value Filldown CHASSIS (\S+)
+Value SLOT (\d+)
+
+Start
+  ^Chassis ${CHASSIS}
+  ^Slot ${SLOT} -> Record

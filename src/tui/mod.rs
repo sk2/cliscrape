@@ -2,15 +2,16 @@ use crate::tui::app::{AppState, Mode};
 use crossterm::event::{KeyCode, KeyModifiers};
 use crossterm::{
     cursor, event as crossterm_event, execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io;
 use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 pub mod app;
+pub mod browser;
 pub mod editor;
 pub mod event;
 pub mod picker;
@@ -159,6 +160,7 @@ fn handle_key(
         Mode::Picker => handle_key_picker(app, key, worker, msg_tx, watcher),
         Mode::Browse => handle_key_browse(app, key),
         Mode::EditTemplate => handle_key_editor(app, key, worker),
+        Mode::TemplateBrowser => handle_key_template_browser(app, key, worker, msg_tx, watcher),
     }
 }
 
@@ -277,6 +279,10 @@ fn handle_key_browse(app: &mut AppState, key: crossterm::event::KeyEvent) -> boo
             app.enter_edit_template();
             false
         }
+        KeyCode::Char('t') => {
+            app.enter_template_browser();
+            false
+        }
         // State Tracer stepping controls
         KeyCode::PageDown => {
             app.step_forward();
@@ -319,6 +325,83 @@ fn handle_key_browse(app: &mut AppState, key: crossterm::event::KeyEvent) -> boo
         }
         _ => false,
     }
+}
+
+fn handle_key_template_browser(
+    app: &mut AppState,
+    key: crossterm::event::KeyEvent,
+    worker: &worker::ParseWorker,
+    msg_tx: &mpsc::Sender<Message>,
+    watcher: &mut Option<watch::WatcherHandle>,
+) -> bool {
+    if matches!(key.code, KeyCode::Char('q') | KeyCode::Esc) {
+        app.exit_template_browser();
+        return false;
+    }
+
+    let Some(browser) = app.browser.as_mut() else {
+        return false;
+    };
+
+    match key.code {
+        KeyCode::Up | KeyCode::Char('k') => {
+            browser.previous();
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            browser.next();
+        }
+        KeyCode::Enter => {
+            if let Some(entry) = browser.selected_entry() {
+                match &entry.location {
+                    crate::tui::browser::TemplateLocation::Embedded => {
+                        if let Some(file) = cliscrape::template::library::get_embedded(&entry.name)
+                        {
+                            let temp_dir = std::env::temp_dir();
+                            let safe_name = entry.name.replace('/', "_");
+                            let temp_path = temp_dir.join(format!(
+                                "cliscrape_tui_{}_{}",
+                                std::process::id(),
+                                safe_name
+                            ));
+                            if let Ok(_) = std::fs::write(&temp_path, &file.data) {
+                                app.template_path = Some(temp_path);
+                            } else {
+                                app.current_error =
+                                    Some("Failed to write temporary template file".to_string());
+                                return false;
+                            }
+                        }
+                    }
+                    crate::tui::browser::TemplateLocation::User(path) => {
+                        app.template_path = Some(path.clone());
+                    }
+                }
+
+                if let (Some(tpl), Some(inp)) = (app.template_path.clone(), app.input_path.clone())
+                {
+                    // (Re)start watcher.
+                    *watcher = None;
+                    match watch::start_watcher(tpl.clone(), inp.clone(), msg_tx.clone()) {
+                        Ok(w) => *watcher = Some(w),
+                        Err(err) => {
+                            app.current_error = Some(format!("{:#}", err));
+                        }
+                    }
+
+                    app.on_parse_started();
+                    worker.request(worker::ParseRequest {
+                        template_path: tpl,
+                        input_path: inp,
+                        block_idx: 0,
+                    });
+                }
+                app.exit_template_browser();
+            }
+        }
+        _ => {}
+    }
+
+    false
 }
 
 fn handle_key_editor(

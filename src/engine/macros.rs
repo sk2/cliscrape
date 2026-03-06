@@ -46,7 +46,7 @@ fn expand_string(
     max_depth: usize,
 ) -> Result<String, ScraperError> {
     if depth > max_depth {
-        return Err(ScraperError::Parse(format!(
+        return Err(ScraperError::Template(format!(
             "Macro expansion exceeded max depth {max_depth}"
         )));
     }
@@ -68,7 +68,7 @@ fn expand_string(
             out.push_str(&expanded);
         } else {
             // Unknown macro is an error during template load
-            return Err(ScraperError::Parse(format!(
+            return Err(ScraperError::Template(format!(
                 "Unknown macro '{{{{{}}}}}' - macros must be defined before use",
                 name
             )));
@@ -96,7 +96,7 @@ fn resolve_macro(
     if let Some(pos) = stack.iter().position(|s| s == name) {
         let mut chain = stack[pos..].to_vec();
         chain.push(name.to_string());
-        return Err(ScraperError::Parse(format!(
+        return Err(ScraperError::Template(format!(
             "Macro expansion cycle detected: {}",
             chain.join(" -> ")
         )));

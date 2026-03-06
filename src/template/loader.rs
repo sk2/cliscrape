@@ -1,8 +1,8 @@
 use crate::engine::types::*;
 use crate::template::{Rule as PestRule, TextFsmParser};
 use crate::{ScraperError, TemplateWarning};
-use pest::iterators::Pair;
 use pest::Parser;
+use pest::iterators::Pair;
 use std::collections::HashMap;
 
 pub struct TextFsmLoader;
@@ -17,7 +17,7 @@ impl TextFsmLoader {
         input: &str,
     ) -> Result<(TemplateIR, Vec<TemplateWarning>), ScraperError> {
         let mut pairs = TextFsmParser::parse(PestRule::file, input)
-            .map_err(|e| ScraperError::Parse(format!("Pest error: {}", e)))?;
+            .map_err(|e| ScraperError::Template(format!("Pest error: {}", e)))?;
 
         let mut values = HashMap::new();
         let mut states = HashMap::new();
@@ -90,6 +90,7 @@ fn parse_definition_with_warnings(
                                         "Unknown Value flag '{}' on field '{}' - ignoring",
                                         flag, name
                                     ),
+                                    line_idx: None,
                                 });
                             }
                         }
@@ -213,7 +214,10 @@ fn parse_action_with_warnings(
             PestRule::line_action => {
                 let action_str = inner.as_str();
                 // Check if this is actually a record action keyword that was misparsed as line_action
-                if matches!(action_str, "Record" | "Clear" | "Clearall" | "Error" | "NoRecord") {
+                if matches!(
+                    action_str,
+                    "Record" | "Clear" | "Clearall" | "Error" | "NoRecord"
+                ) {
                     // This was misparsed - treat it as a record action
                     record_action = match action_str {
                         "Record" => Action::Record,
@@ -251,6 +255,7 @@ fn parse_action_with_warnings(
                                 "Unknown record action '{}' - skipping rule",
                                 action_str
                             ),
+                            line_idx: None,
                         });
                         skip_rule = true;
                         Action::Next
