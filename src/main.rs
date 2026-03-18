@@ -633,8 +633,44 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
         Commands::ShowTemplate { template, source } => {
             handle_show_template(&template, source)?;
         }
+
+        Commands::Generate { template, input } => {
+            handle_generate(&template, input)?;
+        }
     }
 
+    Ok(())
+}
+
+fn handle_generate(template_spec: &str, input_path: Option<PathBuf>) -> anyhow::Result<()> {
+    // 1. Resolve and load template
+    let template_path = resolve_template_spec(template_spec, CliTemplateFormat::Auto)?;
+    let parser = FsmParser::from_file(&template_path)
+        .with_context(|| format!("Failed to load template from {}", template_path.display()))?;
+
+    // 2. Load records from JSON
+    let records_json = match input_path {
+        Some(path) => std::fs::read_to_string(&path)
+            .with_context(|| format!("Failed to read JSON records from {}", path.display()))?,
+        None => {
+            let mut buffer = String::new();
+            io::stdin()
+                .read_to_string(&mut buffer)
+                .context("Failed to read JSON records from stdin")?;
+            buffer
+        }
+    };
+
+    let records: Vec<std::collections::BTreeMap<String, serde_json::Value>> =
+        serde_json::from_str(&records_json)
+            .context("Failed to parse JSON records. Expected a JSON array of objects.")?;
+
+    // 3. Generate synthetic output
+    let output = parser
+        .generate(records)
+        .map_err(|e| anyhow::anyhow!("Generation failed: {}", e))?;
+
+    print!("{}", output);
     Ok(())
 }
 

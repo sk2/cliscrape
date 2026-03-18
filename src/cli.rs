@@ -123,6 +123,17 @@ pub enum Commands {
         #[arg(long)]
         source: bool,
     },
+
+    /// Generate synthetic CLI output from JSON records using a template
+    Generate {
+        /// Template spec (path or identifier)
+        #[arg(short, long, value_name = "TEMPLATE")]
+        template: String,
+
+        /// Path to JSON file containing records (if omitted, reads from stdin)
+        #[arg(short, long, value_name = "JSON")]
+        input: Option<PathBuf>,
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]

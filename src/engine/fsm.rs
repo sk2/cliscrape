@@ -26,7 +26,7 @@ impl Template {
                 })?;
 
                 // 2. Expand values ${ValueName}
-                let mut final_regex_str = expanded_macros;
+                let mut final_regex_str = expanded_macros.clone();
                 for (val_name, val) in &ir.values {
                     let placeholder = format!("${{{}}}", val_name);
                     let replacement = format!("(?P<{}>{})", val_name, val.regex);
@@ -66,6 +66,7 @@ impl Template {
 
                 compiled_rules.push(CompiledRule {
                     regex,
+                    original_pattern: expanded_macros,
                     line_action: rule.line_action.clone(),
                     record_action: rule.record_action.clone(),
                     next_state: rule.next_state.clone(),
@@ -471,6 +472,104 @@ impl Template {
     ) -> Result<Vec<BTreeMap<String, serde_json::Value>>, ScraperError> {
         let (results, _warnings) = self.parse_internal(input, None, ParseOptions::default())?;
         Ok(results)
+    }
+
+    pub fn generate(
+        &self,
+        records: Vec<BTreeMap<String, serde_json::Value>>,
+    ) -> Result<String, ScraperError> {
+        let mut output = String::new();
+        let mut current_state = "Start".to_string();
+
+        static TOKEN_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        let token_re = TOKEN_RE.get_or_init(|| regex::Regex::new(r"\$\{([^}]+)\}").unwrap());
+
+        for record in records {
+            // For each record, we try to satisfy all its fields by walking the FSM
+            let mut emitted_for_record = std::collections::HashSet::new();
+            let mut finished_record = false;
+
+            while !finished_record {
+                let rules = self.states.get(&current_state).ok_or_else(|| {
+                    ScraperError::Template(format!("Invalid state in generation: {}", current_state))
+                })?;
+
+                let mut matched_any = false;
+                for rule in rules {
+                    // Check placeholders
+                    let mut placeholders = Vec::new();
+                    for cap in token_re.captures_iter(&rule.original_pattern) {
+                        placeholders.push(cap.get(1).unwrap().as_str().to_string());
+                    }
+
+                    // A rule matches if:
+                    // 1. It has placeholders and ALL are in the record and NOT YET emitted
+                    // 2. OR it has NO placeholders (static text) and we haven't finished the record
+                    let should_fire = if !placeholders.is_empty() {
+                        placeholders
+                            .iter()
+                            .all(|p| record.contains_key(p) && !emitted_for_record.contains(p))
+                    } else {
+                        // Static text rule - only fire if it leads to a state change or Record
+                        // or if it's a simple next-line rule.
+                        // To avoid infinite loops, we only fire static rules once per state visit?
+                        // Actually, let's fire static rules that lead to Record if we've emitted something.
+                        rule.record_action == Action::Record || rule.next_state.is_some()
+                    };
+
+                    if should_fire {
+                        // Rehydrate
+                        let mut line = rule.original_pattern.clone();
+                        for p in &placeholders {
+                            let val = record.get(p).unwrap();
+                            let val_str = match val {
+                                serde_json::Value::String(s) => s.clone(),
+                                serde_json::Value::Number(n) => n.to_string(),
+                                _ => val.to_string(),
+                            };
+                            line = line.replace(&format!("${{{}}}", p), &val_str);
+                            emitted_for_record.insert(p.clone());
+                        }
+
+                        // Clean regex artifacts
+                        line = line.strip_prefix('^').unwrap_or(&line).to_string();
+                        line = line.strip_suffix('$').unwrap_or(&line).to_string();
+                        line = line.replace(r"\s+", " ");
+                        line = line.replace(r"\d+", "0");
+                        line = line.replace(r"\S+", "VALUE");
+
+                        output.push_str(&line);
+                        output.push('\n');
+
+                        // Handle actions
+                        if rule.record_action == Action::Record {
+                            finished_record = true;
+                        }
+
+                        if let Some(ref next) = rule.next_state {
+                            if next == "End" {
+                                return Ok(output);
+                            }
+                            current_state = next.clone();
+                        }
+
+                        matched_any = true;
+                        if rule.line_action == Action::Next {
+                            break;
+                        }
+                    }
+                }
+
+                if !matched_any {
+                    // Fallback: if we can't find any more rules to satisfy the record,
+                    // but we haven't hit a Record action, we might be stuck.
+                    // For now, just break and move to next record.
+                    break;
+                }
+            }
+        }
+
+        Ok(output)
     }
 
     pub fn debug_parse(&self, input: &str) -> Result<DebugReport, ScraperError> {
@@ -1311,5 +1410,60 @@ mod tests {
             !eof_events.is_empty(),
             "should have RecordEmitted event at EOF"
         );
+    }
+
+    #[test]
+    fn test_generate() {
+        let mut values = HashMap::new();
+        values.insert(
+            "Hostname".to_string(),
+            Value {
+                name: "Hostname".to_string(),
+                regex: r#"\S+"#.to_string(),
+                filldown: false,
+                required: false,
+                list: false,
+                type_hint: None,
+            },
+        );
+        values.insert(
+            "Uptime".to_string(),
+            Value {
+                name: "Uptime".to_string(),
+                regex: r#".*"#.to_string(),
+                filldown: false,
+                required: false,
+                list: false,
+                type_hint: None,
+            },
+        );
+
+        let mut states = HashMap::new();
+        states.insert(
+            "Start".to_string(),
+            State {
+                name: "Start".to_string(),
+                rules: vec![Rule {
+                    regex: r#"^${Hostname} uptime is ${Uptime}$"#.to_string(),
+                    line_action: Action::Next,
+                    record_action: Action::Record,
+                    next_state: None,
+                }],
+            },
+        );
+
+        let ir = TemplateIR {
+            values,
+            states,
+            macros: HashMap::new(),
+        };
+
+        let template = Template::from_ir(ir).unwrap();
+        let mut record = BTreeMap::new();
+        record.insert("Hostname".to_string(), "SW1".into());
+        record.insert("Uptime".to_string(), "10 days".into());
+
+        let output = template.generate(vec![record]).unwrap();
+        assert_eq!(output, "SW1 uptime is 10 days\n");
     }
 }

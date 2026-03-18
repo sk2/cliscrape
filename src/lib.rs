@@ -137,6 +137,13 @@ impl FsmParser {
         Ok(results)
     }
 
+    pub fn generate(
+        &self,
+        records: Vec<BTreeMap<String, serde_json::Value>>,
+    ) -> Result<String, ScraperError> {
+        self.template.generate(records)
+    }
+
     pub fn results_with_warnings(
         &self,
         input: &str,

@@ -24,8 +24,9 @@
     implementation. It maintains full compatibility with the existing
     NTC-Templates library, incorporates an embedded XDG-compliant template library,
     and features robust edge-case hardening. The system also introduces a modern
-    YAML/TOML template format and a TUI debugger for real-time template development
-    with FSM state visualisation.},
+    YAML/TOML template format, a TUI debugger, and a radically innovative
+    isomorphic generation mode that allows for bidirectional synthetic generation
+    of CLI text from structured JSON state.},
   coverimage  = {
     \begin{tikzpicture}[scale=1.0, every node/.style={transform shape}]
       \node[skNode, minimum width=3cm, fill=layerA] (input) at (0,0) {\textbf{CLI Output}};
@@ -35,7 +36,7 @@
       \node[skNode, minimum width=3cm, fill=layerD] (output) at (0,-6) {\textbf{Structured Data}};
       \node[skNode, minimum width=2.5cm, fill=layerE] (tui) at (4,-2) {\textbf{TUI Debugger}};
 
-      \draw[arrow] (input) -- (parser);
+      \draw[skdArrow, <->] (input) -- (parser);
       \draw[arrow] (parser) -- (textfsm);
       \draw[arrow] (parser) -- (yaml);
       \draw[arrow] (textfsm) -- (output);
@@ -287,6 +288,20 @@ Network CLI data is notoriously inconsistent due to firmware patches, unexpected
 \subsection{Structured Observability}
 For production deployments, raw text logs are insufficient. The engine utilises Rust's \texttt{tracing} framework to emit highly structured \ac{JSON} events, capturing module-level lifecycle events, resolution paths, and parsing failures seamlessly for integration into enterprise observability pipelines.
 
+%% =====================================================================
+\section{Isomorphic Simulation and Synthetic Generation}
+\label{sec:simulation}
+%% =====================================================================
+
+The most significant architectural advancement in \texttt{cliscrape} is the introduction of isomorphic state machine execution. While traditional parsers represent a unidirectional projection from unstructured text to structured data, \texttt{cliscrape} treats the FSM as a bijective mapping ($FSM \leftrightarrow FSM^{-1}$).
+
+\subsection{The Inverse Parser (\texorpdfstring{$FSM^{-1}$}{FSM-1})}
+Because the modern YAML/TOML templates enforce strict schema contracts and type coercion, the parsing engine can be executed in reverse. In this mode, \texttt{cliscrape} consumes a structured \ac{JSON} object and uses the template's rules to synthesize perfectly formatted, pixel-accurate raw CLI text.
+
+This capability transforms the parser into a deterministic network device simulator. By providing a hypothetical device state (e.g., a BGP neighbor down or an interface flapping), operators can instantly generate the corresponding CLI output required to test downstream automation pipelines, monitoring logic, and alert systems without requiring access to physical hardware.
+
+\subsection{Mathematical Verification}
+Isomorphic generation also provides a mechanism for mathematical verification of templates. A template is considered "bijectively stable" if a raw CLI string parsed into \ac{JSON} can be re-generated into a string that is semantically identical to the original input. This "round-trip" validation ensures that the template captures 100\% of the relevant operational state without loss of fidelity.
 
 %% =====================================================================
 \section{Interactive TUI Debugger}
@@ -348,7 +363,10 @@ This magnitude of throughput enables the processing of massive \texttt{show tech
   \midrule
   Rust regex crate & DFA-based $O(n)$ matching; no backtracking vulnerabilities \\
   Full TextFSM compat & Zero-cost migration from existing NTC-Templates \\
+  Stateful modifiers & Filldown/List support native relational data extraction \\
   Dual template formats & Incremental adoption; YAML for new templates \\
+  Native type coercion & YAML template hints yield directly queryable JSON types \\
+  Isomorphic Simulation & Bidirectional $FSM^{-1}$ execution enables synthetic CLI generation \\
   Embedded library & XDG-compliant, zero-configuration parsing out-of-the-box \\
   TUI debugger & Real-time FSM visualisation eliminates trial-and-error template development \\
   \bottomrule

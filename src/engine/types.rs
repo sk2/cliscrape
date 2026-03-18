@@ -51,6 +51,7 @@ pub struct TemplateIR {
 #[derive(Debug, Clone)]
 pub struct CompiledRule {
     pub regex: Regex,
+    pub original_pattern: String,
     pub line_action: Action,
     pub record_action: Action,
     pub next_state: Option<String>,
