@@ -340,6 +340,47 @@ The interface offers four panes: an \textbf{Input Pane} for raw text with line h
 
 
 %% =====================================================================
+\section{Future Trajectories: The Network Compiler}
+\label{sec:future}
+%% =====================================================================
+
+By establishing a bijective mathematical engine ($FSM \leftrightarrow FSM^{-1}$) and enforcing rigorous type contracts, \texttt{cliscrape} provides the foundational primitive for several advanced theoretical applications within the broader automation ecosystem.
+
+\subsection{Semantic Drift Analysis}
+Traditional diff utilities are line-oriented and text-blind, heavily penalizing syntactic noise such as timestamp updates or pagination artifacts. Because \texttt{cliscrape} projects raw text into a typed \ac{JSON} manifold, it enables Operational Diffs. By isolating the delta between two parsed states ($S_1 \rightarrow S_2$), the system identifies genuine semantic transitions (e.g., a BGP peer state changing from ESTABLISHED to IDLE) while ignoring trivial formatting shifts.
+
+\subsection{Vendor-Neutral State Manifolds}
+Network data is traditionally trapped within vendor-specific syntax constraints. \texttt{cliscrape}'s modern YAML definitions permit mapping disparate outputs (e.g., \texttt{cisco\_ios\_show\allowbreak\_ip\_route} and \texttt{juniper\_junos\allowbreak\_show\_route}) onto a singular, universal semantic schema. This creates a unified data ledger, allowing downstream systems to query the network's operational state without vendor-specific logic.
+
+\subsection{Grammar Induction and Structural Inference}
+Presently, template creation relies on human authoring. Future iterations of the parsing engine aim to employ grammar induction techniques over large corpuses of raw CLI outputs. By statistically identifying static structural anchors versus variable data payloads, the engine can autonomously synthesize candidate FSM templates for new operating systems, effectively "learning" the language of unknown devices.
+
+\subsection{The FSM-Oracle: Self-Verification}
+The inverse parser facilitates the creation of a closed-loop FSM-Oracle. When a network device receives a firmware update that alters its CLI output formatting, the oracle can detect the anomaly automatically. By continuously verifying templates for round-trip bijective stability, the ecosystem can flag broken templates the moment they fail to losslessly re-generate their input state, laying the groundwork for self-healing automation.
+
+\begin{figure}[H]
+\centering
+\adjustbox{max width=\linewidth}{%
+\begin{tikzpicture}[skd, node distance=12mm and 15mm]
+  \node[skdData, minimum width=3.5cm] (raw) {\textbf{Raw CLI Output}\\\footnotesize (e.g., Firmware v15.4)};
+  \node[skdCompute, right=of raw, minimum width=3cm] (parse) {\textbf{Parser}\\\footnotesize $FSM$};
+  \node[skdStore, right=of parse, minimum width=3cm] (json) {\textbf{Typed State}\\\footnotesize JSON manifold};
+  \node[skdCompute, below=of parse, minimum width=3cm] (gen) {\textbf{Generator}\\\footnotesize $FSM^{-1}$};
+  \node[skdData, left=of gen, minimum width=3.5cm] (synth) {\textbf{Synthetic Output}\\\footnotesize generated text};
+
+  \draw[skdDataArrow] (raw) -- (parse);
+  \draw[skdDataArrow] (parse) -- (json);
+  \draw[skdDataArrow] (json) |- (gen);
+  \draw[skdDataArrow] (gen) -- (synth);
+  \draw[skdCtrlArrow, <->] (raw.south) -- node[right, font=\scriptsize] {Bijective Equality Check} (synth.north);
+\end{tikzpicture}%
+}
+\caption{The FSM-Oracle closed loop. A template is proven robust if the generated synthetic output perfectly matches the original raw CLI output.}
+\label{fig:cs-fsm-oracle}
+\end{figure}
+
+
+%% =====================================================================
 \section{Performance Evaluation}
 \label{sec:performance}
 %% =====================================================================
