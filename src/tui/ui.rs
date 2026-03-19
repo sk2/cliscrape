@@ -6,7 +6,7 @@ use ratatui::{
     text::{Line, Span, Text},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
 };
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 fn display_value_compact(v: &serde_json::Value) -> String {
     match v {

@@ -1,0 +1,415 @@
+%% sk-shared.def — Shared colours, language definitions, and macros
+%% Loaded by sk-confpaper.sty, sk-techreport.sty, sk-presentation.sty, etc.
+%% Do not \usepackage this file; it is loaded via \input.
+%% Prerequisites: listings, setspace should be loaded before this file.
+
+%%──────────────────────────────────────────────────────────────────
+%% Colour palette
+%%──────────────────────────────────────────────────────────────────
+
+% Core semantic colours
+\definecolor{skKeyword}{RGB}{0,70,140}
+\definecolor{skString}{RGB}{151,63,5}
+\definecolor{skComment}{RGB}{128,128,128}
+\definecolor{skGreen}{RGB}{0,110,40}
+\definecolor{skCodeBg}{RGB}{250,250,250}
+
+% Architecture layer colours (Tailwind-inspired pastels)
+\definecolor{layerA}{RGB}{219,234,254}   % blue-100
+\definecolor{layerB}{RGB}{220,252,231}   % green-100
+\definecolor{layerC}{RGB}{254,243,199}   % amber-100
+\definecolor{layerD}{RGB}{243,232,255}   % purple-100
+\definecolor{layerE}{RGB}{241,245,249}   % slate-100
+
+% Callout-box background/frame colours
+\definecolor{skNoteBg}{RGB}{240,248,255}
+\definecolor{skNoteFrame}{RGB}{70,130,180}
+\definecolor{skWarnBg}{RGB}{255,248,230}
+\definecolor{skWarnFrame}{RGB}{210,120,0}
+\definecolor{skExampleBg}{RGB}{240,255,240}
+\definecolor{skExampleFrame}{RGB}{34,139,34}
+
+% Project accent colour (used as rfblue, dspblue, ankblue)
+\definecolor{skDeepBlue}{RGB}{30,90,160}
+\definecolor{skAccent}{RGB}{15,82,138}
+\definecolor{skAccentLight}{RGB}{219,234,254}
+\definecolor{skCmdBg}{RGB}{30,40,55}          % dark background for cmdbox
+\definecolor{skTipGreen}{RGB}{22,120,60}
+\definecolor{skCautionAmber}{RGB}{180,90,0}
+
+% Legacy aliases — keeps existing \color{rustblue} etc. compiling
+\colorlet{rustblue}{skKeyword}
+\colorlet{rustbrown}{skString}
+\colorlet{codegray}{skCodeBg}
+\colorlet{codebg}{skCodeBg}
+\colorlet{darkgreen}{skGreen}
+\colorlet{keywordblue}{skKeyword}
+\colorlet{stringgreen}{skGreen}
+\colorlet{commentgray}{skComment}
+\colorlet{rustgreen}{skGreen}
+\colorlet{pyblue}{skKeyword}
+\colorlet{pygreen}{skGreen}
+\colorlet{pyred}{skString}
+\colorlet{rustred}{skString}
+\colorlet{rfblue}{skDeepBlue}
+\colorlet{dspblue}{skDeepBlue}
+\colorlet{ankblue}{skDeepBlue}
+
+% Python gold accent (used in NTE, Spectra diagrams)
+\definecolor{pygold}{RGB}{255,196,0}
+
+%%──────────────────────────────────────────────────────────────────
+%% Language definitions
+%%──────────────────────────────────────────────────────────────────
+
+% Rust — superset of all keyword lists across projects
+\lstdefinelanguage{Rust}{
+  sensitive=true,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]',
+  alsodigit={_},
+  morekeywords={
+    pub, fn, struct, impl, enum, use, let, mut, return, self, Self, match,
+    if, else, for, while, loop, break, continue, where, type, trait,
+    mod, crate, super, as, in, ref, async, await, move, unsafe, const,
+    static, dyn, extern, true, false, None, Some, Ok, Err,
+    Vec, HashMap, HashSet, String, Option, Result, Box,
+  },
+  keywordstyle=\color{skKeyword}\bfseries,
+  commentstyle=\color{skComment}\itshape,
+  stringstyle=\color{skString},
+}
+
+% Python — stringstyle uses skGreen (majority convention across projects)
+\lstdefinelanguage{SkPython}{
+  sensitive=true,
+  comment=[l]{\#},
+  morestring=[b]",
+  morestring=[b]',
+  morestring=[b]{"""},
+  morekeywords={
+    def, class, import, from, return, if, elif, else, for, while,
+    in, not, and, or, True, False, None, with, as, try, except, raise,
+    lambda, yield, async, await, self, pass, break, continue, del, is,
+  },
+  keywordstyle=\color{skKeyword}\bfseries,
+  commentstyle=\color{skComment}\itshape,
+  stringstyle=\color{skGreen},
+}
+
+% YAML
+\lstdefinelanguage{YAML}{
+  sensitive=false,
+  comment=[l]{\#},
+  morestring=[b]",
+  morestring=[b]',
+  morekeywords={true, false, null},
+  keywordstyle=\color{skKeyword}\bfseries,
+  commentstyle=\color{skComment}\itshape,
+  stringstyle=\color{skString},
+  moredelim=[l][\color{skKeyword}]{-\ },
+}
+
+% JSON
+\lstdefinelanguage{JSON}{
+  sensitive=false,
+  morestring=[b]",
+  morekeywords={true, false, null},
+  keywordstyle=\color{skKeyword}\bfseries,
+  stringstyle=\color{skString},
+}
+
+% Shell
+\lstdefinelanguage{Shell}{
+  sensitive=true,
+  comment=[l]{\#},
+  morestring=[b]",
+  morestring=[b]',
+  morekeywords={
+    if, then, else, elif, fi, for, while, do, done, case, esac,
+    in, function, return, exit, export, source, local, echo, cd,
+  },
+  keywordstyle=\color{skKeyword}\bfseries,
+  commentstyle=\color{skComment}\itshape,
+  stringstyle=\color{skString},
+}
+
+% EBNF — ISO 14977 extended BNF for grammar productions
+%   Non-terminals are plain identifiers; terminals are quoted strings.
+%   Meta-operators (=, |, ;, ,) and grouping ({}, [], ()) are left unstyled
+%   so they read as punctuation.  Comments use (* ... *).
+\lstdefinelanguage{EBNF}{
+  sensitive=true,
+  morecomment=[s]{(*}{*)},
+  morestring=[b]",
+  morestring=[b]',
+  keywordstyle=\color{skKeyword}\bfseries,
+  commentstyle=\color{skComment}\itshape,
+  stringstyle=\color{skString},
+  % Highlight the definition operator
+  moredelim=[is][\color{skKeyword}\bfseries]{::=}{\ },
+  literate=
+    {=}{{{\color{skKeyword}\bfseries=}}}{1}
+    {|}{{{\color{skKeyword}\bfseries|}}}{ 1}
+    {;}{{{\color{skKeyword}\bfseries;}}}{1},
+}
+
+% Starlark (superset of both nte-paper and nte-techreport keyword lists)
+\lstdefinelanguage{Starlark}{
+  sensitive=true,
+  comment=[l]{\#},
+  morestring=[b]",
+  morestring=[b]',
+  morekeywords={
+    def, return, if, else, elif, for, in, not, and, or, True, False,
+    None, load, pass, break, continue, lambda, struct, fail,
+  },
+  keywordstyle=\color{skKeyword}\bfseries,
+  commentstyle=\color{skComment}\itshape,
+  stringstyle=\color{skGreen},
+}
+
+%%──────────────────────────────────────────────────────────────────
+%% Convenience macros
+%%──────────────────────────────────────────────────────────────────
+
+\newcommand{\module}[1]{\texttt{#1}}
+\newcommand{\pyclass}[1]{\texttt{#1}}
+\newcommand{\method}[1]{\texttt{#1}}
+\newcommand{\field}[1]{\texttt{#1}}
+\newcommand{\crate}[1]{\texttt{#1}}
+\newcommand{\config}[1]{\texttt{#1}}
+\newcommand{\eg}{e.g.\@\xspace}
+\newcommand{\ie}{i.e.\@\xspace}
+\newcommand{\etal}{et~al.\@\xspace}
+
+% Integrated TODO with todonotes (from sk-techreport.sty)
+\ifdefined\TODO
+  \renewcommand{\TODO}[2][]{%
+    \@ifundefined{todo}{%
+      \textcolor{red}{\textbf{[TODO: #2]}}%
+    }{%
+      \todo[#1]{#2}%
+    }%
+  }
+\else
+  \newcommand{\TODO}[2][]{%
+    \@ifundefined{todo}{%
+      \textcolor{red}{\textbf{[TODO: #2]}}%
+    }{%
+      \todo[#1]{#2}%
+    }%
+  }
+\fi
+
+% Technical Writing Shortcuts
+\newcommand{\ipaddr}[1]{\texttt{#1}}
+\newcommand{\subnet}[1]{\texttt{#1}}
+\newcommand{\vlan}[1]{\textsc{vlan}~#1}
+\newcommand{\rfc}[1]{RFC~#1}
+
+% Networking Acronym Helpers (use with acronym package)
+\newcommand{\aclink}[1]{\hyperlink{acro:#1}{\acs{#1}}}
+
+%%──────────────────────────────────────────────────────────────────
+%% TikZ Network Architectural Styles
+%%──────────────────────────────────────────────────────────────────
+
+\usetikzlibrary{shapes.geometric, shapes.symbols, arrows.meta, positioning, shadows, calc, fit, backgrounds, 3d}
+\usetikzlibrary{shapes.misc}
+
+\tikzset{
+  % Generic node styles
+  skNode/.style={
+    rectangle, rounded corners=2pt, minimum width=2cm, minimum height=0.8cm,
+    align=center, font=\small\sffamily, draw=skAccent, fill=white,
+    thick, drop shadow={opacity=0.1}
+  },
+  skCard/.style={
+    draw=skAccent!35, fill=skAccent!3, rounded corners=6pt,
+    thick, drop shadow={opacity=0.08}, inner sep=10pt
+  },
+  % Architectural Primitives
+  router/.style={
+    circle, minimum size=1.1cm, draw=skAccent, fill=layerA, thick,
+    inner sep=0pt, font=\bfseries\sffamily\small,
+    path picture={
+      \draw[skAccent, thin] (path picture bounding box.center) -- ++(0,0.4) (path picture bounding box.center) -- ++(0,-0.4);
+      \draw[skAccent, thin] (path picture bounding box.center) -- ++(0.4,0) (path picture bounding box.center) -- ++(-0.4,0);
+    }
+  },
+  switch/.style={
+    rectangle, minimum width=1.2cm, minimum height=0.6cm, draw=skAccent, fill=layerB, thick,
+    inner sep=0pt, font=\bfseries\sffamily\scriptsize,
+    path picture={
+      \draw[skAccent, thin] ([xshift=2pt]path picture bounding box.west) -- ([xshift=-2pt]path picture bounding box.east);
+      \draw[skAccent, thin, <->] ([xshift=4pt, yshift=2pt]path picture bounding box.west) -- ([xshift=-4pt, yshift=-2pt]path picture bounding box.east);
+      \draw[skAccent, thin, <->] ([xshift=4pt, yshift=-2pt]path picture bounding box.west) -- ([xshift=-4pt, yshift=2pt]path picture bounding box.east);
+    }
+  },
+  firewall/.style={
+    rectangle, minimum width=1.2cm, minimum height=0.8cm, draw=orange!80!black, fill=orange!10, thick,
+    path picture={
+      \foreach \y in {-0.2, 0, 0.2} {
+        \draw[orange!80!black, thin] ([yshift=\y cm]path picture bounding box.west) -- ([yshift=\y cm]path picture bounding box.east);
+      }
+      \foreach \x in {-0.3, 0, 0.3} {
+        \draw[orange!80!black, thin] ([xshift=\x cm]path picture bounding box.south) -- ([xshift=\x cm]path picture bounding box.north);
+      }
+    }
+  },
+  database/.style={
+    cylinder, cylinder uses custom fill, cylinder body fill=layerC, cylinder end fill=layerC!80,
+    shape border rotate=90, minimum width=1cm, minimum height=1.2cm, draw=skAccent, thick,
+    font=\bfseries\sffamily\tiny
+  },
+  antenna/.style={
+    isosceles triangle, isosceles triangle apex angle=60, shape border rotate=90,
+    minimum width=0.6cm, minimum height=0.8cm, draw=skAccent, fill=skAccent!10, thick,
+    path picture={
+      \draw[skAccent, thin] (path picture bounding box.south) -- ++(0, -0.4);
+      \foreach \r in {0.2, 0.4, 0.6} {
+        \draw[skAccent, thin] ([yshift=\r cm]path picture bounding box.center) arc (90:30:0.3) arc (90:150:0.3);
+      }
+    }
+  },
+  satellite/.style={
+    rectangle, minimum width=0.8cm, minimum height=0.4cm, draw=skAccent, fill=skAccent!20, thick,
+    path picture={
+      \draw[skAccent, thick] (path picture bounding box.west) -- ++(-0.4, 0) -- ++(0, 0.3) -- ++(0, -0.6);
+      \draw[skAccent, thick] (path picture bounding box.east) -- ++(0.4, 0) -- ++(0, 0.3) -- ++(0, -0.6);
+    }
+  },
+  ml_model/.style={
+    skNode, fill=purple!5, draw=purple!60,
+    font=\bfseries\sffamily\small,
+    path picture={
+      \foreach \i in {1,2,3} {
+        \foreach \j in {1,2} {
+          \fill[purple!60] (-0.6 + \i*0.3, -0.2 + \j*0.2) circle (1pt);
+        }
+      }
+    }
+  },
+  api_node/.style={
+    skNode, fill=teal!5, draw=teal!60,
+    path picture={
+      \node[font=\bfseries\sffamily\tiny, teal!80!black] at (path picture bounding box.center) {\{API\}};
+    }
+  },
+  host/.style={
+    rectangle, minimum width=0.8cm, minimum height=1cm, draw=gray!60, fill=layerE, thick,
+    label={below:\scriptsize Host}
+  },
+  skCloud/.style={
+    cloud, cloud puffs=11, cloud puff arc=120, aspect=2,
+    minimum width=2.5cm, minimum height=1.5cm, draw=skAccent!40, fill=skAccent!5, thick
+  },
+  % Convenience alias: some docs use 'hexagon' as a shape key.
+  hexagon/.style={regular polygon, regular polygon sides=6},
+  % Connection styles
+  p2p/.style={draw=skAccent!80, thick, {Stealth[scale=1.2]}-{Stealth[scale=1.2]}},
+  trunk/.style={draw=skAccent!80, line width=2pt},
+  logic/.style={draw=skComment, dashed, -Stealth, font=\scriptsize\itshape},
+  arrow/.style={-Stealth, thick, draw=skAccent!70!black}
+}
+
+% Some documents use the key 'step' as a node style name.
+% TikZ also defines /tikz/step as a key (e.g. for grid spacing), which requires a value.
+% Provide a benign default so using [step] as a style does not error.
+\tikzset{step/.default=1cm}
+
+%%──────────────────────────────────────────────────────────────────
+%% pgfplots Global Styles
+%%──────────────────────────────────────────────────────────────────
+
+\RequirePackage{pgfplots}
+\pgfplotsset{
+  compat=1.18,
+  skPlot/.style={
+    width=0.85\linewidth,
+    height=6cm,
+    legend style={at={(0.02,0.98)}, anchor=north west, font=\scriptsize, draw=none, fill=white, fill opacity=0.8},
+    axis lines=left,
+    grid=both,
+    grid style={line width=.1pt, draw=gray!10},
+    major grid style={line width=.2pt, draw=gray!30},
+    xlabel style={font=\small\sffamily\color{black!70}},
+    ylabel style={font=\small\sffamily\color{black!70}},
+    tick label style={font=\scriptsize\sffamily\color{black!60}},
+    title style={font=\bfseries\sffamily\color{skAccent}, yshift=5pt},
+    cycle list={
+      {skAccent, thick, mark=*},
+      {orange!80!black, thick, mark=square*},
+      {teal!80!black, thick, mark=triangle*},
+      {purple!80!black, thick, mark=diamond*},
+    }
+  },
+  skBar/.style={
+    ybar,
+    bar width=15pt,
+    skPlot,
+    enlarge x limits=0.15,
+    legend style={at={(0.5,-0.2)}, anchor=north, legend columns=-1},
+    ylabel={Time (ms)},
+    symbolic x coords={Loader, Validator, Builder, Allocator, Compiler},
+    xtick=data,
+  }
+}
+
+\RequirePackage{amsthm}
+%% acmart already provides \see and \printindex; loading makeidx would clash.
+\@ifclassloaded{acmart}{}{\RequirePackage{makeidx}}
+\RequirePackage{qrcode}
+\RequirePackage{fontawesome5}
+
+% ── GitHub Source Traceability ──────────────────────────────────
+
+\newcommand{\githubrepo}{https://github.com/simonknight/dev} % Placeholder base URL
+
+\newcommand{\githublink}[1]{%
+  \marginnote{%
+    \begin{spacing}{0.8}
+      \href{\githubrepo/blob/main/#1}{%
+        \small\color{skAccent!70!black}\faGithub\enspace\texttt{Source}%
+      }
+    \end{spacing}
+  }%
+}
+
+% ── Formal Logic Styles ──────────────────────────────────────────
+
+\newtheoremstyle{skLogic}% name
+  {12pt}% space above
+  {12pt}% space below
+  {\itshape}% body font
+  {}% indent amount
+  {\bfseries\color{skAccent}}% head font
+  {.}% punctuation after head
+  {0.5em}% space after head
+  {}% head spec
+
+\theoremstyle{skLogic}
+\@ifundefined{axiom}{\newtheorem{axiom}{Axiom}}{}
+\@ifundefined{theorem}{\newtheorem{theorem}{Theorem}}{}
+
+\newenvironment{skProof}[1][Proof]{%
+  \begin{proof}[\color{skAccent}\bfseries #1]
+}{%
+  \end{proof}
+}
+
+% Visual Formalism Box (for high-level logic)
+\newtcolorbox{formalbox}[1][Formal Assertion]{%
+  enhanced, breakable,
+  colback=gray!5, colframe=gray!30,
+  borderline west={2pt}{0pt}{skAccent},
+  fonttitle=\bfseries\small\color{skAccent},
+  title={#1},
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  arc=0pt, boxrule=0pt,
+}
+
+\endinput

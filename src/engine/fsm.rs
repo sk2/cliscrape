@@ -595,6 +595,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -642,6 +645,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -653,6 +659,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -707,6 +716,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -718,6 +730,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -832,6 +847,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -843,6 +861,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -899,6 +920,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -942,6 +966,9 @@ mod tests {
                 filldown: true,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -953,6 +980,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -1013,6 +1043,9 @@ mod tests {
                 filldown: false,
                 required: true,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -1024,6 +1057,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -1082,6 +1118,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -1125,6 +1164,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: true,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -1172,6 +1214,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -1220,6 +1265,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -1278,6 +1326,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -1323,6 +1374,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -1372,6 +1426,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -1423,6 +1480,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -1434,6 +1494,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );

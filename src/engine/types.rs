@@ -24,6 +24,9 @@ pub struct Value {
     pub filldown: bool,
     pub required: bool,
     pub list: bool,
+    pub identity: bool,
+    pub ignore: bool,
+    pub common_schema: Option<String>,
     pub type_hint: Option<FieldType>,
 }
 

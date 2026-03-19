@@ -144,6 +144,10 @@ impl FsmParser {
         self.template.generate(records)
     }
 
+    pub fn values(&self) -> &HashMap<String, engine::Value> {
+        &self.template.values
+    }
+
     pub fn results_with_warnings(
         &self,
         input: &str,
@@ -278,6 +282,9 @@ patterns:
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );

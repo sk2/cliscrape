@@ -155,6 +155,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: true,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );
@@ -184,6 +187,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: Some(FieldType::Int),
             },
         );
@@ -210,6 +216,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: Some(FieldType::Int),
             },
         );
@@ -236,6 +245,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: Some(FieldType::String),
             },
         );
@@ -262,6 +274,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: true,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: Some(FieldType::Int),
             },
         );
@@ -295,6 +310,9 @@ mod tests {
                 filldown: false,
                 required: false,
                 list: false,
+                identity: false,
+                ignore: false,
+                common_schema: None,
                 type_hint: None,
             },
         );

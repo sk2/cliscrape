@@ -6,6 +6,23 @@
 
 The networking industry relies heavily on CLI-based management. Parsing this unstructured data is often the bottleneck in automation pipelines. `cliscrape` aims to solve this by bringing Rust's safety and performance to the parsing layer, coupled with a focus on developer experience through interactive debugging.
 
+## Ecosystem Context
+
+> **Role:** High-performance CLI output parsing — transforms raw runtime `show` command output into structured data. 10-50x faster than TextFSM.
+> **Layer:** Operations Path
+> **Consumes from:** deviceinteraction (raw CLI output from live devices), offline files
+> **Produces for:** deviceinteraction (structured parsed data), autonetkit-analysis (operational state)
+
+### Related Tools
+| Tool | Relationship | Boundary |
+|------|-------------|----------|
+| deviceinteraction | cliscrape is called by deviceinteraction for CLI output parsing | deviceinteraction = connect + orchestrate + verify; cliscrape = parse. deviceinteraction handles device connectivity; cliscrape handles parsing |
+| configparsing | Both produce structured network data, from different sources | cliscrape = runtime CLI output (e.g., `show ip route` from a live device) + TextFSM; configparsing = static config files (e.g., `router.cfg`) + LLM/RAG. Different data sources, same goal |
+| autonetkit | cliscrape output feeds into autonetkit-analysis via deviceinteraction | cliscrape provides parsed data; autonetkit-analysis builds the operational topology |
+| netassure | cliscrape data flows through deviceinteraction → autonetkit-analysis → netassure | cliscrape parses; netassure analyzes |
+
+> **Part of the [Network Automation Ecosystem](https://github.com/sk2/automationarch)** — 11 tools covering design, simulation, analysis, and operations.
+
 ### Core Pillars
 
 1.  **Performance:** Zero-cost abstractions and Rust's `regex` engine ensure that even massive `show tech-support` outputs are parsed in milliseconds.

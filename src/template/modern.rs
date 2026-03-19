@@ -48,6 +48,15 @@ pub struct FieldDef {
 
     #[serde(default, skip_serializing_if = "is_false")]
     pub list: bool,
+
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub identity: bool,
+
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub ignore: bool,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub common_schema: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -250,6 +259,9 @@ impl ModernTemplateDoc {
                     filldown: def.filldown,
                     required: def.required,
                     list: def.list,
+                    identity: def.identity,
+                    ignore: def.ignore,
+                    common_schema: def.common_schema.clone(),
                     type_hint: Some(hint),
                 },
             );

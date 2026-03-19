@@ -1,0 +1,19 @@
+% Shared TikZ styles for sk-techreport diagrams.
+% Vendored into this report directory for portability.
+%
+% Included via \input{sk-diagrams.tex}. Do not use \usepackage here.
+
+\tikzset{
+  skd/.style={font=\sffamily},
+  skdBox/.style={skd, draw=black!65, rounded corners=2pt, thick, inner sep=6pt, align=center},
+  skdData/.style={skdBox, fill=layerE!35},
+  skdCompute/.style={skdBox, fill=layerB!35},
+  skdControl/.style={skdBox, fill=layerC!30},
+  skdStore/.style={skdBox, fill=layerD!25},
+  skdNote/.style={skd, draw=black!45, fill=black!3, rounded corners=2pt, inner sep=5pt, align=left},
+  skdArrow/.style={-{Latex}, thick, draw=black!75},
+  skdDataArrow/.style={skdArrow, draw=black!70},
+  skdCtrlArrow/.style={skdArrow, dashed, draw=black!65},
+  skdBackpressure/.style={skdArrow, draw=red!65!black},
+  skdPhase/.style={skd, draw=black!35, fill=black!2, rounded corners=2pt, inner sep=3pt},
+}

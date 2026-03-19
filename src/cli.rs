@@ -70,6 +70,14 @@ pub enum Commands {
         /// Maximum parsing time in milliseconds
         #[arg(long)]
         timeout: Option<u64>,
+
+        /// Use common schema mapping for keys
+        #[arg(long)]
+        common: bool,
+
+        /// Verify template integrity via round-trip (Parse -> Generate)
+        #[arg(long)]
+        verify: bool,
     },
     /// Launch the TUI debugger
     Debug {
@@ -133,6 +141,26 @@ pub enum Commands {
         /// Path to JSON file containing records (if omitted, reads from stdin)
         #[arg(short, long, value_name = "JSON")]
         input: Option<PathBuf>,
+    },
+
+    /// Compare operational state between two CLI outputs
+    Diff {
+        /// "Before" CLI output file
+        before: PathBuf,
+
+        /// "After" CLI output file
+        after: PathBuf,
+
+        /// Template spec (path or identifier)
+        #[arg(short, long, value_name = "TEMPLATE")]
+        template: String,
+    },
+
+    /// Infer a candidate template from raw CLI samples
+    Infer {
+        /// Input sample files
+        #[arg(value_name = "SAMPLES", required = true)]
+        samples: Vec<PathBuf>,
     },
 }
 

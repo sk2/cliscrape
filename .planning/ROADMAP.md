@@ -4,7 +4,8 @@
 
 - ✅ **v1.0 MVP** - Phases 1-5 (shipped 2026-02-22)
 - 🚧 **v1.5 Template Ecosystem & Production Hardening** - Phases 6-11 (in progress)
-- 📋 **v2.0 Connectivity** - (planned)
+- 📋 **v2.0 The Network Compiler** - Phases 12-15 (planned)
+- 📋 **v3.0 Connectivity** - (planned)
 
 ## Phases
 
@@ -23,7 +24,8 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 
 </details>
 
-### 🚧 v1.5 Template Ecosystem & Production Hardening (In Progress)
+<details>
+<summary>🚧 v1.5 Template Ecosystem & Production Hardening (In Progress)</summary>
 
 **Milestone Goal:** Transform cliscrape into production-ready tool with comprehensive template library, discovery mechanism, validation framework, and hardened edge case handling.
 
@@ -34,111 +36,60 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 - [x] **Phase 10: Production Logging** - Structured observability with tracing (completed 2026-03-05)
 - [ ] **Phase 11: Documentation & Authoring Guide** - User guide and template catalog
 
+</details>
+
+### 📋 v2.0 The Network Compiler (Planned)
+
+**Milestone Goal:** Move from simple parsing to mathematical state observation and vendor-neutral operational manifolds.
+
+- [ ] **Phase 12: Semantic Drift Analysis** - Operational diffing between states
+- [ ] **Phase 13: Vendor-Neutral State Manifolds** - Common schema mapping layer
+- [ ] **Phase 14: Grammar Induction** - Statistical structural inference for templates
+- [ ] **Phase 15: The FSM-Oracle** - Bijective verification and self-healing loop
+
 ## Phase Details
 
-### Phase 6: Template Library Foundation
-**Goal**: Users can parse common network device outputs without providing template files
-**Depends on**: Nothing (first phase of v1.5)
-**Requirements**: LIB-01, LIB-02, LIB-03, LIB-04, LIB-05, LIB-06
+### Phase 12: Semantic Drift Analysis
+**Goal**: Users can identify operational state transitions while ignoring syntactic noise
+**Depends on**: Phase 3 (Modern Templates)
+**Requirements**: DRIFT-01, DRIFT-02, DRIFT-03
 **Success Criteria** (what must be TRUE):
-  1. User can run `cliscrape --template cisco_ios_show_version` without providing local file
-  2. User can list available embedded templates with metadata (description, version, compatibility)
-  3. User can override embedded templates by placing custom versions in ~/.local/share/cliscrape/templates/
-  4. User receives security validation error when attempting path traversal via template names
-  5. User can view template source and metadata for any embedded template
-**Plans**: 4 plans in 3 waves
-
-Plans:
-- [x] 06-01-PLAN.md — Embedded library infrastructure (rust-embed + XDG resolver + security validation)
-- [x] 06-02-PLAN.md — Template metadata extraction (YAML/TOML/TextFSM)
-- [x] 06-03-PLAN.md — CLI integration (list-templates and show-template subcommands)
-- [x] 06-04-PLAN.md — Initial template library creation and testing
-
-### Phase 7: Compatibility Validation Suite
-**Goal**: All embedded templates verified against real device outputs with negative test coverage
-**Depends on**: Phase 6
-**Requirements**: VAL-01, VAL-02, VAL-03, VAL-04, VAL-05
-**Success Criteria** (what must be TRUE):
-  1. Developer can run `cargo test --test validation` and see snapshot tests for all embedded templates
-  2. Developer can add fixture file (raw device output) and expected snapshot (parsed JSON) for any template
-  3. Developer can verify negative test cases exist covering malformed input, truncation, and parser errors
-  4. Developer sees CI validation suite pass before merge to main
-  5. User receives actionable warning when template captures less than 80% of expected fields
-**Plans**: 5 plans in 3 waves
-
-Plans:
-- [x] 07-01-PLAN.md — Snapshot testing infrastructure (insta framework + fixtures)
-- [x] 07-02-PLAN.md — Negative test coverage (error cases + edge cases)
-- [x] 07-03-PLAN.md — Performance benchmarking (criterion integration)
-- [x] 07-04-PLAN.md — Coverage validation system (field coverage analysis)
-- [x] 07-05-PLAN.md — CI integration (GitHub Actions workflow)
-
-### Phase 8: TUI Integration
-**Goal**: Users can discover and test embedded templates interactively from TUI Live Lab
-**Depends on**: Phase 6
-**Requirements**: TUI-01, TUI-02, TUI-03, TUI-04
-**Success Criteria** (what must be TRUE):
-  1. User can press hotkey in Live Lab to open template browser showing embedded templates
-  2. User can browse template list with descriptions, compatibility metadata, and selection preview
-  3. User can select embedded template to load into Live Lab for editing and testing
-  4. User can load custom templates from XDG user directory via TUI file picker
+  1. User can run `cliscrape diff before.txt after.txt` and see field-level transitions
+  2. The system ignores "noisy" fields (timestamps, PIDs) defined in template metadata
+  3. The diff engine correctly matches records based on "Identity Fields" (e.g., interface name)
 **Plans**: TBD
 
-### Phase 9: Edge Case Hardening
-**Goal**: Parser handles malformed input gracefully with timeouts, thresholds, and contextual errors
-**Depends on**: Phase 7
-**Requirements**: HARD-01, HARD-02, HARD-03, HARD-04, HARD-05
+### Phase 13: Vendor-Neutral State Manifolds
+**Goal**: Abstract vendor-specific CLI into a universal data ledger
+**Depends on**: Phase 3
+**Requirements**: SCHEMA-01, SCHEMA-02, SCHEMA-03
 **Success Criteria** (what must be TRUE):
-  1. User receives timeout error with pattern details when regex exhibits catastrophic backtracking
-  2. User receives warning when template matches fewer fields than minimum threshold (default 80%)
-  3. User sees contextual error messages showing line number and surrounding context for parsing failures
-  4. User can choose fail-fast mode (--strict) to abort on first error or partial-match mode for warnings
-  5. User receives successful parse with warnings when optional template fields are missing from input
+  1. Modern templates support `common_schema` mapping for variables
+  2. Users can export data in a "Common" format that is vendor-agnostic
+  3. The system validates that a template satisfies its claimed schema compliance
 **Plans**: TBD
 
-### Phase 10: Production Logging
-**Goal**: Production deployments have structured observability without performance degradation
-**Depends on**: Phase 6
-**Requirements**: LOG-01, LOG-02, LOG-03, LOG-04, LOG-05
+### Phase 14: Grammar Induction
+**Goal**: Automate template creation via statistical text analysis
+**Depends on**: Phase 1
+**Requirements**: INDUCT-01, INDUCT-02
 **Success Criteria** (what must be TRUE):
-  1. User can set RUST_LOG=cliscrape=debug to enable structured logging without code changes
-  2. User can filter logs by module (e.g., RUST_LOG=cliscrape::template=trace,cliscrape::parser=warn)
-  3. User can increase CLI verbosity with -v (info), -vv (debug), -vvv (trace), -vvvv (all modules trace)
-  4. User can output logs in JSON format for production observability pipelines
-  5. Developer verifies logging overhead is less than 5% performance impact via benchmarks
-**Plans**: 3 plans in 3 waves
+  1. System can identify static anchors across multiple CLI samples
+  2. System proposes candidate regex capture groups for variable segments
+  3. System generates a boilerplate YAML template from raw input samples
+**Plans**: TBD
 
-Plans:
-- [x] 10-01-PLAN.md — Tracing subscriber init + CLI flags (RUST_LOG, -v defaults, JSON logs to stderr)
-- [x] 10-02-PLAN.md — High-level instrumentation (template resolution + parse lifecycle + warnings/errors)
-- [x] 10-03-PLAN.md — Benchmark overhead verification (tracing off vs on, text vs JSON)
-
-### Phase 11: Documentation & Authoring Guide
-**Goal**: Users can discover templates, understand usage, author new templates, and troubleshoot errors
-**Depends on**: Phases 6-10 (documents completed features)
-**Requirements**: DOC-01, DOC-02, DOC-03, DOC-04, DOC-05
+### Phase 15: The FSM-Oracle
+**Goal**: Continuous mathematical verification of template integrity
+**Depends on**: Isomorphic Simulation Implementation
+**Requirements**: ORACLE-01, ORACLE-02
 **Success Criteria** (what must be TRUE):
-  1. User can read comprehensive user guide covering template selection, discovery, and CLI usage
-  2. User can view auto-generated catalog listing all embedded templates with metadata
-  3. User can follow template authoring guide explaining YAML format, FSM concepts, and regex best practices
-  4. User can consult troubleshooting guide for common parsing errors with resolution steps
-  5. Developer verifies all documentation code examples pass CI validation (doc tests)
-**Plans**: 3 plans in 2 waves
-
-Plans:
-- [ ] 11-01-PLAN.md — README entrypoint + CLI usage guide (with fixtures)
-- [ ] 11-02-PLAN.md — Template authoring + migration guides (modern + legacy + troubleshooting)
-- [ ] 11-03-PLAN.md — Generated template catalog + docs-as-tests (trycmd) + CI enforcement
+  1. CI pipeline automatically verifies bijective stability (round-trip equality)
+  2. System flags broken templates when round-trip verification fails
+  3. CLI emits drift alerts when production input cannot be losslessly round-tripped
+**Plans**: TBD
 
 ## Progress Tracking
-
-**Execution Order:**
-Phases execute in numeric order: 6 → 7 → 8 → 9 → 10 → 11
-
-**Dependencies:**
-- Phases 7, 8, 10 depend on Phase 6 (template library infrastructure)
-- Phase 9 depends on Phase 7 (validation reveals edge cases)
-- Phase 11 depends on all preceding phases (documents completed features)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -153,7 +104,11 @@ Phases execute in numeric order: 6 → 7 → 8 → 9 → 10 → 11
 | 9. Edge Case Hardening | v1.5 | 3/3 | Complete | 2026-03-04 |
 | 10. Production Logging | v1.5 | 3/3 | Complete | 2026-03-05 |
 | 11. Documentation & Authoring Guide | v1.5 | 0/? | Not started | - |
+| 12. Semantic Drift Analysis | v2.0 | 0/? | Planned | - |
+| 13. Vendor-Neutral State Manifolds | v2.0 | 0/? | Planned | - |
+| 14. Grammar Induction | v2.0 | 0/? | Planned | - |
+| 15. The FSM-Oracle | v2.0 | 0/? | Planned | - |
 
 ---
 *Roadmap created: 2026-02-22*
-*Last updated: 2026-03-05*
+*Last updated: 2026-03-18*

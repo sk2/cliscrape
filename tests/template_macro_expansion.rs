@@ -14,6 +14,9 @@ fn test_template_from_ir_expands_macros_in_rule_regex() {
             filldown: false,
             required: false,
             list: false,
+            identity: false,
+            ignore: false,
+            common_schema: None,
             type_hint: None,
         },
     );

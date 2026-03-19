@@ -344,6 +344,8 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
             strict,
             threshold,
             timeout,
+            common,
+            verify,
         } => {
             let start_time = Instant::now();
             // Template resolution: path vs identifier
@@ -496,6 +498,51 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
                 format
             };
 
+            // Perform round-trip verification if requested
+            if verify {
+                tracing::info!(target: "cliscrape::cli", event = "verify_start");
+                let synthetic = parser.generate(all_results.clone())
+                    .context("Verification failed: Could not generate synthetic output from parsed records")?;
+                
+                // For verification, we parse the synthetic output back to JSON and compare
+                let round_trip_results = parser.parse(&synthetic)
+                    .context("Verification failed: Could not re-parse synthetic output")?;
+                
+                if all_results != round_trip_results {
+                    tracing::error!(
+                        target: "cliscrape::cli",
+                        event = "verify_failed",
+                        message = "Template is not bijectively stable. Round-trip data mismatch."
+                    );
+                    if !quiet {
+                        eprintln!("Warning: Template round-trip verification failed. Semantic data drift detected.");
+                    }
+                } else {
+                    tracing::info!(target: "cliscrape::cli", event = "verify_success");
+                }
+            }
+
+            // Apply common schema mapping if requested
+            if common {
+                let values = parser.values();
+                all_results = all_results
+                    .into_iter()
+                    .map(|rec| {
+                        let mut common_rec = std::collections::BTreeMap::new();
+                        for (k, v) in rec {
+                            if let Some(val_def) = values.get(&k) {
+                                if let Some(common_key) = &val_def.common_schema {
+                                    common_rec.insert(common_key.clone(), v);
+                                    continue;
+                                }
+                            }
+                            common_rec.insert(k, v);
+                        }
+                        common_rec
+                    })
+                    .collect();
+            }
+
             let output = output::serialize(&all_results, final_format)?;
             println!("{}", output);
 
@@ -636,6 +683,79 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
 
         Commands::Generate { template, input } => {
             handle_generate(&template, input)?;
+        }
+
+        Commands::Diff {
+            before,
+            after,
+            template,
+        } => {
+            handle_diff(&before, &after, &template)?;
+        }
+
+        Commands::Infer { samples } => {
+            handle_infer(&samples)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn handle_infer(sample_paths: &[PathBuf]) -> anyhow::Result<()> {
+    let mut samples = Vec::new();
+    for path in sample_paths {
+        let content = std::fs::read_to_string(path)
+            .with_context(|| format!("Failed to read sample file: {}", path.display()))?;
+        samples.push(content);
+    }
+
+    let engine = cliscrape::engine::infer::InferenceEngine::new(samples);
+    let template_yaml = engine.infer();
+
+    println!("{}", template_yaml);
+    Ok(())
+}
+
+fn handle_diff(before_path: &Path, after_path: &Path, template_spec: &str) -> anyhow::Result<()> {
+    use cliscrape::engine::diff::SemanticDiffEngine;
+
+    // 1. Load template
+    let template_path = resolve_template_spec(template_spec, CliTemplateFormat::Auto)?;
+    let parser = FsmParser::from_file(&template_path)
+        .with_context(|| format!("Failed to load template from {}", template_path.display()))?;
+
+    // 2. Parse both inputs
+    let before_text = std::fs::read_to_string(before_path)
+        .with_context(|| format!("Failed to read 'before' file: {}", before_path.display()))?;
+    let after_text = std::fs::read_to_string(after_path)
+        .with_context(|| format!("Failed to read 'after' file: {}", after_path.display()))?;
+
+    let before_records = parser.parse(&before_text).context("Failed to parse 'before' input")?;
+    let after_records = parser.parse(&after_text).context("Failed to parse 'after' input")?;
+
+    // 3. Diff
+    let engine = SemanticDiffEngine::new(parser.values());
+    let diffs = engine.diff(before_records, after_records);
+
+    // 4. Output
+    if diffs.is_empty() {
+        println!("No operational state changes detected.");
+    } else {
+        for op in diffs {
+            match op {
+                cliscrape::engine::diff::DiffOp::Added { after } => {
+                    println!("+ Added record: {:?}", after);
+                }
+                cliscrape::engine::diff::DiffOp::Removed { before } => {
+                    println!("- Removed record: {:?}", before);
+                }
+                cliscrape::engine::diff::DiffOp::Modified { identity, changes } => {
+                    println!("~ Modified record: {:?}", identity);
+                    for (field, change) in changes {
+                        println!("    {}: {:?} -> {:?}", field, change.before, change.after);
+                    }
+                }
+            }
         }
     }
 
