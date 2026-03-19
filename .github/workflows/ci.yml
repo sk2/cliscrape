@@ -33,6 +33,10 @@ jobs:
         run: cargo insta test --test validation --check
         # --check fails if snapshots pending review (prevents auto-acceptance)
 
+      - name: Run FSM-Oracle Bijective Verification
+        run: cargo test --test oracle_verification
+        # Enforces round-trip stability (Text -> JSON -> Synthetic Text -> JSON)
+
       - name: Compile benchmarks
         run: cargo bench --no-run
         # Ensures benchmarks compile without running them (saves CI time)
