@@ -34,7 +34,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 - [x] **Phase 8: TUI Integration** - Template browser and Live Lab integration (completed 2026-03-04)
 - [x] **Phase 9: Edge Case Hardening** - Timeout enforcement and graceful degradation (completed 2026-03-04)
 - [x] **Phase 10: Production Logging** - Structured observability with tracing (completed 2026-03-05)
-- [ ] **Phase 11: Documentation & Authoring Guide** - User guide and template catalog
+- [x] **Phase 11: Documentation & Authoring Guide** - User guide and template catalog (completed 2026-03-19)
 
 </details>
 
@@ -103,7 +103,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 | 8. TUI Integration | v1.5 | 4/4 | Complete | 2026-03-04 |
 | 9. Edge Case Hardening | v1.5 | 3/3 | Complete | 2026-03-04 |
 | 10. Production Logging | v1.5 | 3/3 | Complete | 2026-03-05 |
-| 11. Documentation & Authoring Guide | v1.5 | 0/? | Not started | - |
+| 11. Documentation & Authoring Guide | v1.5 | 3/3 | Complete | 2026-03-19 |
 | 12. Semantic Drift Analysis | v2.0 | 0/? | Planned | - |
 | 13. Vendor-Neutral State Manifolds | v2.0 | 0/? | Planned | - |
 | 14. Grammar Induction | v2.0 | 0/? | Planned | - |
