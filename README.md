@@ -1,90 +1,81 @@
 # cliscrape
 
-`cliscrape` is a high-performance CLI scraping and parsing tool for network devices, written in Rust. It provides a modern, ergonomic, and blazingly fast alternative to legacy tools like `TextFSM`, while maintaining first-class compatibility with existing templates.
+`cliscrape` is a high-performance parser for semi-structured network CLI output. It supports legacy TextFSM templates, a modern YAML/TOML template format, embedded template discovery, and an interactive TUI for parser development.
 
-## The Vision
+## What It Does
 
-The networking industry relies heavily on CLI-based management. Parsing this unstructured data is often the bottleneck in automation pipelines. `cliscrape` aims to solve this by bringing Rust's safety and performance to the parsing layer, coupled with a focus on developer experience through interactive debugging.
+- Parse raw device output into structured JSON
+- Run with embedded templates or local template files
+- Author and debug templates with a Live Lab TUI
+- Support policy-aware parsing with field constraints and `--strict-policy`
+- Power newer v2.0 workflows such as semantic diffing, schema mapping, and FSM verification
 
-## Ecosystem Context
+## Install
 
-> **Role:** High-performance CLI output parsing — transforms raw runtime `show` command output into structured data. 10-50x faster than TextFSM.
-> **Layer:** Operations Path
-> **Consumes from:** deviceinteraction (raw CLI output from live devices), offline files
-> **Produces for:** deviceinteraction (structured parsed data), autonetkit-analysis (operational state)
+Build from source:
 
-### Related Tools
-| Tool | Relationship | Boundary |
-|------|-------------|----------|
-| deviceinteraction | cliscrape is called by deviceinteraction for CLI output parsing | deviceinteraction = connect + orchestrate + verify; cliscrape = parse. deviceinteraction handles device connectivity; cliscrape handles parsing |
-| configparsing | Both produce structured network data, from different sources | cliscrape = runtime CLI output (e.g., `show ip route` from a live device) + TextFSM; configparsing = static config files (e.g., `router.cfg`) + LLM/RAG. Different data sources, same goal |
-| autonetkit | cliscrape output feeds into autonetkit-analysis via deviceinteraction | cliscrape provides parsed data; autonetkit-analysis builds the operational topology |
-| netassure | cliscrape data flows through deviceinteraction → autonetkit-analysis → netassure | cliscrape parses; netassure analyzes |
-
-> **Part of the [Network Automation Ecosystem](https://github.com/sk2/automationarch)** — 11 tools covering design, simulation, analysis, and operations.
-
-### Core Pillars
-
-1.  **Performance:** Zero-cost abstractions and Rust's `regex` engine ensure that even massive `show tech-support` outputs are parsed in milliseconds.
-2.  **Compatibility:** Full support for the `TextFSM` grammar. Use your existing library of hundreds of community templates (e.g., from `ntc-templates`) without modification.
-3.  **Ergonomics:** A new, structured template format (YAML/TOML) that reduces the "regex soup" often found in TextFSM files.
-4.  **Observability:** A built-in TUI for real-time debugging of templates. See exactly which line matched which rule and why.
-
----
-
-## Architectural Overview
-
-### 1. The Engine (Rust-FSM)
-A state-machine based parser that replicates the behavior of TextFSM. It handles:
-- **Value Definitions:** Typed variables with regex validation.
-- **State Transitions:** `Start`, `End`, and custom user-defined states.
-- **Actions:** `Next`, `Continue`, `Record`, and `Clear`.
-
-### 2. TextFSM Compatibility Layer
-A parser for `.textfsm` files that translates them into the internal `cliscrape` FSM representation. This allows seamless migration for existing workflows.
-
-### 3. Modern Template Format (Proposal)
-While TextFSM is powerful, its DSL can be hard to read. `cliscrape` proposes a structured YAML/TOML format:
-
-```yaml
-# cisco_ios_show_ip_int_brief.yaml
-values:
-  interface: \S+
-  ip_address: \d+\.\d+\.\d+\.\d+|unassigned
-  status: up|down|administratively down
-  protocol: up|down
-
-states:
-  Start:
-    - match: ^${interface}\s+${ip_address}\s+\S+\s+\S+\s+${status}\s+${protocol}
-      action: Record
+```bash
+cargo install --path .
 ```
 
-### 4. TUI Debugger (The "Dry Run" Mode)
-The TUI provides a visual environment for template development:
-- **Input Pane:** Paste or load raw CLI output.
-- **State Pane:** Watch the FSM transition between states as it consumes the input.
-- **Variables Pane:** See the current value of all defined variables in real-time.
-- **Diff View:** Highlight which part of the line matched a specific regex.
+Or run without installing:
 
----
+```bash
+cargo run -- --help
+```
 
-## Performance Comparison (Anticipated)
+## Quickstart
 
-| Feature | TextFSM (Python) | cliscrape (Rust) |
-| :--- | :--- | :--- |
-| **Parsing Speed** | Baseline | ~10-50x Faster |
-| **Memory Usage** | Moderate | Low / Deterministic |
-| **Startup Time** | Slow (Interpreted) | Instant (Compiled) |
-| **Concurrency** | GIL-bound | Fully Parallelizable |
+Parse a local template against a file:
 
----
+```bash
+cliscrape parse tests/fixtures/inputs/constraints/min_pass.txt --template tests/fixtures/templates/constraints.yaml --format json
+```
 
-## Roadmap
+List embedded templates:
 
-- [x] Initial Vision and Project Scaffolding
-- [ ] **Phase 1: Lexer/Parser for TextFSM Files**
-- [ ] **Phase 2: Core FSM Execution Engine**
-- [ ] **Phase 3: CLI Implementation (Basic Parse)**
-- [ ] **Phase 4: TUI Debugger and Visualizer**
-- [ ] **Phase 5: Modern YAML/TOML Template Support**
+```bash
+cliscrape list-templates --format json
+```
+
+Inspect one template:
+
+```bash
+cliscrape show-template cisco_ios_show_version
+```
+
+Use strict policy mode:
+
+```bash
+cliscrape parse tests/fixtures/inputs/constraints/min_fail.txt --template tests/fixtures/templates/constraints.yaml --strict-policy
+```
+
+## Guides
+
+- User guide: `docs/guides/USER_GUIDE.md`
+- Authoring guide: `docs/guides/AUTHORING.md`
+
+## Current Roadmap
+
+- v1.0 MVP: shipped
+- v1.5 Production Hardening: shipped, with some planning artifact cleanup still pending
+- v2.0 The Network Compiler: active milestone
+- v3.0 Isomorphic Ecosystem: planned
+
+Canonical planning files live under `.planning/`:
+
+- `.planning/ROADMAP.md`
+- `.planning/MILESTONES.md`
+- `.planning/STATE.md`
+
+## Core Commands
+
+```bash
+cliscrape parse <input> --template <template>
+cliscrape debug -t <template> -i <input>
+cliscrape list-templates
+cliscrape show-template <name>
+cliscrape convert --input old.textfsm --output new.yaml --defaults
+cliscrape diff before.txt after.txt --template <template>
+cliscrape generate --template <template> --input records.json
+```

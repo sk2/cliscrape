@@ -30,6 +30,8 @@
 - [x] Phase 10: Production Logging
 - [x] Phase 11: Documentation & Authoring Guide
 
+> Note: user and authoring guides shipped. The original plan 03 catalog/doc-validation artifacts were deferred and are tracked as reconciliation work.
+
 </details>
 
 ### 🚧 v2.0 The Network Compiler (In Progress)
@@ -40,7 +42,7 @@
 - [x] **Phase 13: Vendor-Neutral State Manifolds** - Common schema mapping layer (Complete)
 - [x] **Phase 14: Grammar Induction** - Statistical structural inference for templates (Complete)
 - [x] **Phase 15: The FSM-Oracle** - Bijective verification and self-healing loop (Complete)
-- [ ] **Phase 16: Semantic Constraint Logic** - Policy-aware parsing with boundary assertions
+- [x] **Phase 16: Semantic Constraint Logic** - Policy-aware parsing with boundary assertions (implemented)
 - [ ] **Phase 17: The Universal Ledger Library** - Standardized schemas for core network operations
 
 ### 📋 v3.0 Isomorphic Ecosystem (Planned)
@@ -67,7 +69,7 @@
 **Depends on**: Phase 13
 **Requirements**: LEDGER-01, LOG-02
 **Success Criteria**:
-  1. Standard schemas defined for: `interface`, `bgp_neighbor`, `lldp_neighbor`, `version`.
+  1. Standard schemas defined for: `interface`, `bgp_neighbor`, `lldp_neighbor`, `version`, `route`.
   2. All core embedded templates updated with `common_schema` mappings.
   3. Validation tool ensures a template claiming a schema actually provides required keys.
 
@@ -88,10 +90,12 @@
 | 13. Vendor-Neutral Manifolds | v2.0 | 2/2 | Complete | 2026-03-19 |
 | 14. Grammar Induction | v2.0 | 2/2 | Complete | 2026-03-19 |
 | 15. The FSM-Oracle | v2.0 | 2/2 | Complete | 2026-03-19 |
-| 16. Semantic Constraint Logic | v2.0 | 0/3 | Planned | - |
+| 16. Semantic Constraint Logic | v2.0 | 1/1 | Complete | 2026-03-20 |
 | 17. Universal Ledger Library | v2.0 | 0/3 | Planned | - |
 | 18. Semantic Mock Server | v3.0 | 0/3 | Planned | - |
+| 19. State-of-the-World Manifests | v3.0 | 0/3 | Planned | - |
+| 20. SSH/CLI Protocol Integration | v3.0 | 0/3 | Planned | - |
 
 ---
 *Roadmap created: 2026-02-22*
-*Last updated: 2026-03-19*
+*Last updated: 2026-03-20*

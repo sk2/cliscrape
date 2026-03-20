@@ -6,21 +6,22 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core Value:** Extremely fast, reliable parsing of semi-structured CLI output into structured data, regardless of whether the template is legacy TextFSM or the new ergonomic format.
 
-**Current Focus:** Milestone v1.5 - Template Ecosystem & Production Hardening
+**Current Focus:** Milestone v2.0 - The Network Compiler
 
 ## Current Position
 
-Phase: 11 of 11 (Documentation & Authoring Guide)
+Phase: 17 of 20 (Universal Ledger Library)
 Plan: Not started
-Status: Ready to execute
-Last Activity: 2026-03-05 — Completed 10-03-PLAN.md
+Status: Ready for planning
+Last Activity: 2026-03-20 - Restored Phase 16 test fixtures and synced planning status to implementation
 
-Progress: [██████████] 100% (completed plans: 44/44)
+Progress: [████████░░] 80% milestone completion (completed phases: 16/20)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 40 (28 v1.0 + 12 v1.5)
+- Total completed phases: 16 (5 v1.0 + 6 v1.5 + 5 v2.0)
+- Total completed plans: 44
 - Average duration: ~10 min (recent)
 - Total execution time: Not tracked
 
@@ -29,12 +30,14 @@ Progress: [██████████] 100% (completed plans: 44/44)
 | Milestone | Phases | Plans | Status |
 |-----------|--------|-------|--------|
 | v1.0 MVP | 5 | 28/28 | Complete (2026-02-22) |
-| v1.5 Template Ecosystem | 6 | 12/12 | Phases 6, 7, 8, 9 complete |
+| v1.5 Production Hardening | 6 | 12/12 | Complete (2026-03-19) |
+| v2.0 The Network Compiler | 6 | 8/10 | Phases 12-16 complete; 17 planned |
 
 **Recent Trend:**
 - v1.0 shipped with 77 passing tests, 4.1M lines/sec throughput
-- v1.5 Phase 6: 4/4 plans complete (library foundation, metadata extraction, CLI discovery, template population)
-- Trend: Template ecosystem foundation complete, ready for production use
+- v1.5 shipped with roadmap status marked complete across Phases 6-11
+- v2.0 foundation Phases 12-16 are complete; Phase 17 is the next active planning target
+- Trend: project focus has shifted from production hardening to semantic, policy-aware parsing and vendor-neutral state modeling
 
 **Recent Plan Metrics:**
 
@@ -75,13 +78,16 @@ Recent decisions affecting current work:
 
 - [ ] Run Live Lab TUI interactive verification (deferred from Phase 4 to milestone verification)
 - [ ] Run interactive converter smoke test (deferred from Phase 3 to milestone verification)
+- [x] Record Phase 11 plan 03 as deferred reconciliation work instead of silently complete
+- [x] Consolidate backlog into `.planning/BACKLOG.md` as the canonical planning backlog
 
 ### Blockers/Concerns
 
-None currently. v1.5 starts fresh with research-informed architecture.
+- `v1.5-MILESTONE-AUDIT.md` is historical and should not be used as the active status source.
+- Phase 11 still has deferred reconciliation work for plan 03 artifacts that are not present in the codebase.
 
 ## Session Continuity
 
-Last session: 2026-03-05 03:51Z
-Stopped at: Completed 10-03-PLAN.md
+Last session: 2026-03-20 00:00Z
+Stopped at: Synced Phase 16 planning status with implemented code and restored constraint test fixtures
 Resume file: None
