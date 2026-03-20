@@ -112,6 +112,7 @@ fn parse_definition_with_warnings(
             identity: false,
             ignore: false,
             common_schema: None,
+            constraints: None,
             type_hint: None,
         },
         warnings,

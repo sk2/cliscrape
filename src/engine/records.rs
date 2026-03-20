@@ -45,7 +45,7 @@ impl RecordBuffer {
     pub fn emit(
         &mut self,
         values: &HashMap<String, Value>,
-    ) -> Option<BTreeMap<String, serde_json::Value>> {
+    ) -> Option<(BTreeMap<String, serde_json::Value>, Vec<crate::TemplateWarning>)> {
         if !self.dirty {
             return None;
         }
@@ -62,26 +62,28 @@ impl RecordBuffer {
         }
 
         let mut record = BTreeMap::new();
+        let mut warnings = Vec::new();
+
         for (name, val_def) in values {
             if let Some(vals) = self.buffer.get(name) {
                 if val_def.list {
-                    record.insert(
-                        name.clone(),
-                        serde_json::Value::Array(
-                            vals.iter()
-                                .map(|s| convert_scalar(s, val_def.type_hint))
-                                .collect(),
-                        ),
-                    );
-                } else {
-                    // Should only have one value if it's not a list, but we take the last one just in case
-                    if let Some(v) = vals.last() {
-                        record.insert(name.clone(), convert_scalar(v, val_def.type_hint));
+                    let mut json_vals = Vec::new();
+                    for s in vals {
+                        let coerced = convert_scalar(s, val_def.type_hint);
+                        if let Some(constraints) = &val_def.constraints {
+                            warnings.extend(crate::engine::validate::validate_value(name, &coerced, constraints));
+                        }
+                        json_vals.push(coerced);
                     }
+                    record.insert(name.clone(), serde_json::Value::Array(json_vals));
+                } else if let Some(v) = vals.last() {
+                    let coerced = convert_scalar(v, val_def.type_hint);
+                    if let Some(constraints) = &val_def.constraints {
+                        warnings.extend(crate::engine::validate::validate_value(name, &coerced, constraints));
+                    }
+                    record.insert(name.clone(), coerced);
                 }
             } else {
-                // If it's a list, we might want an empty array instead of missing key?
-                // TextFSM usually returns empty string for missing non-list values.
                 if val_def.list {
                     record.insert(name.clone(), serde_json::Value::Array(vec![]));
                 } else {
@@ -91,7 +93,7 @@ impl RecordBuffer {
         }
 
         self.reset_after_emit(values);
-        Some(record)
+        Some((record, warnings))
     }
 
     fn reset_after_emit(&mut self, values: &HashMap<String, Value>) {
@@ -158,6 +160,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -190,6 +193,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: Some(FieldType::Int),
             },
         );
@@ -219,6 +223,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: Some(FieldType::Int),
             },
         );
@@ -248,6 +253,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: Some(FieldType::String),
             },
         );
@@ -277,6 +283,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: Some(FieldType::Int),
             },
         );
@@ -313,6 +320,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );

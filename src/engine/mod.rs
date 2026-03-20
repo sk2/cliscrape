@@ -15,3 +15,5 @@ pub use infer::*;
 pub use macros::*;
 pub use records::*;
 pub use types::*;
+pub mod validate;
+pub use validate::*;

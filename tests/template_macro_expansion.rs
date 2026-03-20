@@ -17,6 +17,7 @@ fn test_template_from_ir_expands_macros_in_rule_regex() {
             identity: false,
             ignore: false,
             common_schema: None,
+            constraints: None,
             type_hint: None,
         },
     );

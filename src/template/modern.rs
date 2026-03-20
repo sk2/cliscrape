@@ -57,6 +57,9 @@ pub struct FieldDef {
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub common_schema: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub constraints: Option<crate::engine::types::FieldConstraints>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -262,6 +265,7 @@ impl ModernTemplateDoc {
                     identity: def.identity,
                     ignore: def.ignore,
                     common_schema: def.common_schema.clone(),
+                    constraints: def.constraints.clone(),
                     type_hint: Some(hint),
                 },
             );

@@ -346,6 +346,7 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
             timeout,
             common,
             verify,
+            strict_policy,
         } => {
             let start_time = Instant::now();
             // Template resolution: path vs identifier
@@ -433,6 +434,7 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
             let parse_options = cliscrape::ParseOptions {
                 strict,
                 threshold,
+                strict_policy,
                 timeout_ms: timeout,
             };
 
@@ -460,7 +462,7 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
                 }
 
                 for (idx, block) in blocks.iter().enumerate() {
-                    let (mut parsed, warnings) = parser
+                    let (mut parsed, block_warnings) = parser
                         .results_with_warnings(block, parse_options.clone())
                         .with_context(|| {
                             format!(
@@ -469,8 +471,16 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
                                 source.display()
                             )
                         })?;
+
+                    // Process warnings from this block
+                    for warning in block_warnings {
+                        if parse_options.strict_policy && warning.kind == "ConstraintViolation" {
+                            anyhow::bail!("Constraint violation failed strict policy: {}", warning.message);
+                        }
+                        all_warnings.push(warning);
+                    }
+
                     all_results.append(&mut parsed);
-                    all_warnings.extend(warnings);
                 }
             }
 

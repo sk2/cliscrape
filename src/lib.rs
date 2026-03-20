@@ -42,6 +42,7 @@ pub enum ScraperError {
 #[derive(Debug, Clone)]
 pub struct ParseOptions {
     pub strict: bool,
+    pub strict_policy: bool,
     pub threshold: f64,
     pub timeout_ms: Option<u64>,
 }
@@ -50,6 +51,7 @@ impl Default for ParseOptions {
     fn default() -> Self {
         Self {
             strict: false,
+            strict_policy: false,
             threshold: 80.0,
             timeout_ms: None,
         }
@@ -285,6 +287,7 @@ patterns:
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );

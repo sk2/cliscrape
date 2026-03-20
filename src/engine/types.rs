@@ -17,6 +17,14 @@ pub enum FieldType {
     String,
 }
 
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct FieldConstraints {
+    pub min: Option<f64>,
+    pub max: Option<f64>,
+    pub choices: Option<Vec<String>>,
+    pub regex: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Value {
     pub name: String,
@@ -27,6 +35,7 @@ pub struct Value {
     pub identity: bool,
     pub ignore: bool,
     pub common_schema: Option<String>,
+    pub constraints: Option<FieldConstraints>,
     pub type_hint: Option<FieldType>,
 }
 

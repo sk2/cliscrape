@@ -184,7 +184,8 @@ impl Template {
                     // Handle record action
                     match rule.record_action {
                         Action::Record => {
-                            if let Some(record) = record_buffer.emit(&self.values) {
+                            if let Some((record, mut validation_warnings)) = record_buffer.emit(&self.values) {
+                                warnings.append(&mut validation_warnings);
                                 // Validate threshold
                                 let template_fields: Vec<String> =
                                     self.values.keys().cloned().collect();
@@ -349,7 +350,8 @@ impl Template {
                         // Handle record action
                         match rule.record_action {
                             Action::Record => {
-                                if let Some(record) = record_buffer.emit(&self.values) {
+                                if let Some((record, mut validation_warnings)) = record_buffer.emit(&self.values) {
+                                warnings.append(&mut validation_warnings);
                                     // Validate threshold
                                     let template_fields: Vec<String> =
                                         self.values.keys().cloned().collect();
@@ -413,7 +415,8 @@ impl Template {
             }
         } else {
             // No explicit EOF state: use implicit EOF record emission
-            if let Some(record) = record_buffer.emit(&self.values) {
+            if let Some((record, mut validation_warnings)) = record_buffer.emit(&self.values) {
+                warnings.append(&mut validation_warnings);
                 // Validate threshold
                 let template_fields: Vec<String> = self.values.keys().cloned().collect();
                 let coverage =
@@ -502,6 +505,12 @@ impl Template {
                         placeholders.push(cap.get(1).unwrap().as_str().to_string());
                     }
 
+                    static NAMED_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+                    let named_re = NAMED_RE.get_or_init(|| regex::Regex::new(r"\(\?P<([A-Za-z_][A-Za-z0-9_]*)>").unwrap());
+                    for cap in named_re.captures_iter(&rule.original_pattern) {
+                        placeholders.push(cap.get(1).unwrap().as_str().to_string());
+                    }
+
                     // A rule matches if:
                     // 1. It has placeholders and ALL are in the record and NOT YET emitted
                     // 2. OR it has NO placeholders (static text) and we haven't finished the record
@@ -510,10 +519,6 @@ impl Template {
                             .iter()
                             .all(|p| record.contains_key(p) && !emitted_for_record.contains(p))
                     } else {
-                        // Static text rule - only fire if it leads to a state change or Record
-                        // or if it's a simple next-line rule.
-                        // To avoid infinite loops, we only fire static rules once per state visit?
-                        // Actually, let's fire static rules that lead to Record if we've emitted something.
                         rule.record_action == Action::Record || rule.next_state.is_some()
                     };
 
@@ -525,9 +530,40 @@ impl Template {
                             let val_str = match val {
                                 serde_json::Value::String(s) => s.clone(),
                                 serde_json::Value::Number(n) => n.to_string(),
+                                serde_json::Value::Bool(b) => b.to_string(),
                                 _ => val.to_string(),
                             };
+
+                            // Replace ${name}
                             line = line.replace(&format!("${{{}}}", p), &val_str);
+
+                            // Replace (?P<name>...)
+                            let group_prefix = format!("(?P<{}>", p);
+                            while let Some(start_idx) = line.find(&group_prefix) {
+                                let mut depth = 1; // Already inside the first '(' from group_prefix
+                                let mut end_idx = start_idx + group_prefix.len();
+                                let chars: Vec<char> = line.chars().collect();
+                                
+                                for (i, c) in chars.iter().enumerate().skip(start_idx + group_prefix.len()) {
+                                    if *c == '(' { depth += 1; }
+                                    else if *c == ')' {
+                                        depth -= 1;
+                                        if depth == 0 {
+                                            end_idx = i;
+                                            break;
+                                        }
+                                    }
+                                }
+                                
+                                // Slice and replace
+                                // Note: we need to use byte indices for slicing, but `i` from `chars().enumerate()`
+                                // is a char index. We must be careful with unicode.
+                                // For simplicity, we can just rebuild the string from chars.
+                                let before: String = chars[..start_idx].iter().collect();
+                                let after: String = chars[end_idx + 1..].iter().collect();
+                                line = format!("{}{}{}", before, val_str, after);
+                            }
+
                             emitted_for_record.insert(p.clone());
                         }
 
@@ -535,8 +571,22 @@ impl Template {
                         line = line.strip_prefix('^').unwrap_or(&line).to_string();
                         line = line.strip_suffix('$').unwrap_or(&line).to_string();
                         line = line.replace(r"\s+", " ");
+                        line = line.replace(r"\s*", "");
+                        line = line.replace(r".+", " DUMMY ");
+                        line = line.replace(r".*", "");
                         line = line.replace(r"\d+", "0");
+                        line = line.replace(r"\d*", "");
                         line = line.replace(r"\S+", "VALUE");
+                        line = line.replace(r"\(", "(");
+                        line = line.replace(r"\)", ")");
+                        line = line.replace(r"\[", "[");
+                        line = line.replace(r"\]", "]");
+                        line = line.replace(r"\?", "?");
+                        line = line.replace(r"\.", ".");
+                        line = line.replace(r"(?:", "");
+                        
+                        // Some patterns have trailing `)` from non-capturing groups if we blindly stripped `(?:`
+                        // A truly rigorous inverse regex generator is complex. For the Oracle, we do our best.
 
                         output.push_str(&line);
                         output.push('\n');
@@ -598,6 +648,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -648,6 +699,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -662,6 +714,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -719,6 +772,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -733,6 +787,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -850,6 +905,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -864,6 +920,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -923,6 +980,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -969,6 +1027,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -983,6 +1042,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -1046,6 +1106,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -1060,6 +1121,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -1121,6 +1183,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -1167,6 +1230,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -1217,6 +1281,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -1268,6 +1333,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -1329,6 +1395,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -1377,6 +1444,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -1429,6 +1497,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -1483,6 +1552,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );
@@ -1497,6 +1567,7 @@ mod tests {
                 identity: false,
                 ignore: false,
                 common_schema: None,
+                constraints: None,
                 type_hint: None,
             },
         );

@@ -30,6 +30,7 @@ pub fn template_ir_to_modern_doc(ir: &TemplateIR) -> ModernTemplateDoc {
                 identity: v.identity,
                 ignore: v.ignore,
                 common_schema: v.common_schema.clone(),
+                constraints: v.constraints.clone(),
             },
         );
     }

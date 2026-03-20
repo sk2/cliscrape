@@ -78,6 +78,10 @@ pub enum Commands {
         /// Verify template integrity via round-trip (Parse -> Generate)
         #[arg(long)]
         verify: bool,
+
+        /// Abort if any field constraint validation fails
+        #[arg(long)]
+        strict_policy: bool,
     },
     /// Launch the TUI debugger
     Debug {

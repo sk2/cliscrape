@@ -1,0 +1,17 @@
+version: 1
+fields:
+  mtu:
+    type: int
+    pattern: '\d+'
+    constraints:
+      min: 1500
+  status:
+    type: string
+    pattern: '\S+'
+    constraints:
+      choices: ["up", "down", "admin-down"]
+patterns:
+  - regex: '^MTU: ${mtu}'
+    record: true
+  - regex: '^Status: ${status}'
+    record: true
