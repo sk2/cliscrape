@@ -8,7 +8,7 @@ fn convert_defaults_non_interactive_writes_output() {
     let out_path = "target/tmp_converted.yaml";
     let _ = std::fs::remove_file(out_path);
 
-    let mut cmd = Command::cargo_bin("cliscrape").expect("cliscrape binary builds");
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("cliscrape"));
     cmd.args([
         "convert",
         "-i",

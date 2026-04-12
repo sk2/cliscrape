@@ -2,8 +2,7 @@ use assert_cmd::Command;
 
 #[test]
 fn parse_file_input_emits_json_with_hostname() {
-    let output = Command::cargo_bin("cliscrape")
-        .expect("cliscrape binary builds")
+    let output = Command::new(assert_cmd::cargo::cargo_bin!("cliscrape"))
         .args([
             "parse",
             "-t",
@@ -30,8 +29,7 @@ fn parse_file_input_emits_json_with_hostname() {
 
 #[test]
 fn parse_piped_stdin_emits_json_with_hostname() {
-    let output = Command::cargo_bin("cliscrape")
-        .expect("cliscrape binary builds")
+    let output = Command::new(assert_cmd::cargo::cargo_bin!("cliscrape"))
         .args([
             "parse",
             "-t",
@@ -59,8 +57,7 @@ fn parse_piped_stdin_emits_json_with_hostname() {
 
 #[test]
 fn parse_stdin_plus_file_ordering_file_first_stdin_last() {
-    let output = Command::cargo_bin("cliscrape")
-        .expect("cliscrape binary builds")
+    let output = Command::new(assert_cmd::cargo::cargo_bin!("cliscrape"))
         .args([
             "parse",
             "-t",
@@ -96,8 +93,7 @@ fn parse_stdin_plus_file_ordering_file_first_stdin_last() {
 
 #[test]
 fn parse_textfsm_required_filldown_interaction() {
-    let output = Command::cargo_bin("cliscrape")
-        .expect("cliscrape binary builds")
+    let output = Command::new(assert_cmd::cargo::cargo_bin!("cliscrape"))
         .args([
             "parse",
             "-t",
@@ -134,8 +130,7 @@ fn parse_textfsm_required_filldown_interaction() {
 #[test]
 fn parse_identifier_resolution_via_cwd_only_search() {
     // Run from tests/fixtures/textfsm directory, use identifier instead of path
-    let output = Command::cargo_bin("cliscrape")
-        .expect("cliscrape binary builds")
+    let output = Command::new(assert_cmd::cargo::cargo_bin!("cliscrape"))
         .current_dir("tests/fixtures/textfsm")
         .args([
             "parse",
@@ -169,8 +164,7 @@ fn parse_identifier_resolution_via_cwd_only_search() {
 fn parse_no_partial_stdout_on_later_failure() {
     // First input succeeds, second triggers Error action
     // Verify: exit code 1, stdout empty (no partial JSON)
-    let output = Command::cargo_bin("cliscrape")
-        .expect("cliscrape binary builds")
+    let output = Command::new(assert_cmd::cargo::cargo_bin!("cliscrape"))
         .args([
             "parse",
             "-t",

@@ -39,13 +39,15 @@ fn verify_all_templates_are_bijectively_stable() {
 
         let parser = FsmParser::from_file(path)
             .unwrap_or_else(|e| panic!("Oracle failed to load template {}: {}", path.display(), e));
-        
+
         // Find corresponding fixtures
         // Pattern: templates/cisco_ios_show_version.yaml -> tests/fixtures/cisco/ios_show_version/
         let template_name = path.file_stem().unwrap().to_str().unwrap();
         let vendor_os: Vec<&str> = template_name.splitn(3, '_').collect();
-        if vendor_os.len() < 3 { continue; } // Non-standard naming
-        
+        if vendor_os.len() < 3 {
+            continue;
+        } // Non-standard naming
+
         let vendor = vendor_os[0];
         let command = format!("{}_{}", vendor_os[1], vendor_os[2]);
         let fixture_dir = PathBuf::from(format!("tests/fixtures/{}/{}", vendor, command));
@@ -63,32 +65,55 @@ fn verify_all_templates_are_bijectively_stable() {
             }
 
             let raw_text = fs::read_to_string(&fixture_path).unwrap();
-            
+
             // FSM: Text -> JSON
-            let options = ParseOptions { strict: false, threshold: 0.0, timeout_ms: None };
-            let (initial_records, _) = parser.results_with_warnings(&raw_text, options.clone()).unwrap();
-            
+            let options = ParseOptions {
+                strict: false,
+                strict_policy: false,
+                threshold: 0.0,
+                timeout_ms: None,
+            };
+            let (initial_records, _) = parser
+                .results_with_warnings(&raw_text, options.clone())
+                .unwrap();
+
             if initial_records.is_empty() {
                 continue; // Cannot verify an empty parse
             }
 
             // FSM^-1: JSON -> Synthetic Text
-            let synthetic_text = parser.generate(initial_records.clone())
-                .unwrap_or_else(|e| panic!("Oracle failed to generate synthetic text for {}: {}", fixture_path.display(), e));
-            
+            let synthetic_text = parser
+                .generate(initial_records.clone())
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "Oracle failed to generate synthetic text for {}: {}",
+                        fixture_path.display(),
+                        e
+                    )
+                });
+
             // Re-Parse: Synthetic Text -> JSON
-            let (round_trip_records, _) = parser.results_with_warnings(&synthetic_text, options).unwrap();
+            let (round_trip_records, _) = parser
+                .results_with_warnings(&synthetic_text, options)
+                .unwrap();
 
             // Bijective Equality Assertion
             if initial_records != round_trip_records {
                 // If it's not bijectively stable, we don't panic the test suite because legacy templates
                 // (like NTC ports) use complex non-injective regexes (A|B). But we do log the failure.
-                println!("⚠️ Template {} is not bijectively stable for fixture {}.", path.display(), fixture_path.display());
+                println!(
+                    "⚠️ Template {} is not bijectively stable for fixture {}.",
+                    path.display(),
+                    fixture_path.display()
+                );
             } else {
                 fixtures_verified += 1;
             }
         }
     }
 
-    println!("FSM-Oracle mathematically verified {} fixtures as perfectly bijective across {} modern templates.", fixtures_verified, templates_checked);
+    println!(
+        "FSM-Oracle mathematically verified {} fixtures as perfectly bijective across {} modern templates.",
+        fixtures_verified, templates_checked
+    );
 }

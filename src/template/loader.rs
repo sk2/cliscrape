@@ -55,11 +55,6 @@ impl TextFsmLoader {
     }
 }
 
-fn parse_definition(pair: Pair<PestRule>) -> Result<Value, ScraperError> {
-    let (value, _warnings) = parse_definition_with_warnings(pair)?;
-    Ok(value)
-}
-
 fn parse_definition_with_warnings(
     pair: Pair<PestRule>,
 ) -> Result<(Value, Vec<TemplateWarning>), ScraperError> {
@@ -119,11 +114,6 @@ fn parse_definition_with_warnings(
     ))
 }
 
-fn parse_state_block(pair: Pair<PestRule>) -> Result<State, ScraperError> {
-    let (state, _warnings) = parse_state_block_with_warnings(pair)?;
-    Ok(state)
-}
-
 fn parse_state_block_with_warnings(
     pair: Pair<PestRule>,
 ) -> Result<(State, Vec<TemplateWarning>), ScraperError> {
@@ -149,11 +139,6 @@ fn parse_state_block_with_warnings(
     }
 
     Ok((State { name, rules }, warnings))
-}
-
-fn parse_rule(pair: Pair<PestRule>) -> Result<Rule, ScraperError> {
-    let (rule, _warnings) = parse_rule_with_warnings(pair)?;
-    Ok(rule.expect("parse_rule should return Some"))
 }
 
 fn parse_rule_with_warnings(
@@ -197,11 +182,6 @@ fn parse_rule_with_warnings(
             warnings,
         ))
     }
-}
-
-fn parse_action(pair: Pair<PestRule>) -> Result<(Action, Action, Option<String>), ScraperError> {
-    let (la, ra, ns, _warnings, _skip) = parse_action_with_warnings(pair)?;
-    Ok((la, ra, ns))
 }
 
 fn parse_action_with_warnings(

@@ -1,7 +1,7 @@
+use crate::engine::types::Value as TemplateValue;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap};
-use crate::engine::types::Value as TemplateValue;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum DiffOp {
@@ -176,33 +176,44 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    fn mock_template_values(identities: &[&str], ignores: &[&str]) -> HashMap<String, TemplateValue> {
+    fn mock_template_values(
+        identities: &[&str],
+        ignores: &[&str],
+    ) -> HashMap<String, TemplateValue> {
         let mut map = HashMap::new();
         for &id in identities {
-            map.insert(id.to_string(), TemplateValue {
-                name: id.to_string(),
-                regex: "".to_string(),
-                filldown: false,
-                required: false,
-                list: false,
-                identity: true,
-                ignore: false,
-                common_schema: None,
-                type_hint: None,
-            });
+            map.insert(
+                id.to_string(),
+                TemplateValue {
+                    name: id.to_string(),
+                    regex: "".to_string(),
+                    filldown: false,
+                    required: false,
+                    list: false,
+                    identity: true,
+                    ignore: false,
+                    common_schema: None,
+                    constraints: None,
+                    type_hint: None,
+                },
+            );
         }
         for &ign in ignores {
-            map.insert(ign.to_string(), TemplateValue {
-                name: ign.to_string(),
-                regex: "".to_string(),
-                filldown: false,
-                required: false,
-                list: false,
-                identity: false,
-                ignore: true,
-                common_schema: None,
-                type_hint: None,
-            });
+            map.insert(
+                ign.to_string(),
+                TemplateValue {
+                    name: ign.to_string(),
+                    regex: "".to_string(),
+                    filldown: false,
+                    required: false,
+                    list: false,
+                    identity: false,
+                    ignore: true,
+                    common_schema: None,
+                    constraints: None,
+                    type_hint: None,
+                },
+            );
         }
         map
     }
@@ -214,11 +225,19 @@ mod tests {
 
         let before = vec![
             json!({"name": "Gi0/1", "status": "up", "uptime": "10s"})
-                .as_object().unwrap().clone().into_iter().collect(),
+                .as_object()
+                .unwrap()
+                .clone()
+                .into_iter()
+                .collect(),
         ];
         let after = vec![
             json!({"name": "Gi0/1", "status": "down", "uptime": "20s"})
-                .as_object().unwrap().clone().into_iter().collect(),
+                .as_object()
+                .unwrap()
+                .clone()
+                .into_iter()
+                .collect(),
         ];
 
         let diffs = engine.diff(before, after);

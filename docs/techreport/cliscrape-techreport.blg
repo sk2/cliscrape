@@ -1,15 +1,15 @@
 [0] Config.pm:328> INFO - This is Biber 2.21
 [0] Config.pm:331> INFO - Logfile is 'cliscrape-techreport.blg'
-[26] biber-darwin:342> INFO - === Wed Mar 18, 2026, 13:24:33
-[32] Biber.pm:421> INFO - Reading 'cliscrape-techreport.bcf'
-[58] Biber.pm:1002> INFO - Found 2 citekeys in bib section 0
-[63] Biber.pm:4487> INFO - Processing section 0
-[67] Biber.pm:4678> INFO - Looking for bibtex file 'cliscrape-techreport.bib' for section 0
-[69] bibtex.pm:1713> INFO - LaTeX decoding ...
-[70] bibtex.pm:1519> INFO - Found BibTeX data source 'cliscrape-techreport.bib'
-[84] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
-[84] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
-[84] Biber.pm:4307> INFO - Sorting list 'none/global//global/global/global' of type 'entry' with template 'none' and locale 'en-US'
-[84] Biber.pm:4313> INFO - No sort tailoring available for locale 'en-US'
-[88] bbl.pm:676> INFO - Writing 'cliscrape-techreport.bbl' with encoding 'UTF-8'
-[88] bbl.pm:779> INFO - Output to cliscrape-techreport.bbl
+[31] biber-darwin:342> INFO - === Sun Apr 12, 2026, 19:38:35
+[39] Biber.pm:421> INFO - Reading 'cliscrape-techreport.bcf'
+[68] Biber.pm:1002> INFO - Found 2 citekeys in bib section 0
+[74] Biber.pm:4487> INFO - Processing section 0
+[78] Biber.pm:4678> INFO - Looking for bibtex file 'cliscrape-techreport.bib' for section 0
+[79] bibtex.pm:1713> INFO - LaTeX decoding ...
+[80] bibtex.pm:1519> INFO - Found BibTeX data source 'cliscrape-techreport.bib'
+[97] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[97] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[97] Biber.pm:4307> INFO - Sorting list 'none/global//global/global/global' of type 'entry' with template 'none' and locale 'en-US'
+[97] Biber.pm:4313> INFO - No sort tailoring available for locale 'en-US'
+[100] bbl.pm:676> INFO - Writing 'cliscrape-techreport.bbl' with encoding 'UTF-8'
+[101] bbl.pm:779> INFO - Output to cliscrape-techreport.bbl

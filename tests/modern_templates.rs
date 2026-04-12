@@ -43,8 +43,7 @@ fn cli_can_override_template_format_for_ambiguous_extension() {
     let doc = std::fs::read_to_string("templates/modern/ios_show_interfaces.yaml").unwrap();
     let template_path = write_temp_file("unknown", &doc);
 
-    let output = Command::cargo_bin("cliscrape")
-        .unwrap()
+    let output = Command::new(assert_cmd::cargo::cargo_bin!("cliscrape"))
         .args([
             "parse",
             "--template-format",

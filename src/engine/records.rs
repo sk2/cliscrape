@@ -45,7 +45,10 @@ impl RecordBuffer {
     pub fn emit(
         &mut self,
         values: &HashMap<String, Value>,
-    ) -> Option<(BTreeMap<String, serde_json::Value>, Vec<crate::TemplateWarning>)> {
+    ) -> Option<(
+        BTreeMap<String, serde_json::Value>,
+        Vec<crate::TemplateWarning>,
+    )> {
         if !self.dirty {
             return None;
         }
@@ -71,7 +74,11 @@ impl RecordBuffer {
                     for s in vals {
                         let coerced = convert_scalar(s, val_def.type_hint);
                         if let Some(constraints) = &val_def.constraints {
-                            warnings.extend(crate::engine::validate::validate_value(name, &coerced, constraints));
+                            warnings.extend(crate::engine::validate::validate_value(
+                                name,
+                                &coerced,
+                                constraints,
+                            ));
                         }
                         json_vals.push(coerced);
                     }
@@ -79,7 +86,11 @@ impl RecordBuffer {
                 } else if let Some(v) = vals.last() {
                     let coerced = convert_scalar(v, val_def.type_hint);
                     if let Some(constraints) = &val_def.constraints {
-                        warnings.extend(crate::engine::validate::validate_value(name, &coerced, constraints));
+                        warnings.extend(crate::engine::validate::validate_value(
+                            name,
+                            &coerced,
+                            constraints,
+                        ));
                     }
                     record.insert(name.clone(), coerced);
                 }
@@ -168,7 +179,8 @@ mod tests {
         rb.insert("Interfaces".to_string(), "Eth1".to_string(), true);
         rb.insert("Interfaces".to_string(), "Eth2".to_string(), true);
 
-        let record = rb.emit(&values).unwrap();
+        let (record, warnings) = rb.emit(&values).unwrap();
+        assert!(warnings.is_empty());
         let interfaces = record.get("Interfaces").unwrap();
         assert!(interfaces.is_array());
         let arr = interfaces.as_array().unwrap();
@@ -199,7 +211,8 @@ mod tests {
         );
 
         rb.insert("Count".to_string(), "1,234".to_string(), false);
-        let record = rb.emit(&values).unwrap();
+        let (record, warnings) = rb.emit(&values).unwrap();
+        assert!(warnings.is_empty());
 
         assert_eq!(
             record["Count"],
@@ -229,7 +242,8 @@ mod tests {
         );
 
         rb.insert("Count".to_string(), "12x".to_string(), false);
-        let record = rb.emit(&values).unwrap();
+        let (record, warnings) = rb.emit(&values).unwrap();
+        assert!(warnings.is_empty());
 
         assert_eq!(
             record["Count"],
@@ -259,7 +273,8 @@ mod tests {
         );
 
         rb.insert("Raw".to_string(), "1,234".to_string(), false);
-        let record = rb.emit(&values).unwrap();
+        let (record, warnings) = rb.emit(&values).unwrap();
+        assert!(warnings.is_empty());
 
         assert_eq!(
             record["Raw"],
@@ -290,7 +305,8 @@ mod tests {
 
         rb.insert("Counts".to_string(), "1".to_string(), true);
         rb.insert("Counts".to_string(), "2,000".to_string(), true);
-        let record = rb.emit(&values).unwrap();
+        let (record, warnings) = rb.emit(&values).unwrap();
+        assert!(warnings.is_empty());
 
         let arr = record["Counts"].as_array().unwrap();
         assert_eq!(arr.len(), 2);
@@ -326,7 +342,8 @@ mod tests {
         );
 
         rb.insert("MaybeNum".to_string(), "+1_234".to_string(), false);
-        let record = rb.emit(&values).unwrap();
+        let (record, warnings) = rb.emit(&values).unwrap();
+        assert!(warnings.is_empty());
 
         assert_eq!(
             record["MaybeNum"],

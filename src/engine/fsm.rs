@@ -184,7 +184,9 @@ impl Template {
                     // Handle record action
                     match rule.record_action {
                         Action::Record => {
-                            if let Some((record, mut validation_warnings)) = record_buffer.emit(&self.values) {
+                            if let Some((record, mut validation_warnings)) =
+                                record_buffer.emit(&self.values)
+                            {
                                 warnings.append(&mut validation_warnings);
                                 // Validate threshold
                                 let template_fields: Vec<String> =
@@ -350,8 +352,10 @@ impl Template {
                         // Handle record action
                         match rule.record_action {
                             Action::Record => {
-                                if let Some((record, mut validation_warnings)) = record_buffer.emit(&self.values) {
-                                warnings.append(&mut validation_warnings);
+                                if let Some((record, mut validation_warnings)) =
+                                    record_buffer.emit(&self.values)
+                                {
+                                    warnings.append(&mut validation_warnings);
                                     // Validate threshold
                                     let template_fields: Vec<String> =
                                         self.values.keys().cloned().collect();
@@ -494,7 +498,10 @@ impl Template {
 
             while !finished_record {
                 let rules = self.states.get(&current_state).ok_or_else(|| {
-                    ScraperError::Template(format!("Invalid state in generation: {}", current_state))
+                    ScraperError::Template(format!(
+                        "Invalid state in generation: {}",
+                        current_state
+                    ))
                 })?;
 
                 let mut matched_any = false;
@@ -506,7 +513,9 @@ impl Template {
                     }
 
                     static NAMED_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
-                    let named_re = NAMED_RE.get_or_init(|| regex::Regex::new(r"\(\?P<([A-Za-z_][A-Za-z0-9_]*)>").unwrap());
+                    let named_re = NAMED_RE.get_or_init(|| {
+                        regex::Regex::new(r"\(\?P<([A-Za-z_][A-Za-z0-9_]*)>").unwrap()
+                    });
                     for cap in named_re.captures_iter(&rule.original_pattern) {
                         placeholders.push(cap.get(1).unwrap().as_str().to_string());
                     }
@@ -543,10 +552,15 @@ impl Template {
                                 let mut depth = 1; // Already inside the first '(' from group_prefix
                                 let mut end_idx = start_idx + group_prefix.len();
                                 let chars: Vec<char> = line.chars().collect();
-                                
-                                for (i, c) in chars.iter().enumerate().skip(start_idx + group_prefix.len()) {
-                                    if *c == '(' { depth += 1; }
-                                    else if *c == ')' {
+
+                                for (i, c) in chars
+                                    .iter()
+                                    .enumerate()
+                                    .skip(start_idx + group_prefix.len())
+                                {
+                                    if *c == '(' {
+                                        depth += 1;
+                                    } else if *c == ')' {
                                         depth -= 1;
                                         if depth == 0 {
                                             end_idx = i;
@@ -554,7 +568,7 @@ impl Template {
                                         }
                                     }
                                 }
-                                
+
                                 // Slice and replace
                                 // Note: we need to use byte indices for slicing, but `i` from `chars().enumerate()`
                                 // is a char index. We must be careful with unicode.
@@ -584,7 +598,7 @@ impl Template {
                         line = line.replace(r"\?", "?");
                         line = line.replace(r"\.", ".");
                         line = line.replace(r"(?:", "");
-                        
+
                         // Some patterns have trailing `)` from non-capturing groups if we blindly stripped `(?:`
                         // A truly rigorous inverse regex generator is complex. For the Oracle, we do our best.
 

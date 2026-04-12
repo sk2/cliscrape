@@ -1,10 +1,10 @@
 # Template Authoring Guide
 
-This guide covers how to write, test, and mathematically verify modern YAML templates for `cliscrape`.
+This guide covers how to write, test, and round-trip check modern YAML/TOML templates for `cliscrape`.
 
 ## The Modern YAML Format
 
-While `cliscrape` is 100% compatible with legacy TextFSM templates, it introduces a strict schema-driven YAML/TOML format. This format eliminates "regex soup" and enables advanced features like native type coercion, semantic diffing, and isomorphic simulation.
+`cliscrape` supports legacy TextFSM templates and introduces a schema-driven YAML/TOML format. This format keeps fields explicit and enables features like native type coercion, semantic diffing, constraints, and best-effort generation.
 
 ### Basic Structure
 
@@ -40,7 +40,7 @@ patterns:
 
 ## Field Metadata (The Network Compiler)
 
-The `fields` block defines the operational schema contract. By adding specific metadata to your fields, you unlock `cliscrape`'s advanced analytical capabilities.
+The `fields` block defines the operational schema contract. By adding specific metadata to your fields, you enable `cliscrape`'s analytical features.
 
 * `type: int | string` - Enables native JSON type coercion (e.g., `"1500" -> 1500`).
 * `identity: true` - Marks this field as a unique primary key for the record (e.g., an interface name). Used by the `diff` engine to track state changes.
@@ -51,20 +51,20 @@ The `fields` block defines the operational schema contract. By adding specific m
 
 ## Grammar Induction (Auto-Generation)
 
-If you are faced with a new, undocumented CLI output, you do not need to write the template from scratch. `cliscrape` can statistically infer the boilerplate template for you.
+If you are faced with a new, undocumented CLI output, `cliscrape` can infer a starting template for you.
 
 1. Gather 2-3 sample outputs of the command.
 2. Run the induction engine:
    ```bash
    cliscrape infer sample1.txt sample2.txt > new_template.yaml
    ```
-3. The engine will identify the static anchors and propose variable `(?P<data>.*)` capture groups for you to refine.
+3. The current engine identifies lines shared across samples as static anchors and emits broad `(?P<data>.*)` capture groups for varying lines. Treat the output as a scaffold to refine.
 
-## The FSM-Oracle: Bijective Verification
+## The FSM-Oracle: Round-Trip Verification
 
-A template is considered **"Bijectively Stable"** (Perfect) if it can parse raw text into JSON, and then regenerate that exact same text from the JSON without any data loss.
+A template is considered round-trip stable when it can parse raw text into JSON, generate synthetic text from the JSON, and parse that synthetic text back into the same JSON.
 
-When authoring a template, you should aim for Bijective Stability.
+When authoring a template, you should aim for round-trip stability where the command format makes that realistic.
 
 1. Create a fixture file: `tests/fixtures/my_vendor/my_command.txt`
 2. Run the Oracle Verification loop:
@@ -72,6 +72,6 @@ When authoring a template, you should aim for Bijective Stability.
    cliscrape parse my_command.txt --template my_template.yaml --verify
    ```
 
-If the verification succeeds, your template is mathematically proven to capture 100% of the relevant operational state. If it fails, `cliscrape` will emit a `verify_failed` tracing event, indicating that your regex patterns dropped syntactic information during the parse.
+If the verification succeeds, the template preserved the parsed semantic data for that fixture. If it fails, `cliscrape` emits a `verify_failed` tracing event and warns that the generated text did not parse back to the same JSON data.
 
 *(Note: Legacy TextFSM templates with complex OR `|` branching outside of capture groups are inherently non-injective and cannot be perfectly round-tripped).*

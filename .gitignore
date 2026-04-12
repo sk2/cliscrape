@@ -1,2 +1,12 @@
 /target
 /Cargo.lock
+/.cargo/config.toml
+
+# bv (beads viewer) local config and caches
+.bv/
+
+# LaTeX local build cache files
+docs/techreport/*.fdb_latexmk
+docs/techreport/*.fls
+docs/techreport/*.ilg
+docs/techreport/*.ind

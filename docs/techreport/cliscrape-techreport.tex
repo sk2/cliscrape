@@ -9,24 +9,25 @@
 \begin{document}
 
 \maketechreporttitle{
-  title       = {cliscrape: A High-Performance CLI Parsing Engine with Interactive TUI Debugger},
-  subtitle    = {TextFSM-Compatible State Machine Parser in Rust},
+  title       = {cliscrape: A Rust CLI Parsing Engine with Interactive TUI Debugger},
+  subtitle    = {TextFSM-Compatible Parsing, Modern Templates, and Network-Compiler Foundations},
   reportid    = {CS-TR-2026-01},
   classification = {OPEN SOURCE},
-  version     = {0.1.1},
-  date        = {March 2026},
+  version     = {0.1.2 report revision},
+  date        = {April 2026},
   author      = {Simon Knight},
   abstract    = {Network automation pipelines rely heavily on parsing
     unstructured CLI output from network devices.  This report presents
     cliscrape, a Rust implementation of a TextFSM-compatible state machine
-    parser that provides over 4 million lines/sec throughput, offering a
-    10--50$\times$ performance improvement over the Python reference
-    implementation. It maintains full compatibility with the existing
-    NTC-Templates library, incorporates an embedded XDG-compliant template library,
-    and features robust edge-case hardening. The system also introduces a modern
-    YAML/TOML template format, a TUI debugger, and a radically innovative
-    isomorphic generation mode that allows for bidirectional synthetic generation
-    of CLI text from structured JSON state.},
+    parser. Historical benchmarks have reported multi-million-line-per-second
+    throughput, but release performance claims should be regenerated from the
+    current benchmark suite before publication. The current implementation
+    supports legacy TextFSM templates, a modern YAML/TOML template format,
+    embedded/XDG template resolution, structured logging, policy constraints,
+    semantic diffing, grammar induction, best-effort synthetic generation, and
+    an interactive TUI debugger. Full NTC-Templates coverage, universal ledger
+    schemas, strict oracle semantics, release automation, and streaming parsing
+    remain tracked follow-up work.},
   coverimage  = {
     \begin{tikzpicture}[scale=1.0, every node/.style={transform shape}]
       \node[skNode, minimum width=3cm, fill=layerA] (input) at (0,0) {\textbf{CLI Output}};
@@ -47,6 +48,7 @@
   revisions = {
     0.1.0 & March 2026 & Initial architecture report \\
     0.1.1 & March 2026 & Added ecosystem context, case studies, production hardening, and performance data \\
+    0.1.2 & April 2026 & Synced claims with current code, tests, and roadmap gaps \\
   },
 }
 
@@ -73,7 +75,10 @@ configuration and monitoring.  Parsing this unstructured text output
 is often the bottleneck in automation pipelines.
 TextFSM~\cite{textfsm2024} provides a template-based approach using
 state machines, and the NTC-Templates~\cite{ntc_templates2024} library
-offers hundreds of community-maintained templates.
+offers hundreds of community-maintained templates. \texttt{cliscrape}
+implements a compatible TextFSM loading path and a modern template format;
+full coverage of the external NTC template corpus is still a compatibility
+target rather than the current embedded library state.
 
 However, the Python TextFSM implementation has three core limitations:
 performance limitations due to interpreted execution (often struggling
@@ -121,19 +126,17 @@ System image file is "flash:/c2960-lanbasek9-mz.150-2.SE11.bin"
 
 Instead of brittle custom scripts or string-splitting, the \ac{FSM} engine applies an embedded YAML or TextFSM template. The variables defined in the template dictate the keys of the resulting \ac{JSON} object.
 
-\begin{lstlisting}[language=json, title={Parsed Structured Output}]
+\begin{lstlisting}[language=json, title={Parsed Structured Output (excerpt)}]
 [
   {
     "hostname": "SW-CORE-01",
-    "model": "WS-C2960-48TT-L",
-    "serial": ":",
     "uptime": "5 weeks, 2 days, 3 hours, 45 minutes",
     "version": "15.0(2)SE11,"
   }
 ]
 \end{lstlisting}
 
-This operational model allows downstream tools like \texttt{netassure} to perform strict type-checking and logical assertions against properties like \texttt{uptime} and \texttt{version}, entirely decoupled from the vendor-specific formatting quirks of the original CLI.
+This operational model allows downstream tools to perform type-aware assertions against properties like \texttt{uptime} and \texttt{version}, decoupled from many vendor-specific formatting quirks of the original CLI. The current validation snapshots have also exposed template-specific extraction bugs, such as Cisco IOS serial-number handling, which should be fixed as template correctness work rather than hidden in report examples.
 
 %% =====================================================================
 \section{FSM Engine Architecture}
@@ -232,7 +235,7 @@ These modifiers allow the parser to build deep, relational data structures from 
 
 Supporting both TextFSM and YAML formats allows teams to migrate incrementally. Existing templates work immediately via a compatibility translation layer. New templates can use the more readable YAML format. Both compile to the same internal \ac{FSM} representation (IR).
 
-Beyond mere readability, the shift to YAML/TOML introduces a strict schema definition capability. Because values can be natively typed (e.g., explicitly defining an interface MTU as an integer rather than an arbitrary regex string), \texttt{cliscrape} can automatically generate downstream tooling assets like typed struct definitions, upstream documentation, and the embedded Template Catalog.
+Beyond mere readability, the shift to YAML/TOML introduces explicit schema definition capability. Because values can be natively typed (e.g., explicitly defining an interface MTU as an integer rather than an arbitrary regex string), \texttt{cliscrape} can support downstream tooling such as JSON Schema generation, typed client bindings, and documentation validation. Those assets are roadmap items, not all current shipped behavior.
 
 \subsection{Native Type Coercion}
 
@@ -268,40 +271,40 @@ Because \texttt{cliscrape}'s modern templates allow explicit type definitions, t
 
 Moving from a parsing prototype to a robust operational tool required several critical system enhancements to handle edge cases, simplify deployments, and ensure continuous availability.
 
-\subsection{Zero-Dependency Static Deployment}
-In enterprise networking environments, deploying tools to jump-hosts or restricted bastion servers is often hindered by Python runtime dependencies, virtual environments, and missing \texttt{pip} packages. Because \texttt{cliscrape} is written in Rust and bundles its templates internally, it compiles down to a single, zero-dependency static binary. Operators can simply \texttt{scp} the executable to any restricted node and parse CLI outputs out-of-the-box without altering the host system state.
+\subsection{Native Binary Deployment}
+In enterprise networking environments, deploying tools to jump-hosts or restricted bastion servers is often hindered by Python runtime dependencies, virtual environments, and missing \texttt{pip} packages. Because \texttt{cliscrape} is written in Rust and bundles its templates internally, it can be distributed as a single native executable per target platform. Operators can copy the executable to a restricted node and parse CLI outputs without installing a Python runtime or template package set.
 
 \subsection{Embedded Template Library \& Hot-Reloading}
-To eliminate the friction of distributing raw template files, \texttt{cliscrape} ships with an embedded library of validated templates. Using an XDG-compliant resolver, users can parse outputs simply by declaring the target device and command, e.g., \texttt{-t cisco\_ios\_show\_version}. User-defined overrides placed in \texttt{\textasciitilde{}/.local/share/cliscrape/templates/} automatically take precedence over embedded defaults. 
+To eliminate the friction of distributing raw template files, \texttt{cliscrape} ships with a small embedded template library. Using an XDG-compliant resolver, users can parse outputs by declaring a template identifier, e.g., \texttt{-t cisco\_ios\_show\_version}, or an explicit template file. User-defined overrides placed in \texttt{\textasciitilde{}/.local/share/cliscrape/templates/} take precedence over embedded defaults.
 
-Furthermore, the embedded library utilizes \texttt{rust-embed} to provide dual-mode execution. In release builds, templates are compiled directly into the binary for zero-dependency deployment. In debug builds, the engine dynamically reads from the local filesystem, enabling instant hot-reloading of templates during development without requiring recompilation.
+Furthermore, the embedded library utilizes \texttt{rust-embed} to provide dual-mode execution. In release builds, templates are compiled directly into the binary for self-contained template deployment. In debug builds, the engine dynamically reads from the local filesystem, enabling instant hot-reloading of templates during development without requiring recompilation.
 
 \subsection{Validation and Edge Case Management}
 Network CLI data is notoriously inconsistent due to firmware patches, unexpected banners, and hardware variants. The engine implements strict thresholds and boundaries:
 \begin{itemize}
     \item \textbf{Coverage Validation:} A configurable warning system triggers if a parsed output matches fewer fields than a minimum acceptable threshold (e.g., 80\%), acting as a canary for firmware formatting changes.
-    \item \textbf{Regex Boundary Enforcement:} To defend against catastrophic backtracking in custom user templates, timeout mechanisms and contextual line-number errors preemptively kill hung matching processes.
-    \item \textbf{Snapshot Testing:} A comprehensive internal suite relies on \texttt{insta} snapshots, ensuring every embedded template guarantees identical parsed \ac{JSON} parity against real-world fixture data across updates.
+    \item \textbf{Timeout Guard:} Rust's \texttt{regex} crate avoids backtracking-style regex explosions, and parse calls can also set an elapsed-time timeout guard for operational control.
+    \item \textbf{Snapshot Testing:} A comprehensive internal suite relies on \texttt{insta} snapshots, guarding parsed \ac{JSON} output against unintended fixture regressions across updates.
     \item \textbf{Execution Modes:} To balance resilience with strictness, the parser supports a Partial-Match mode (gracefully returning successfully parsed data alongside warnings for missing fields) and a \texttt{--strict} Fail-Fast mode that aborts execution upon the first error.
 \end{itemize}
 
 \subsection{Structured Observability}
-For production deployments, raw text logs are insufficient. The engine utilises Rust's \texttt{tracing} framework to emit highly structured \ac{JSON} events, capturing module-level lifecycle events, resolution paths, and parsing failures seamlessly for integration into enterprise observability pipelines.
+For production deployments, raw text logs are insufficient. The engine utilises Rust's \texttt{tracing} framework and supports JSON log formatting, capturing module-level lifecycle events, resolution paths, and parsing failures for integration into observability pipelines.
 
 %% =====================================================================
 \section{Isomorphic Simulation and Synthetic Generation}
 \label{sec:simulation}
 %% =====================================================================
 
-The most significant architectural advancement in \texttt{cliscrape} is the introduction of isomorphic state machine execution. While traditional parsers represent a unidirectional projection from unstructured text to structured data, \texttt{cliscrape} treats the FSM as a bijective mapping ($FSM \leftrightarrow FSM^{-1}$).
+One architectural direction in \texttt{cliscrape} is round-trip state machine execution. Traditional parsers represent a unidirectional projection from unstructured text to structured data; \texttt{cliscrape} adds best-effort generation from structured records back into CLI-like text.
 
 \subsection{The Inverse Parser (\texorpdfstring{$FSM^{-1}$}{FSM-1})}
-Because the modern YAML/TOML templates enforce strict schema contracts and type coercion, the parsing engine can be executed in reverse. In this mode, \texttt{cliscrape} consumes a structured \ac{JSON} object and uses the template's rules to synthesize perfectly formatted, pixel-accurate raw CLI text.
+Because the modern YAML/TOML templates preserve rule patterns and field metadata, the parsing engine can be run in a reverse direction for some templates. In this mode, \texttt{cliscrape} consumes structured \ac{JSON} records and uses template rules to synthesize CLI-like text. This is useful, but it is not yet a general inverse-regex solver and should not be described as pixel-accurate for every template.
 
-This capability transforms the parser into a deterministic network device simulator. By providing a hypothetical device state (e.g., a BGP neighbor down or an interface flapping), operators can instantly generate the corresponding CLI output required to test downstream automation pipelines, monitoring logic, and alert systems without requiring access to physical hardware.
+This capability is a foundation for deterministic network-device simulation. By providing a hypothetical device state, operators can generate representative CLI output for downstream automation tests. The richer simulator, session protocol integration, and vendor-authentic formatting remain planned v3.0 work.
 
 \subsection{Mathematical Verification}
-Isomorphic generation also provides a mechanism for mathematical verification of templates. A template is considered "bijectively stable" if a raw CLI string parsed into \ac{JSON} can be re-generated into a string that is semantically identical to the original input. This "round-trip" validation ensures that the template captures 100\% of the relevant operational state without loss of fidelity.
+Round-trip generation also provides a mechanism for template verification. A template is round-trip stable for a fixture if raw CLI text parses into \ac{JSON}, generates synthetic text, and re-parses into the same \ac{JSON}. Current verification reports mismatches but does not fail the whole suite for every non-injective template, so stricter oracle semantics remain future hardening work.
 
 %% =====================================================================
 \section{Interactive TUI Debugger}
@@ -310,7 +313,7 @@ Isomorphic generation also provides a mechanism for mathematical verification of
 
 The built-in \ac{TUI} provides an integrated "Live Lab", offering visual, interactive observability into the parser execution, eliminating trial-and-error template development.
 
-Beyond simply debugging a single file, the TUI includes a full \textbf{Template Browser}. Users can browse the embedded XDG library, select a template (e.g., \texttt{cisco\_ios\_show\_version}), and instantly load it into the Live Lab alongside their current raw CLI text. The parsing engine automatically recompiles the selected template and re-evaluates the input text in real-time.
+Beyond simply debugging a single file, the TUI includes a \textbf{Template Browser}. Users can press \texttt{t} to browse embedded and XDG user templates, select a template (e.g., \texttt{cisco\_ios\_show\_version.yaml}), and load it into the Live Lab alongside their current raw CLI text. The parsing engine re-runs when watched template/input files change, and after saving edits in the template editor.
 
 \begin{figure}[H]
 \centering
@@ -344,19 +347,19 @@ The interface offers four panes: an \textbf{Input Pane} for raw text with line h
 \label{sec:future}
 %% =====================================================================
 
-By establishing a bijective mathematical engine ($FSM \leftrightarrow FSM^{-1}$) and enforcing rigorous type contracts, \texttt{cliscrape} provides the foundational primitive for several advanced theoretical applications within the broader automation ecosystem.
+By combining a TextFSM-compatible runtime, typed modern templates, semantic diffing, policy constraints, and best-effort generation, \texttt{cliscrape} provides a foundation for several advanced applications within the broader automation ecosystem.
 
 \subsection{Semantic Drift Analysis}
-Traditional diff utilities are line-oriented and text-blind, heavily penalizing syntactic noise such as timestamp updates or pagination artifacts. Because \texttt{cliscrape} projects raw text into a typed \ac{JSON} manifold, it enables Operational Diffs. By isolating the delta between two parsed states ($S_1 \rightarrow S_2$), the system identifies genuine semantic transitions (e.g., a BGP peer state changing from ESTABLISHED to IDLE) while ignoring trivial formatting shifts.
+Traditional diff utilities are line-oriented and text-blind, heavily penalizing syntactic noise such as timestamp updates or pagination artifacts. Because \texttt{cliscrape} projects raw text into structured \ac{JSON} records, it enables Operational Diffs. By isolating the delta between two parsed states ($S_1 \rightarrow S_2$), the system identifies semantic transitions while ignoring fields explicitly marked as diff noise.
 
-\subsection{Vendor-Neutral State Manifolds}
-Network data is traditionally trapped within vendor-specific syntax constraints. \texttt{cliscrape}'s modern YAML definitions permit mapping disparate outputs (e.g., \texttt{cisco\_ios\_show\allowbreak\_ip\_route} and \texttt{juniper\_junos\allowbreak\_show\_route}) onto a singular, universal semantic schema. This creates a unified data ledger, allowing downstream systems to query the network's operational state without vendor-specific logic.
+\subsection{Vendor-Neutral State Schemas}
+Network data is traditionally trapped within vendor-specific syntax constraints. \texttt{cliscrape}'s modern YAML definitions include a \texttt{common\_schema} field hook that can map vendor-specific names onto a universal semantic schema. The embedded templates do not yet provide full ledger coverage; standard schemas and compliance validation are the Phase 17 Universal Ledger work.
 
 \subsection{Grammar Induction and Structural Inference}
-Presently, template creation relies on human authoring. Future iterations of the parsing engine aim to employ grammar induction techniques over large corpuses of raw CLI outputs. By statistically identifying static structural anchors versus variable data payloads, the engine can autonomously synthesize candidate FSM templates for new operating systems, effectively "learning" the language of unknown devices.
+Current template creation still relies on human refinement. The existing \texttt{infer} command can identify static lines shared across samples and emit broad candidate capture groups as a scaffold. Future iterations should deepen that grammar-induction layer over larger corpuses of raw CLI outputs.
 
 \subsection{The FSM-Oracle: Self-Verification}
-The inverse parser facilitates the creation of a closed-loop FSM-Oracle. When a network device receives a firmware update that alters its CLI output formatting, the oracle can detect the anomaly automatically. By continuously verifying templates for round-trip bijective stability, the ecosystem can flag broken templates the moment they fail to losslessly re-generate their input state, laying the groundwork for self-healing automation.
+The generator facilitates a closed-loop FSM-Oracle direction. When a network device receives a firmware update that alters its CLI output formatting, round-trip checks can detect semantic drift between original and generated records. Today this is a warning-oriented verification loop; a strict CI gate over selected templates is still needed before calling it a proof system.
 
 \begin{figure}[H]
 \centering
@@ -364,18 +367,18 @@ The inverse parser facilitates the creation of a closed-loop FSM-Oracle. When a 
 \begin{tikzpicture}[skd, node distance=12mm and 15mm]
   \node[skdData, minimum width=3.5cm] (raw) {\textbf{Raw CLI Output}\\\footnotesize (e.g., Firmware v15.4)};
   \node[skdCompute, right=of raw, minimum width=3cm] (parse) {\textbf{Parser}\\\footnotesize $FSM$};
-  \node[skdStore, right=of parse, minimum width=3cm] (json) {\textbf{Typed State}\\\footnotesize JSON manifold};
-  \node[skdCompute, below=of parse, minimum width=3cm] (gen) {\textbf{Generator}\\\footnotesize $FSM^{-1}$};
+  \node[skdStore, right=of parse, minimum width=3cm] (json) {\textbf{Structured Records}\\\footnotesize JSON};
+  \node[skdCompute, below=of parse, minimum width=3cm] (gen) {\textbf{Generator}\\\footnotesize best effort};
   \node[skdData, left=of gen, minimum width=3.5cm] (synth) {\textbf{Synthetic Output}\\\footnotesize generated text};
 
   \draw[skdDataArrow] (raw) -- (parse);
   \draw[skdDataArrow] (parse) -- (json);
   \draw[skdDataArrow] (json) |- (gen);
   \draw[skdDataArrow] (gen) -- (synth);
-  \draw[skdCtrlArrow, <->] (raw.south) -- node[right, font=\scriptsize] {Bijective Equality Check} (synth.north);
+  \draw[skdCtrlArrow, <->] (raw.south) -- node[right, font=\scriptsize] {Semantic Round-Trip Check} (synth.north);
 \end{tikzpicture}%
 }
-\caption{The FSM-Oracle closed loop. A template is proven robust if the generated synthetic output perfectly matches the original raw CLI output.}
+\caption{The FSM-Oracle direction. A template is stronger when generated synthetic output re-parses to the same semantic records as the original raw CLI output.}
 \label{fig:cs-fsm-oracle}
 \end{figure}
 
@@ -385,9 +388,9 @@ The inverse parser facilitates the creation of a closed-loop FSM-Oracle. When a 
 \label{sec:performance}
 %% =====================================================================
 
-The transition from interpreted Python execution to a zero-cost abstraction model in Rust yields significant performance gains. Benchmark testing using the Criterion framework indicates that \texttt{cliscrape} operates at a sustained throughput of approximately \textbf{4.1 million lines per second}.
+The transition from interpreted Python execution to Rust should yield significant performance gains, and the project includes Criterion benchmarks for throughput tracking. Earlier benchmark runs reported approximately \textbf{4.1 million lines per second}; current release notes should regenerate this number from the checked-in benchmark suite before making public performance claims.
 
-This magnitude of throughput enables the processing of massive \texttt{show tech-support} archives in milliseconds rather than seconds. When compared directly to the legacy Python implementation, the compiled Rust architecture and DFA-based regex matching deliver a stable \textbf{10--50$\times$ improvement} in parsing speed, free from GIL bottlenecks and catastrophic backtracking delays. Furthermore, the verified overhead of the production structured logging framework remains strictly below the targeted 5\% margin.
+The compiled Rust architecture and DFA-based regex matching avoid Python GIL bottlenecks and backtracking-style regex explosions. A dedicated performance-regression CI gate and refreshed benchmark baselines remain open follow-up work.
 
 %% =====================================================================
 \section{Design Summary}
@@ -403,13 +406,13 @@ This magnitude of throughput enables the processing of massive \texttt{show tech
   \textbf{Decision} & \textbf{Rationale} \\
   \midrule
   Rust regex crate & DFA-based $O(n)$ matching; no backtracking vulnerabilities \\
-  Full TextFSM compat & Zero-cost migration from existing NTC-Templates \\
+  TextFSM compatibility & Migration path for legacy TextFSM templates \\
   Stateful modifiers & Filldown/List support native relational data extraction \\
   Dual template formats & Incremental adoption; YAML for new templates \\
   Native type coercion & YAML template hints yield directly queryable JSON types \\
-  Isomorphic Simulation & Bidirectional $FSM^{-1}$ execution enables synthetic CLI generation \\
+  Best-effort generation & Structured records can generate representative synthetic CLI text \\
   Embedded library & XDG-compliant, zero-configuration parsing out-of-the-box \\
-  TUI debugger & Real-time FSM visualisation eliminates trial-and-error template development \\
+  TUI debugger & Interactive FSM visualisation reduces trial-and-error template development \\
   \bottomrule
 \end{tabularx}
 \end{table}

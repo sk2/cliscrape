@@ -2,8 +2,7 @@ use assert_cmd::Command;
 
 #[test]
 fn parse_help_includes_phase2_contract_flags_and_defaults() {
-    let output = Command::cargo_bin("cliscrape")
-        .expect("cliscrape binary builds")
+    let output = Command::new(assert_cmd::cargo::cargo_bin!("cliscrape"))
         .args(["parse", "--help"])
         .output()
         .expect("run cliscrape parse --help");

@@ -1,7 +1,7 @@
 # Phase 16: Semantic Constraint Logic - Context
 
 **Gathered:** 2026-03-20
-**Status:** Ready for planning
+**Status:** Historical planning context; implementation completed with the current field names noted below
 
 <domain>
 ## Phase Boundary
@@ -15,7 +15,7 @@ Add policy-aware parsing so modern templates can declare constraints, the parser
 
 ### Constraint authoring
 - Use a hybrid authoring model: simple constraints live with each field, while the design should leave room for a separate section for more advanced cases later.
-- Ship only the roadmap constraint types in this phase: `min`, `max`, `allowed_values`, and `regex_assertions`.
+- Ship only the roadmap constraint types in this phase: `min`, `max`, `choices`, and `regex`.
 - Keep the authoring model future-friendly so additional constraint kinds can slot in later without redesigning the template shape.
 - Constraints should be profile-based rather than purely ad hoc; authors should be able to opt into stricter policy behavior instead of relying only on unconstrained fields.
 
@@ -34,7 +34,7 @@ Add policy-aware parsing so modern templates can declare constraints, the parser
 ### Constraint semantics
 - Missing constrained fields should be treated as rule-dependent rather than always valid or always invalid.
 - If type conversion fails before a numeric check, user-facing behavior should capture both the conversion problem and the resulting constraint failure.
-- `regex_assertions` should pass on any regex match by default.
+- `regex` constraints should pass on any regex match by default.
 - When one field violates multiple constraints, reporting should show a concise headline failure while retaining full detail in tracing or deeper reporting.
 
 ### Claude's Discretion

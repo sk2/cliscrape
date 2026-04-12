@@ -1,5 +1,5 @@
-use crate::engine::types::FieldConstraints;
 use crate::TemplateWarning;
+use crate::engine::types::FieldConstraints;
 use serde_json::Value;
 
 pub fn validate_value(

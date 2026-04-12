@@ -25,10 +25,14 @@ To support both TextFSM and newer formats (YAML/TOML), `cliscrape` uses an inter
 - **`Template` Object:** Contains `Values` and `States`.
 - **`Value` Definition:** 
   - `regex`: The pattern.
-  - `type`: (Integer, String, IP, etc. - extension beyond TextFSM).
+  - `type`: Integer or string hint for JSON value conversion.
   - `filldown`: Carry value to subsequent records.
   - `required`: Record is only valid if this value is present.
   - `list`: Accumulate multiple matches into a list.
+  - `identity`: Use the field as a semantic diff identity key.
+  - `ignore`: Exclude the field from semantic diff comparisons.
+  - `common_schema`: Optional output key used by `--common`.
+  - `constraints`: Optional `min`, `max`, `choices`, and `regex` policy checks.
 
 ## 3. TUI Debugger Layout
 
@@ -55,29 +59,33 @@ The TUI is built using `ratatui` and aims for a high-density, informative displa
 
 ## 4. Performance Considerations
 
-- **Regex Compilation:** All regexes are pre-compiled into a `RegexSet` where possible for fast dispatching.
-- **Memory Management:** Use a pre-allocated buffer for records to avoid frequent heap allocations during large-scale parsing.
-- **Zero-Copy:** Where possible, values will be `Cow<'a, str>` referencing the original input string.
+- **Regex Compilation:** Each rule regex is compiled once when the template IR is lowered into the runtime `Template`.
+- **Memory Management:** Captures are stored in an owned `RecordBuffer` and emitted as `serde_json::Value` records.
+- **Timeout Guard:** Parse calls can set `timeout_ms`; the engine checks elapsed time while processing lines.
 
 ## 5. Modern Configuration (YAML)
 
 The goal is to make templates more readable than the positional logic of TextFSM.
 
 ```yaml
-# Proposed modern format
-meta:
-  name: cisco_show_version
-  author: Simon Knight
+version: 1
 
-values:
-  version: (?P<version>\d+\.\S+)
-  uptime: (?P<uptime>.+)
+metadata:
+  description: "Parse show version"
+  compatibility: "Vendor OS 1.0"
+  version: "1.0.0"
 
-states:
-  Start:
-    - match: "^Cisco IOS Software, .+ Version ${version},"
-      next_state: Main
-  Main:
-    - match: "^.+ uptime is ${uptime}"
-      actions: [Record]
+fields:
+  version:
+    type: string
+    pattern: '\d+\.\S+'
+  uptime:
+    type: string
+    pattern: '.+'
+    ignore: true
+
+patterns:
+  - regex: '^Cisco IOS Software, .+ Version ${version},'
+  - regex: '^.+ uptime is ${uptime}'
+    record: true
 ```

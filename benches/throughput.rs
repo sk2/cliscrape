@@ -15,8 +15,8 @@ fn benchmark_throughput(c: &mut Criterion) {
             filldown: false,
             required: true,
             list: false,
-                identity: false,
-                ignore: false,
+            identity: false,
+            ignore: false,
             type_hint: None,
         },
     );
@@ -28,8 +28,8 @@ fn benchmark_throughput(c: &mut Criterion) {
             filldown: false,
             required: false,
             list: false,
-                identity: false,
-                ignore: false,
+            identity: false,
+            ignore: false,
             type_hint: None,
         },
     );

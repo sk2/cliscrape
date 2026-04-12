@@ -466,21 +466,6 @@ impl AppState {
         }
     }
 
-    pub fn jump_to_line(&mut self, line_idx: usize) {
-        let Some(report) = &self.last_good else {
-            return;
-        };
-        if let Some((idx, _)) = report
-            .trace
-            .iter()
-            .enumerate()
-            .find(|(_, e)| e.line_idx == line_idx)
-        {
-            self.trace_index = idx;
-            self.sync_cursor_to_trace();
-        }
-    }
-
     // Filter and mode toggles
 
     pub fn toggle_stepping_mode(&mut self) {
@@ -506,16 +491,6 @@ impl AppState {
 
     pub fn toggle_filter_clear_actions(&mut self) {
         self.filter_state.show_clear_actions = !self.filter_state.show_clear_actions;
-    }
-
-    // Watch list methods
-
-    pub fn toggle_watch(&mut self, var_name: String) {
-        if self.watch_list.contains(&var_name) {
-            self.watch_list.remove(&var_name);
-        } else {
-            self.watch_list.insert(var_name);
-        }
     }
 }
 

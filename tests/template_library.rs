@@ -1,10 +1,14 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
 
+fn cliscrape_cmd() -> Command {
+    Command::new(assert_cmd::cargo::cargo_bin!("cliscrape"))
+}
+
 /// Test that list-templates shows all embedded templates with metadata
 #[test]
 fn test_list_embedded_templates() {
-    let mut cmd = Command::cargo_bin("cliscrape").unwrap();
+    let mut cmd = cliscrape_cmd();
     cmd.arg("list-templates").arg("--format").arg("json");
 
     let output = cmd.assert().success();
@@ -80,7 +84,7 @@ fn test_list_embedded_templates() {
 /// Test that show-template displays metadata and field information
 #[test]
 fn test_show_template_details() {
-    let mut cmd = Command::cargo_bin("cliscrape").unwrap();
+    let mut cmd = cliscrape_cmd();
     cmd.arg("show-template").arg("cisco_ios_show_version.yaml");
 
     cmd.assert()
@@ -103,7 +107,7 @@ System serial number: FOC1234ABCD
 cisco WS-C2960-48TT-L (PowerPC405) processor (revision V02) with 65536K bytes of memory.
 "#;
 
-    let mut cmd = Command::cargo_bin("cliscrape").unwrap();
+    let mut cmd = cliscrape_cmd();
     cmd.arg("parse")
         .arg("--template")
         .arg("cisco_ios_show_version.yaml")
@@ -137,7 +141,7 @@ cisco WS-C2960-48TT-L (PowerPC405) processor (revision V02) with 65536K bytes of
 #[test]
 fn test_template_name_security_validation() {
     // Test path traversal attempt with non-existent path (to trigger resolver validation)
-    let mut cmd = Command::cargo_bin("cliscrape").unwrap();
+    let mut cmd = cliscrape_cmd();
     cmd.arg("parse")
         .arg("--template")
         .arg("../nonexistent/template")
@@ -149,7 +153,7 @@ fn test_template_name_security_validation() {
         .stderr(predicate::str::contains("not found"));
 
     // Test template name with path separators (should be rejected by resolver)
-    let mut cmd = Command::cargo_bin("cliscrape").unwrap();
+    let mut cmd = cliscrape_cmd();
     cmd.arg("parse")
         .arg("--template")
         .arg("evil/../../etc/passwd")
@@ -164,7 +168,7 @@ fn test_template_name_security_validation() {
 /// Test that filtering templates works with glob patterns
 #[test]
 fn test_filter_templates() {
-    let mut cmd = Command::cargo_bin("cliscrape").unwrap();
+    let mut cmd = cliscrape_cmd();
     cmd.arg("list-templates")
         .arg("--filter")
         .arg("cisco*")
@@ -216,7 +220,7 @@ fn test_filter_templates() {
 /// Test that show-template includes source code when --source flag is used
 #[test]
 fn test_show_template_source_flag() {
-    let mut cmd = Command::cargo_bin("cliscrape").unwrap();
+    let mut cmd = cliscrape_cmd();
     cmd.arg("show-template")
         .arg("cisco_ios_show_version.yaml")
         .arg("--source");
@@ -232,7 +236,7 @@ fn test_show_template_source_flag() {
 /// Test that nonexistent template returns appropriate error
 #[test]
 fn test_nonexistent_template_error() {
-    let mut cmd = Command::cargo_bin("cliscrape").unwrap();
+    let mut cmd = cliscrape_cmd();
     cmd.arg("show-template").arg("nonexistent_template.yaml");
 
     cmd.assert()
@@ -243,7 +247,7 @@ fn test_nonexistent_template_error() {
 /// Test CSV format returns error (not supported)
 #[test]
 fn test_list_templates_csv_format_error() {
-    let mut cmd = Command::cargo_bin("cliscrape").unwrap();
+    let mut cmd = cliscrape_cmd();
     cmd.arg("list-templates").arg("--format").arg("csv");
 
     cmd.assert()
@@ -254,7 +258,7 @@ fn test_list_templates_csv_format_error() {
 /// Test that embedded templates have correct metadata
 #[test]
 fn test_embedded_template_metadata() {
-    let mut cmd = Command::cargo_bin("cliscrape").unwrap();
+    let mut cmd = cliscrape_cmd();
     cmd.arg("list-templates").arg("--format").arg("json");
 
     let output = cmd.assert().success();
@@ -294,7 +298,7 @@ fn test_embedded_template_metadata() {
 /// Test that template list is sorted alphabetically
 #[test]
 fn test_template_list_sorted() {
-    let mut cmd = Command::cargo_bin("cliscrape").unwrap();
+    let mut cmd = cliscrape_cmd();
     cmd.arg("list-templates").arg("--format").arg("json");
 
     let output = cmd.assert().success();

@@ -186,9 +186,9 @@ pub enum OutputFormat {
     Auto,
     /// JSON output
     Json,
-    /// CSV output (placeholder)
+    /// CSV output
     Csv,
-    /// Table output (placeholder)
+    /// Table output
     Table,
 }
 

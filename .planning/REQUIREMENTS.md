@@ -37,12 +37,12 @@ These requirements were defined for the shipped v1.5 milestone and are retained 
 
 - [x] **TUI-01**: User can select embedded templates from Live Lab TUI mode
 - [x] **TUI-02**: User can browse available templates with descriptions and metadata
-- [x] **TUI-03**: User can run validation tests interactively from TUI
+- [ ] **TUI-03**: User can run validation tests interactively from TUI
 - [x] **TUI-04**: User can load XDG user templates in TUI mode
 
 ### Edge Case Hardening
 
-- [x] **HARD-01**: User receives timeout errors for regex patterns with catastrophic backtracking
+- [x] **HARD-01**: User can set a parse timeout and receives timeout errors when it is exceeded
 - [x] **HARD-02**: User receives warnings when template match threshold is not met
 - [x] **HARD-03**: User receives contextual error messages showing parsing failures with line context
 - [x] **HARD-04**: User can choose fail-fast mode (abort on first error) or partial-match mode (continue with warnings)
@@ -59,10 +59,10 @@ These requirements were defined for the shipped v1.5 milestone and are retained 
 ### Documentation
 
 - [x] **DOC-01**: User can read comprehensive guide covering template selection and usage
-- [x] **DOC-02**: User can view auto-generated catalog of available templates
+- [ ] **DOC-02**: User can view auto-generated catalog of available templates
 - [x] **DOC-03**: User can read template authoring guide with YAML format and FSM concepts
 - [x] **DOC-04**: User can find troubleshooting guide for common parsing errors
-- [x] **DOC-05**: Developer verifies all documentation examples pass CI validation
+- [ ] **DOC-05**: Developer verifies all documentation examples pass CI validation
 
 ## Active Requirements: v2.0 The Network Compiler
 
@@ -129,9 +129,9 @@ These remain potential future requirement areas but are not the active planning 
 | VAL-05 | Phase 7 | Complete |
 | TUI-01 | Phase 8 | Complete |
 | TUI-02 | Phase 8 | Complete |
-| TUI-03 | Phase 8 | Complete |
+| TUI-03 | Phase 8 | Deferred; no interactive validation runner is present in current TUI code |
 | TUI-04 | Phase 8 | Complete |
-| HARD-01 | Phase 9 | Complete |
+| HARD-01 | Phase 9 | Complete as parser timeout guard |
 | HARD-02 | Phase 9 | Complete |
 | HARD-03 | Phase 9 | Complete |
 | HARD-04 | Phase 9 | Complete |

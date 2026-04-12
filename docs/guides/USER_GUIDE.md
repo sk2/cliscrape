@@ -1,6 +1,6 @@
 # cliscrape User Guide
 
-`cliscrape` is a high-performance CLI scraping and parsing tool for network devices. It converts unstructured vendor-specific CLI output into strictly typed JSON manifolds, enabling advanced operations like semantic differential tracking and generative testing.
+`cliscrape` is a high-performance CLI scraping and parsing tool for network devices. It converts unstructured vendor-specific CLI output into typed JSON records, enabling advanced operations like semantic differential tracking and generative testing.
 
 ## Table of Contents
 1. [Core Philosophy](#core-philosophy)
@@ -18,7 +18,7 @@
 
 Network changes are not changes in text; they are **state transitions** within a distributed system. 
 
-Legacy tools like Python's TextFSM extract unstructured string arrays. `cliscrape` uses a modern Finite State Machine (FSM) engine written in Rust to project raw device output into a **strongly typed JSON manifold**. This enables downstream systems (like Autonetkit and NetAssure) to query the network using structured logic rather than brittle regex parsing.
+Legacy tools like Python's TextFSM extract unstructured string arrays. `cliscrape` uses a modern Finite State Machine (FSM) engine written in Rust to project raw device output into structured JSON records. This enables downstream systems to query the network using structured logic rather than brittle regex parsing.
 
 ## Basic Parsing
 
@@ -38,17 +38,17 @@ Network data is notoriously inconsistent. `cliscrape` provides several modes for
 
 ## Template Discovery
 
-You do not need to manually search for templates. `cliscrape` includes discovery tools to find the correct parser for your device.
+`cliscrape` includes tools for browsing the embedded template set and inspecting template metadata.
 
 ```bash
 # List all available embedded templates
 cliscrape list-templates
 
 # Search for specific vendors/commands
-cliscrape list-templates "cisco*interfaces*"
+cliscrape list-templates --filter 'cisco*interfaces*'
 
 # View the metadata, fields, and source of a template
-cliscrape show-template cisco_ios_show_version
+cliscrape show-template cisco_ios_show_version.yaml
 ```
 
 *Note: You can override any embedded template by placing a file with the identical name in `~/.local/share/cliscrape/templates/`.*
@@ -63,8 +63,8 @@ cliscrape debug -t my_template.yaml -i raw_output.txt
 ```
 
 **Features:**
-1. **Template Browser:** Press `L` to browse the embedded template library and instantly load it into the lab.
-2. **Real-time Evaluation:** The engine hot-reloads the template and re-evaluates the FSM continuously as you type.
+1. **Template Browser:** Press `t` to browse templates and load one into the lab.
+2. **Evaluation Loop:** The engine re-parses when watched template/input files change, and after saving edits in the template editor.
 3. **State Tracing:** Visually step through the FSM's match/action loop line-by-line to find exactly where a regex failed.
 
 ---
@@ -81,25 +81,25 @@ Traditional `diff` tools flag syntactic noise (e.g., changing timestamps, PIDs, 
 cliscrape diff before.txt after.txt --template cisco_ios_show_interfaces
 ```
 
-This will ignore all fields marked as `ignore: true` in the template (like `uptime`) and only output genuine state transitions (e.g., `status: "up" -> "down"`).
+This ignores fields marked as `ignore: true` in the template and uses fields marked as `identity: true` to match records across the two inputs.
 
 ### Universal Ledger (Common Schema)
 
-Different vendors use different names for identical concepts (e.g., `vendor_interface` vs `ge-0/0/0`). By using the `--common` flag, `cliscrape` will map vendor-specific variables to a universal operational ledger.
+Different vendors use different names for identical concepts. The `--common` flag renames fields that declare `common_schema` in a modern template.
 
 ```bash
 cliscrape parse output.txt --template cisco_ios_show_version --common
 ```
 
-Downstream tools can now query `"interface": "Gi0/1"` without caring whether the underlying hardware is Cisco, Juniper, or Arista.
+Current embedded templates do not yet define those mappings; the broader Universal Ledger template library is tracked as Phase 17 planning work.
 
 ### Isomorphic Generation (FSM-Oracle)
 
-Because the parsing templates enforce rigorous schema contracts, `cliscrape` can be run in reverse ($FSM^{-1}$). It consumes a structured JSON object and synthesizes perfectly formatted, pixel-accurate raw CLI text.
+For templates that are written with round-trip generation in mind, `cliscrape` can run a best-effort reverse pass. It consumes structured JSON records and synthesizes CLI-like text from template patterns.
 
 ```bash
 # Generate synthetic device output from JSON
 cliscrape generate --template cisco_ios_show_interfaces --input mock_state.json > synthetic.txt
 ```
 
-**Verification (`--verify`):** You can append `--verify` to any `parse` command. The engine will parse the text to JSON, generate synthetic text from the JSON, and re-parse the synthetic text to guarantee 100% **Bijective Stability**.
+**Verification (`--verify`):** You can append `--verify` to any `parse` command. The engine parses text to JSON, generates synthetic text, and re-parses it; mismatches are reported as verification warnings/log events rather than a hard failure.

@@ -119,10 +119,13 @@ fn handle_message(
 ) -> bool {
     match msg {
         Message::Key(key) => handle_key(app, key, worker, msg_tx, watcher),
-        Message::FsChanged { .. } => {
+        Message::FsChanged { which } => {
             let (Some(tpl), Some(inp)) = (app.template_path.clone(), app.input_path.clone()) else {
                 return false;
             };
+            match which {
+                FsWhich::Template | FsWhich::Input => {}
+            }
             app.on_parse_started();
             worker.request(worker::ParseRequest {
                 template_path: tpl,

@@ -475,7 +475,10 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
                     // Process warnings from this block
                     for warning in block_warnings {
                         if parse_options.strict_policy && warning.kind == "ConstraintViolation" {
-                            anyhow::bail!("Constraint violation failed strict policy: {}", warning.message);
+                            anyhow::bail!(
+                                "Constraint violation failed strict policy: {}",
+                                warning.message
+                            );
                         }
                         all_warnings.push(warning);
                     }
@@ -511,13 +514,15 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
             // Perform round-trip verification if requested
             if verify {
                 tracing::info!(target: "cliscrape::cli", event = "verify_start");
-                let synthetic = parser.generate(all_results.clone())
-                    .context("Verification failed: Could not generate synthetic output from parsed records")?;
-                
+                let synthetic = parser.generate(all_results.clone()).context(
+                    "Verification failed: Could not generate synthetic output from parsed records",
+                )?;
+
                 // For verification, we parse the synthetic output back to JSON and compare
-                let round_trip_results = parser.parse(&synthetic)
+                let round_trip_results = parser
+                    .parse(&synthetic)
                     .context("Verification failed: Could not re-parse synthetic output")?;
-                
+
                 if all_results != round_trip_results {
                     tracing::error!(
                         target: "cliscrape::cli",
@@ -525,7 +530,9 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
                         message = "Template is not bijectively stable. Round-trip data mismatch."
                     );
                     if !quiet {
-                        eprintln!("Warning: Template round-trip verification failed. Semantic data drift detected.");
+                        eprintln!(
+                            "Warning: Template round-trip verification failed. Semantic data drift detected."
+                        );
                     }
                 } else {
                     tracing::info!(target: "cliscrape::cli", event = "verify_success");
@@ -740,8 +747,12 @@ fn handle_diff(before_path: &Path, after_path: &Path, template_spec: &str) -> an
     let after_text = std::fs::read_to_string(after_path)
         .with_context(|| format!("Failed to read 'after' file: {}", after_path.display()))?;
 
-    let before_records = parser.parse(&before_text).context("Failed to parse 'before' input")?;
-    let after_records = parser.parse(&after_text).context("Failed to parse 'after' input")?;
+    let before_records = parser
+        .parse(&before_text)
+        .context("Failed to parse 'before' input")?;
+    let after_records = parser
+        .parse(&after_text)
+        .context("Failed to parse 'after' input")?;
 
     // 3. Diff
     let engine = SemanticDiffEngine::new(parser.values());

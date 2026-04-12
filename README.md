@@ -8,7 +8,7 @@
 - Run with embedded templates or local template files
 - Author and debug templates with a Live Lab TUI
 - Support policy-aware parsing with field constraints and `--strict-policy`
-- Power newer v2.0 workflows such as semantic diffing, schema mapping, and FSM verification
+- Power newer v2.0 workflows such as semantic diffing, opt-in schema-key mapping, and FSM round-trip checks
 
 ## Install
 
@@ -29,7 +29,7 @@ cargo run -- --help
 Parse a local template against a file:
 
 ```bash
-cliscrape parse tests/fixtures/inputs/constraints/min_pass.txt --template tests/fixtures/templates/constraints.yaml --format json
+cliscrape parse tests/fixtures/inputs/hostname_file.txt --template tests/fixtures/templates/simple_hostname.toml --format json
 ```
 
 List embedded templates:
@@ -41,7 +41,7 @@ cliscrape list-templates --format json
 Inspect one template:
 
 ```bash
-cliscrape show-template cisco_ios_show_version
+cliscrape show-template cisco_ios_show_version.yaml
 ```
 
 Use strict policy mode:
@@ -74,8 +74,10 @@ Canonical planning files live under `.planning/`:
 cliscrape parse <input> --template <template>
 cliscrape debug -t <template> -i <input>
 cliscrape list-templates
-cliscrape show-template <name>
+cliscrape list-templates --filter 'cisco*interfaces*'
+cliscrape show-template <name.yaml>
 cliscrape convert --input old.textfsm --output new.yaml --defaults
 cliscrape diff before.txt after.txt --template <template>
 cliscrape generate --template <template> --input records.json
+cliscrape infer sample1.txt sample2.txt
 ```
