@@ -85,13 +85,15 @@ This ignores fields marked as `ignore: true` in the template and uses fields mar
 
 ### Universal Ledger (Common Schema)
 
-Different vendors use different names for identical concepts. The `--common` flag renames fields that declare `common_schema` in a modern template.
+Different vendors use different names for identical concepts. The `--common` flag renames fields that declare `common_schema` in a modern template, projecting the record onto a vendor-neutral shape.
 
 ```bash
 cliscrape parse output.txt --template cisco_ios_show_version --common
 ```
 
-Current embedded templates do not yet define those mappings; the broader Universal Ledger template library is tracked as Phase 17 planning work.
+The canonical shapes are specified under [`common_schemas/`](../../common_schemas/) and documented in [COMMON_SCHEMAS.md](COMMON_SCHEMAS.md). Five schemas ship today: `version`, `interface`, `bgp_neighbor`, `lldp_neighbor`, `route`.
+
+Wiring the embedded templates to declare these mappings is tracked as bead `cliscrape-1s8.2`; CI enforcement of schema compliance is `cliscrape-1s8.3`.
 
 ### Isomorphic Generation (FSM-Oracle)
 

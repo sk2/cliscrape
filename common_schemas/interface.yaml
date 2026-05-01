@@ -1,0 +1,94 @@
+schema: interface
+version: 1
+description: |
+  Vendor-neutral representation of a network interface, as exposed by
+  commands like `show interfaces`, `show ip interface brief`, and equivalents.
+  One record per interface.
+
+  Status fields use string enumerations rather than bool because:
+  (a) the engine's modern template format does not support a native bool type,
+  (b) some vendors distinguish "administratively down" from plain "down".
+
+applies_to:
+  - "show interfaces"
+  - "show interface"
+  - "show ip interface brief"
+
+keys:
+  name:
+    type: string
+    required: true
+    description: |
+      Canonical interface name as the device exposes it (e.g.
+      "GigabitEthernet0/0/0", "Ethernet1/1", "ge-0/0/0"). Not normalized
+      across vendors — preserve the name the device prints.
+
+  description:
+    type: string
+    required: false
+    description: Operator-supplied interface description, if configured.
+
+  admin_status:
+    type: string
+    required: false
+    description: |
+      Administrative state. Lowercase string. Expected values:
+      "up", "down", "administratively down". The third value distinguishes
+      operator-disabled interfaces from interfaces that are merely not yet
+      configured.
+
+  oper_status:
+    type: string
+    required: false
+    description: |
+      Operational (link) state. Lowercase. Expected values: "up", "down".
+
+  protocol_status:
+    type: string
+    required: false
+    description: |
+      Line-protocol state, where the device distinguishes it from `oper_status`.
+      Lowercase. Expected values: "up", "down".
+
+  mtu:
+    type: int
+    required: false
+    description: Maximum transmission unit in bytes.
+
+  bandwidth_kbps:
+    type: int
+    required: false
+    description: |
+      Configured (or auto-detected) bandwidth in kilobits per second. Use
+      kbps consistently, even if the device reports Mbps or Gbps — the
+      template should convert at parse time.
+
+  mac_address:
+    type: string
+    required: false
+    description: |
+      Hardware (MAC) address. Format: lowercase, colon-separated octets
+      (e.g. "00:1c:2d:3e:4f:50"). Templates that capture vendor-formatted
+      MACs (e.g. Cisco "001c.2d3e.4f50") should normalize.
+
+  ipv4_address:
+    type: string
+    required: false
+    description: |
+      Configured IPv4 address. Format: dotted-quad, optionally with a CIDR
+      prefix length (e.g. "10.0.0.1" or "10.0.0.1/24"). Pick one form per
+      template and document the choice.
+
+  duplex:
+    type: string
+    required: false
+    description: |
+      Lowercase. Expected values: "full", "half", "auto".
+
+  speed:
+    type: string
+    required: false
+    description: |
+      Negotiated or configured link speed. String type (not int) because
+      vendors print values like "auto", "1G", "10G", and "1000" interchangeably.
+      No normalization assumed.

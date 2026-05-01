@@ -45,7 +45,7 @@ The `fields` block defines the operational schema contract. By adding specific m
 * `type: int | string` - Enables native JSON type coercion (e.g., `"1500" -> 1500`).
 * `identity: true` - Marks this field as a unique primary key for the record (e.g., an interface name). Used by the `diff` engine to track state changes.
 * `ignore: true` - Marks this field as syntactic noise (e.g., uptime, timestamps). The `diff` engine will ignore changes to this field.
-* `common_schema: 'key_name'` - Maps this vendor-specific variable to a Universal Ledger key (e.g., `vendor_interface -> interface`).
+* `common_schema: 'key_name'` - Maps this vendor-specific variable to a Universal Ledger key (e.g., `vendor_interface -> name` for the `interface` schema). See [COMMON_SCHEMAS.md](COMMON_SCHEMAS.md) for the canonical key set per schema and [`common_schemas/`](../../common_schemas/) for the source-of-truth specs.
 * `filldown: true` - Retains the captured value across multiple record emissions until overwritten.
 * `list: true` - Accumulates multiple matches into a JSON array instead of overwriting.
 

@@ -1,0 +1,61 @@
+schema: bgp_neighbor
+version: 1
+description: |
+  Vendor-neutral representation of a BGP neighbor relationship, as exposed by
+  commands like `show ip bgp summary` and `show bgp neighbors`. One record per
+  configured peer.
+
+  A neighbor is uniquely identified by (vrf, neighbor) — the same peer IP can
+  legitimately appear in multiple VRFs.
+
+applies_to:
+  - "show ip bgp summary"
+  - "show bgp summary"
+  - "show bgp neighbors"
+
+keys:
+  neighbor:
+    type: string
+    required: true
+    description: |
+      Peer IP address. IPv4 or IPv6 (e.g. "10.0.0.1", "2001:db8::1"). No
+      normalization beyond what the device prints.
+
+  remote_as:
+    type: int
+    required: true
+    description: Peer's autonomous system number. 4-byte ASNs supported.
+
+  state:
+    type: string
+    required: true
+    description: |
+      BGP session state, vendor-formatted (e.g. "Established", "Active",
+      "Idle", "OpenSent", "OpenConfirm", "Connect"). RFC 4271 names. Some
+      vendors append modifiers (e.g. "Idle (Admin)") — preserve as-is.
+
+  local_as:
+    type: int
+    required: false
+    description: |
+      Local ASN advertised to this peer. Optional because most `show bgp
+      summary` outputs only mention local AS once at the top, not per neighbor.
+
+  prefixes_received:
+    type: int
+    required: false
+    description: Number of prefixes received from this peer.
+
+  uptime:
+    type: string
+    required: false
+    description: |
+      Free-form session uptime string as printed (e.g. "1d04h", "00:12:34",
+      "never"). String type because the format varies by vendor.
+
+  vrf:
+    type: string
+    required: false
+    description: |
+      VRF / routing-instance the neighbor belongs to. If omitted, the global
+      VRF is implied. Templates parsing per-VRF output should populate this.

@@ -1,0 +1,57 @@
+schema: version
+version: 1
+description: |
+  Vendor-neutral representation of device version and identity, as exposed by
+  commands like `show version`. Captures the small handful of fields most
+  network operators use to identify and inventory a device, regardless of
+  which vendor produced the output.
+
+applies_to:
+  - "show version"
+  - "show ver"
+
+keys:
+  hostname:
+    type: string
+    required: true
+    description: |
+      Configured device hostname. The same string that appears in the
+      device's CLI prompt.
+
+  model:
+    type: string
+    required: true
+    description: |
+      Hardware platform or model identifier (e.g. "C9300-48UXM",
+      "DCS-7050SX-72Q-F", "MX240"). Vendor-formatted; no normalization.
+
+  version:
+    type: string
+    required: true
+    description: |
+      Software version string, vendor-formatted (e.g. "15.4(2)T1", "4.30.0F",
+      "20.4R3-S6"). String type because vendor versioning schemes are not
+      compatible. Consumers comparing versions should parse downstream.
+
+  serial:
+    type: string
+    required: false
+    description: |
+      Hardware serial number. Optional because not all vendors expose this in
+      the `show version` output (some require `show inventory` or
+      `show chassis hardware`).
+
+  uptime:
+    type: string
+    required: false
+    description: |
+      Free-form uptime string as printed by the device (e.g. "1 year, 2
+      weeks, 3 days, 4 hours, 5 minutes"). String type because the format
+      varies by vendor and is not always parseable into discrete fields.
+
+  image:
+    type: string
+    required: false
+    description: |
+      Software image filename or path the device booted from
+      (e.g. "flash:/cat9k_iosxe.17.06.04.SPA.bin", "EOS-4.30.0F.swi").

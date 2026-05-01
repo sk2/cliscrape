@@ -1,0 +1,67 @@
+schema: route
+version: 1
+description: |
+  Vendor-neutral representation of a single routing-table entry, as exposed by
+  commands like `show ip route` and `show route`. One record per
+  (vrf, prefix, next_hop) triple — multipath routes produce multiple records.
+
+  Protocol codes are normalized to short uppercase strings rather than each
+  vendor's single-letter code, because the same letter can mean different
+  things across vendors (e.g. Cisco's "B" is BGP, but Juniper uses "BGP").
+
+applies_to:
+  - "show ip route"
+  - "show route"
+  - "show ipv6 route"
+
+keys:
+  prefix:
+    type: string
+    required: true
+    description: |
+      Destination network in CIDR notation (e.g. "10.0.0.0/24",
+      "2001:db8::/32"). Always include the prefix length, even for /32 host
+      routes. Templates parsing classful or netmask formats must convert.
+
+  protocol:
+    type: string
+    required: true
+    description: |
+      Routing protocol that installed the route. Normalized short uppercase:
+      "STATIC", "CONNECTED", "LOCAL", "BGP", "OSPF", "OSPFv3", "ISIS", "RIP",
+      "EIGRP", "OTHER". Templates map vendor-specific letters/strings to
+      these canonical names.
+
+  next_hop:
+    type: string
+    required: false
+    description: |
+      Next-hop IP address (e.g. "10.0.0.1"). Optional because connected
+      routes have no next-hop, and some BGP entries reference a recursive
+      next-hop string instead.
+
+  interface:
+    type: string
+    required: false
+    description: |
+      Egress interface (e.g. "GigabitEthernet0/0/0"). Same naming convention
+      as the `interface` schema's `name` key.
+
+  metric:
+    type: int
+    required: false
+    description: Routing-protocol metric / cost.
+
+  distance:
+    type: int
+    required: false
+    description: |
+      Administrative distance (route preference). Lower is preferred. Cisco
+      and Arista use this term; Juniper calls it "preference" — same meaning.
+
+  vrf:
+    type: string
+    required: false
+    description: |
+      VRF / routing-instance the route belongs to. If omitted, the global
+      VRF is implied.

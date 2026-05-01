@@ -1,0 +1,59 @@
+schema: lldp_neighbor
+version: 1
+description: |
+  Vendor-neutral representation of a single LLDP adjacency, as exposed by
+  `show lldp neighbors`. One record per (local_interface, remote_port) pair.
+
+  LLDP advertises four pieces of identity per neighbor: chassis ID, port ID,
+  system name, and capabilities. Schema captures all four where available,
+  plus the local-side interface that observed the advertisement.
+
+applies_to:
+  - "show lldp neighbors"
+  - "show lldp neighbors detail"
+
+keys:
+  local_interface:
+    type: string
+    required: true
+    description: |
+      The local device's interface that received the LLDP advertisement
+      (e.g. "GigabitEthernet0/0/0"). Same naming convention as the
+      `interface` schema's `name` key.
+
+  remote_port:
+    type: string
+    required: true
+    description: |
+      The remote (peer) device's port identifier as advertised in LLDP's
+      Port ID TLV. May be a port name, ifIndex, or MAC depending on
+      `port_id_subtype` — preserve as the peer printed it.
+
+  remote_system_name:
+    type: string
+    required: false
+    description: |
+      The peer's configured system name (LLDP System Name TLV). Often the
+      peer's hostname.
+
+  remote_chassis_id:
+    type: string
+    required: false
+    description: |
+      The peer's chassis identifier (LLDP Chassis ID TLV). Format depends on
+      `chassis_id_subtype`; commonly a MAC address. Preserve vendor format.
+
+  ttl:
+    type: int
+    required: false
+    description: |
+      Advertised TTL in seconds — how long this advertisement remains valid.
+
+  capabilities:
+    type: string
+    required: false
+    description: |
+      Comma-separated list of capabilities the peer advertised (e.g.
+      "bridge,router"). Lowercase. String form (not list) because the engine's
+      modern template format renders list-typed fields differently and the
+      capability set is small enough that comma-joining is unambiguous.
