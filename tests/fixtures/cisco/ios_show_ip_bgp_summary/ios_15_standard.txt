@@ -1,0 +1,17 @@
+BGP router identifier 192.0.2.1, local AS number 64496
+BGP table version is 28341, main routing table version 28341
+27 network entries using 6912 bytes of memory
+54 path entries using 7236 bytes of memory
+12/8 BGP path/bestpath attribute entries using 2880 bytes of memory
+4 BGP AS-PATH entries using 96 bytes of memory
+0 BGP route-map cache entries using 0 bytes of memory
+0 BGP filter-list cache entries using 0 bytes of memory
+BGP using 17124 total bytes of memory
+BGP activity 27/0 prefixes, 54/0 paths, scan interval 60 secs
+
+Neighbor        V           AS MsgRcvd MsgSent   TblVer  InQ OutQ Up/Down  State/PfxRcd
+192.0.2.2       4        64497   12349   12351    28341    0    0 3d04h          15
+192.0.2.3       4        64498    8821    8819    28341    0    0 1w2d            8
+198.51.100.1    4        65501   28104   28109    28341    0    0 14:23:11        4
+203.0.113.10    4        64512       0       0        1    0    0 never    Idle (Admin)
+2001:db8::2     4        64497    9821    9823    28341    0    0 2d11h           7

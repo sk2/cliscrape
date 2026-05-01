@@ -30,9 +30,19 @@ keys:
     type: string
     required: true
     description: |
-      BGP session state, vendor-formatted (e.g. "Established", "Active",
-      "Idle", "OpenSent", "OpenConfirm", "Connect"). RFC 4271 names. Some
-      vendors append modifiers (e.g. "Idle (Admin)") — preserve as-is.
+      BGP session state. Templates MUST normalize vendor abbreviations and
+      implicit indicators to one of the canonical RFC 4271 names:
+      "Established", "Active", "Idle", "Connect", "OpenSent", "OpenConfirm".
+
+      Cisco IOS' "State/PfxRcd" column shows a numeric prefix count when the
+      session is Established; templates infer "Established" in that case.
+      Arista EOS' "Estab" abbreviation expands to "Established". Modifier
+      suffixes (e.g. "(Admin)" for administratively shutdown) are preserved
+      after a single space, e.g. "Idle (Admin)".
+
+      The schema requires normalization rather than preserve-as-is because
+      vendor neutrality is the point: consumers comparing peers across
+      Cisco and Arista output must see the same state strings.
 
   local_as:
     type: int

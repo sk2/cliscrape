@@ -1,0 +1,9 @@
+BGP summary information for VRF default
+Router identifier 192.0.2.10, local AS number 64496
+Neighbor Status Codes: m - Under maintenance
+  Description              Neighbor         V  AS           MsgRcvd   MsgSent  InQ OutQ  Up/Down State   PfxRcd PfxAcc
+  spine-01-uplink          192.0.2.11       4  64497          15234     15201    0    0  4d12h Estab     156    156
+  spine-02-uplink          192.0.2.12       4  64497          15087     15098    0    0  4d12h Estab     156    156
+  transit-isp-a            198.51.100.5     4  65501         184523    184501    0    0  3w1d Estab     842342  842342
+  customer-acme            203.0.113.20     4  64513              0         0    0    0   never Idle             0       0
+  ix-route-server          198.51.100.250   4  65500          92341     92389    0    0 12:04:33 Active            0       0
