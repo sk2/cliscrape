@@ -9,15 +9,33 @@
 
 ### Universal Ledger Library — `cliscrape-1s8`
 
-Closes v2.0. Three sequential children:
+Closes v2.0. Seven children organized in three tiers (the original 3-child
+decomposition was decomposed further once "solid" was the goal — see the
+epic description for rationale).
+
+**Tier 1 — Foundation:**
+
+| Bead | Slice | Status | Depends on |
+|------|-------|--------|------------|
+| `cliscrape-1s8.1` | Define common schemas | ✅ Closed | — |
+| `cliscrape-1s8.4` | Typed schema loader + template validation | Ready | — |
+| `cliscrape-1s8.5` | Real fixtures for bgp/lldp/route schemas | Ready | — |
+
+**Tier 2 — Contract:**
 
 | Bead | Slice | Depends on |
 |------|-------|------------|
-| `cliscrape-1s8.1` | Define common schemas (`interface`, `bgp_neighbor`, `lldp_neighbor`, `version`, `route`) | — |
-| `cliscrape-1s8.2` | Wire `common_schema` mappings into embedded YAML templates | `cliscrape-1s8.1` |
-| `cliscrape-1s8.3` | Schema compliance test suite (`tests/schema_compliance.rs`) | `cliscrape-1s8.2` |
+| `cliscrape-1s8.6` | Top-level `claims_schema:` declaration | `cliscrape-1s8.4` |
+| `cliscrape-1s8.7` | Format validators (ipv4, ipv6, mac, cidr, asn) | `cliscrape-1s8.4` |
 
-Related: `br-71zd` (Template Ecosystem: Core Network Commands) consumes the schemas once defined.
+**Tier 3 — Application:**
+
+| Bead | Slice | Depends on |
+|------|-------|------------|
+| `cliscrape-1s8.2` | Wire embedded templates | `cliscrape-1s8.5`, `cliscrape-1s8.6` |
+| `cliscrape-1s8.3` | Schema compliance test suite | `cliscrape-1s8.2`, `cliscrape-1s8.7` |
+
+Related: `br-71zd` (Template Ecosystem: Core Network Commands) is the home for adding new templates beyond the current embedded set; not a blocker for this epic.
 
 Inspect: `br show cliscrape-1s8` · `br dep tree cliscrape-1s8 -d up`
 

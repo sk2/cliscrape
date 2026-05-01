@@ -48,7 +48,7 @@ Artifacts in `archive/phases/06-*` through `archive/phases/11-*`. Outstanding re
 
 **Open (tracked in beads):**
 
-- [ ] **Universal Ledger Library** — `cliscrape-1s8` (epic) with children `cliscrape-1s8.1` (define schemas) → `cliscrape-1s8.2` (wire templates) → `cliscrape-1s8.3` (compliance tests). Closes the milestone.
+- [ ] **Universal Ledger Library** — `cliscrape-1s8` (epic) with seven children across three tiers: foundation (`1s8.1` ✅, `1s8.4`, `1s8.5`), contract (`1s8.6`, `1s8.7`), application (`1s8.2`, `1s8.3`). Closes the milestone.
 
 ## 📋 v3.0 Isomorphic Ecosystem (Planned)
 
@@ -63,8 +63,12 @@ Artifacts in `archive/phases/06-*` through `archive/phases/11-*`. Outstanding re
 | Bead | Title | Milestone | Status |
 |------|-------|-----------|--------|
 | `cliscrape-1s8` | Universal Ledger Library (epic) | v2.0 | Active |
-| `cliscrape-1s8.1` | Define common schemas | v2.0 | Ready |
-| `cliscrape-1s8.2` | Wire `common_schema` mappings | v2.0 | Blocked |
+| `cliscrape-1s8.1` | Define common schemas | v2.0 | ✅ Closed |
+| `cliscrape-1s8.4` | Typed schema loader + template validation | v2.0 | Ready |
+| `cliscrape-1s8.5` | Fixtures for bgp/lldp/route schemas | v2.0 | Ready |
+| `cliscrape-1s8.6` | `claims_schema:` template declaration | v2.0 | Blocked |
+| `cliscrape-1s8.7` | Format validators (ipv4/ipv6/mac/cidr/asn) | v2.0 | Blocked |
+| `cliscrape-1s8.2` | Wire embedded templates | v2.0 | Blocked |
 | `cliscrape-1s8.3` | Schema compliance test suite | v2.0 | Blocked |
 | `cliscrape-quw` | Semantic Mock Server (epic) | v3.0 | Blocked |
 | `cliscrape-woo` | State-of-the-World Manifests (epic) | v3.0 | Blocked |

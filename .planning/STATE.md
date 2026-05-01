@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Active milestone: v2.0 The Network Compiler
-Open epic: Universal Ledger Library (`cliscrape-1s8`) with three sequential children (`cliscrape-1s8.1` → `1s8.2` → `1s8.3`)
-Status: ready to work `cliscrape-1s8.1` (define common schemas)
-Last activity: 2026-05-01 — migrated active task tracking from GSD phases to beads; dropped Phase NN framing from active work.
+Open epic: Universal Ledger Library (`cliscrape-1s8`) with seven children (1s8.1 ✅, 1s8.4 + 1s8.5 ready, 1s8.6 + 1s8.7 + 1s8.2 + 1s8.3 blocked)
+Status: two parallel tracks ready — `cliscrape-1s8.4` (typed schema loader) and `cliscrape-1s8.5` (real fixtures for bgp/lldp/route).
+Last activity: 2026-05-01 — closed 1s8.1 (defined 5 common schemas); decomposed remaining work into 7 children targeting "solid" foundation (typed loader, fixtures, claims_schema declaration, format validators) before template wiring runs.
 
 Milestone progress: v2.0 epic-level — 5 of 6 closed (Semantic Drift, Vendor-Neutral State Mappings, Grammar Induction, FSM-Oracle, Semantic Constraint Logic). Universal Ledger remains.
 
@@ -102,6 +102,6 @@ None active. Historical entries:
 ## Session Continuity
 
 Last session: 2026-05-01 00:00Z
-Stopped at: Migrated Phase 17-20 task tracking from GSD `phases/NN-*/PLAN.md` directories to beads. Phase 17 epic + 3 sequential children + Phase 18-20 epics with inter-phase deps. Converted 3 carry-over TODOs to beads (`cliscrape-vwo`, `cliscrape-442`, `cliscrape-mes`). Archived completed-milestone phase directories (Phases 1-11) and the v1.5 audit to `.planning/archive/`.
+Stopped at: Closed `cliscrape-1s8.1` after defining and committing 5 common schemas under `common_schemas/`. Audited and decomposed the remaining Universal Ledger work into 7 children across three tiers (foundation / contract / application) to address gaps that blocked "solid": no machine validation of schemas, 3/5 schemas ungrounded, ambiguous schema-claim mechanism, doc-only type discipline.
 Resume file: None
-Next ready work: `cliscrape-1s8.1` (Define common schemas)
+Next ready work: `cliscrape-1s8.4` (typed schema loader) and `cliscrape-1s8.5` (real fixtures) — parallel tracks.
