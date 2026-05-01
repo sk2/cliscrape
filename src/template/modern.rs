@@ -14,6 +14,18 @@ pub enum ModernFormat {
 pub struct ModernTemplateDoc {
     pub version: u32,
 
+    /// Universal Ledger schemas this template claims to satisfy. Accepts a
+    /// single string (`claims_schema: interface`) or a list
+    /// (`claims_schema: [interface, interface_counters]`).
+    ///
+    /// When present, the validator restricts bare `common_schema:`
+    /// references to the claimed schemas and enforces that every required
+    /// key in each claimed schema is mapped by at least one field. When
+    /// absent, bare references must resolve unambiguously across the entire
+    /// registry — the legacy inference path.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub claims_schema: Option<OneOrMany>,
+
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub macros: HashMap<String, String>,
 
@@ -29,6 +41,24 @@ pub struct ModernTemplateDoc {
     /// Metadata section - parsed separately by metadata module, ignored by template loader
     #[serde(default, skip_serializing)]
     pub metadata: Option<serde_json::Value>,
+}
+
+/// Accepts either a single string or a list of strings. Used for
+/// `claims_schema:` in templates.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(untagged)]
+pub enum OneOrMany {
+    One(String),
+    Many(Vec<String>),
+}
+
+impl OneOrMany {
+    pub fn as_slice(&self) -> &[String] {
+        match self {
+            OneOrMany::One(s) => std::slice::from_ref(s),
+            OneOrMany::Many(v) => v.as_slice(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -252,14 +282,35 @@ impl ModernTemplateDoc {
         use crate::engine::common_schemas::{KeyType, ResolveError, builtin_registry};
 
         let registry = builtin_registry();
-        let claimed: &[String] = &[];
+        let claimed_owned: Vec<String> = self
+            .claims_schema
+            .as_ref()
+            .map(|c| c.as_slice().to_vec())
+            .unwrap_or_default();
         let mut errors: Vec<String> = Vec::new();
+
+        // Verify every claimed schema name is actually known.
+        for schema_name in &claimed_owned {
+            if registry.get(schema_name).is_none() {
+                let known: Vec<&str> = registry.schema_names().collect();
+                errors.push(format!(
+                    "claims_schema lists '{}' but no such schema is registered (known: {})",
+                    schema_name,
+                    known.join(", ")
+                ));
+            }
+        }
+
+        // Track which keys per schema were satisfied; used to enforce
+        // required-key coverage when claims_schema is declared.
+        let mut covered: std::collections::BTreeMap<String, std::collections::BTreeSet<String>> =
+            std::collections::BTreeMap::new();
 
         for (field_name, def) in &self.fields {
             let Some(reference) = def.common_schema.as_deref() else {
                 continue;
             };
-            match registry.resolve(reference, claimed) {
+            match registry.resolve(reference, &claimed_owned) {
                 Ok((schema, key_name, key_def)) => {
                     let field_ty = match def.r#type.unwrap_or(FieldTypeDef::String) {
                         FieldTypeDef::Int => KeyType::Int,
@@ -271,6 +322,10 @@ impl ModernTemplateDoc {
                             field_name, field_ty, schema.name, key_name, key_def.ty, schema.name
                         ));
                     }
+                    covered
+                        .entry(schema.name.clone())
+                        .or_default()
+                        .insert(key_name.to_string());
                 }
                 Err(ResolveError::UnknownSchema { schema, known }) => {
                     errors.push(format!(
@@ -306,6 +361,30 @@ impl ModernTemplateDoc {
                         schemas.join(", ")
                     ));
                 }
+            }
+        }
+
+        // Required-key enforcement: every claimed schema must have all of its
+        // required keys mapped by some field. Skipped when claims_schema is
+        // absent (legacy inference path).
+        for schema_name in &claimed_owned {
+            let Some(schema) = registry.get(schema_name) else {
+                continue; // already reported as unknown above
+            };
+            let satisfied = covered
+                .get(schema_name)
+                .cloned()
+                .unwrap_or_default();
+            let missing: Vec<&str> = schema
+                .required_keys()
+                .filter(|k| !satisfied.contains(*k))
+                .collect();
+            if !missing.is_empty() {
+                errors.push(format!(
+                    "claims_schema '{}' but does not map required keys: {}",
+                    schema_name,
+                    missing.join(", ")
+                ));
             }
         }
 

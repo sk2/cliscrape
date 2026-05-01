@@ -68,14 +68,34 @@ existing `serde_json` behavior.
 
 ## How a template "claims" a schema
 
-For now, a template claims a schema implicitly: it has at least one field
-with `common_schema: <key>` that matches a key from this directory. The
-schema-compliance test (`cliscrape-1s8.3`, future work) will infer membership
-this way and verify required keys are mapped.
+A template should declare an explicit top-level `claims_schema:` field:
 
-A future extension may add an explicit top-level `claims_schema: <name>`
-declaration on templates for stricter validation. The spec format above is
-forward-compatible with that.
+```yaml
+version: 1
+claims_schema: interface
+```
+
+When `claims_schema:` is present:
+
+* Bare `common_schema:` references (`common_schema: name`) resolve against
+  the claimed schema(s). This disambiguates collisions like `uptime`, which
+  appears in both `version` and `bgp_neighbor`.
+* The template loader enforces that every `required: true` key in each
+  claimed schema is mapped by some field. A template claiming `interface`
+  without mapping `name` fails to load.
+
+When `claims_schema:` is absent, bare references must resolve unambiguously
+across the entire registry. This is the legacy inference path — new
+templates should declare claims explicitly.
+
+Multi-schema claims are supported:
+
+```yaml
+claims_schema: [interface, interface_counters]
+```
+
+Within a multi-schema scope, bare references must be unambiguous; otherwise
+use the qualified `<schema>.<key>` form.
 
 ## Adding or extending a schema
 

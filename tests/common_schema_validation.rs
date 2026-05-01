@@ -143,3 +143,128 @@ patterns:
 "#;
     load_yaml_str(template).expect("unique bare key should resolve");
 }
+
+#[test]
+fn claims_schema_with_all_required_keys_loads() {
+    let template = r#"
+version: 1
+claims_schema: version
+fields:
+  hostname:
+    type: string
+    common_schema: hostname
+  model:
+    type: string
+    common_schema: model
+  version:
+    type: string
+    common_schema: version
+patterns:
+  - regex: '^(?P<hostname>\S+) (?P<model>\S+) (?P<version>\S+)$'
+    record: true
+"#;
+    load_yaml_str(template).expect("claims_schema with all required keys should load");
+}
+
+#[test]
+fn claims_schema_missing_required_key_fails() {
+    // version schema requires hostname, model, version. This template only
+    // maps hostname.
+    let template = r#"
+version: 1
+claims_schema: version
+fields:
+  hostname:
+    type: string
+    common_schema: hostname
+patterns:
+  - regex: '^Host=(?P<hostname>\S+)$'
+    record: true
+"#;
+    let err = load_yaml_str(template).unwrap_err().to_string();
+    assert!(
+        err.contains("claims_schema 'version'"),
+        "error should name the schema: {err}"
+    );
+    assert!(
+        err.contains("model") && err.contains("version"),
+        "error should list missing keys: {err}"
+    );
+}
+
+#[test]
+fn claims_schema_disambiguates_otherwise_ambiguous_bare_key() {
+    // 'uptime' is normally ambiguous (version + bgp_neighbor). With
+    // claims_schema: version, the bare reference resolves to version.uptime.
+    let template = r#"
+version: 1
+claims_schema: version
+fields:
+  hostname:
+    type: string
+    common_schema: hostname
+  model:
+    type: string
+    common_schema: model
+  version:
+    type: string
+    common_schema: version
+  uptime:
+    type: string
+    common_schema: uptime
+patterns:
+  - regex: '^(?P<hostname>\S+) (?P<model>\S+) (?P<version>\S+) (?P<uptime>.+)$'
+    record: true
+"#;
+    load_yaml_str(template).expect("claims_schema scope should disambiguate uptime");
+}
+
+#[test]
+fn claims_schema_unknown_name_fails() {
+    let template = r#"
+version: 1
+claims_schema: not_a_real_schema
+fields:
+  whatever:
+    type: string
+patterns:
+  - regex: '^x=(?P<whatever>\S+)$'
+    record: true
+"#;
+    let err = load_yaml_str(template).unwrap_err().to_string();
+    assert!(
+        err.contains("not_a_real_schema"),
+        "error should name the bad schema: {err}"
+    );
+    assert!(
+        err.contains("known"),
+        "error should list known schemas: {err}"
+    );
+}
+
+#[test]
+fn claims_schema_as_list_loads() {
+    // Multi-schema claim is uncommon but supported. version + interface
+    // share no required keys, so this template needs to satisfy both.
+    let template = r#"
+version: 1
+claims_schema: [version, interface]
+fields:
+  hostname:
+    type: string
+    common_schema: hostname
+  model:
+    type: string
+    common_schema: model
+  version:
+    type: string
+    common_schema: version
+  iface_name:
+    type: string
+    common_schema: name
+patterns:
+  - regex: '^(?P<hostname>\S+) (?P<model>\S+) (?P<version>\S+) (?P<iface_name>\S+)$'
+    record: true
+"#;
+    load_yaml_str(template).expect("multi-schema claim should load when all required keys are mapped");
+}

@@ -72,6 +72,7 @@ pub fn template_ir_to_modern_doc(ir: &TemplateIR) -> ModernTemplateDoc {
 
     ModernTemplateDoc {
         version: 1,
+        claims_schema: None,
         macros: ir.macros.clone(),
         fields,
         states: Some(states),

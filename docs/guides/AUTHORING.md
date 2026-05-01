@@ -45,7 +45,24 @@ The `fields` block defines the operational schema contract. By adding specific m
 * `type: int | string` - Enables native JSON type coercion (e.g., `"1500" -> 1500`).
 * `identity: true` - Marks this field as a unique primary key for the record (e.g., an interface name). Used by the `diff` engine to track state changes.
 * `ignore: true` - Marks this field as syntactic noise (e.g., uptime, timestamps). The `diff` engine will ignore changes to this field.
-* `common_schema: 'key_name'` - Maps this vendor-specific variable to a Universal Ledger key (e.g., `vendor_interface -> name` for the `interface` schema). See [COMMON_SCHEMAS.md](COMMON_SCHEMAS.md) for the canonical key set per schema and [`common_schemas/`](../../common_schemas/) for the source-of-truth specs.
+* `common_schema: 'key_name'` - Maps this vendor-specific variable to a Universal Ledger key (e.g., `vendor_interface -> name` for the `interface` schema). Bare references (`common_schema: name`) resolve against the schema(s) declared in the template's top-level `claims_schema:`. Qualified references (`common_schema: interface.name`) work regardless. See [COMMON_SCHEMAS.md](COMMON_SCHEMAS.md) for the canonical key set per schema and [`common_schemas/`](../../common_schemas/) for the source-of-truth specs.
+
+## Top-level `claims_schema:`
+
+Declares which Universal Ledger schemas this template satisfies. Optional but recommended for new templates.
+
+```yaml
+version: 1
+claims_schema: interface          # single schema
+# or:
+# claims_schema: [interface, interface_counters]   # multi-schema
+```
+
+When present:
+- Bare `common_schema:` references are restricted to keys declared by the claimed schemas (disambiguates collisions like `uptime`, which appears in both `version` and `bgp_neighbor`).
+- The validator enforces that every required key in each claimed schema is mapped by some field. A template that claims `interface` but doesn't map `name` fails to load.
+
+When absent (legacy inference path), bare references must resolve unambiguously across the entire registry.
 * `filldown: true` - Retains the captured value across multiple record emissions until overwritten.
 * `list: true` - Accumulates multiple matches into a JSON array instead of overwriting.
 

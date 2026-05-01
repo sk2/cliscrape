@@ -28,6 +28,9 @@ The engine treats `common_schema:` as a per-field rename. Given a template
 field:
 
 ```yaml
+version: 1
+claims_schema: version
+
 fields:
   hostname:
     type: string
@@ -40,6 +43,25 @@ be `hostname` or may be something else like `device_name`).
 
 Keys that aren't mapped to a `common_schema` value pass through unchanged
 under their original names.
+
+### Declaring schema membership: `claims_schema:`
+
+Templates should declare a top-level `claims_schema:` so the validator can
+enforce coverage and disambiguate bare references:
+
+```yaml
+claims_schema: interface             # single
+claims_schema: [interface, version]  # multiple
+```
+
+When `claims_schema:` is present, the loader enforces that every required
+key in each claimed schema is mapped by some field. A template claiming
+`interface` without mapping `name` fails to load with a precise error.
+
+When `claims_schema:` is absent (legacy path), bare references must resolve
+unambiguously across the entire registry — bare `uptime` would fail because
+both `version` and `bgp_neighbor` declare it. Use a qualified reference
+(`common_schema: version.uptime`) or add `claims_schema:` to disambiguate.
 
 ## Worked example
 
