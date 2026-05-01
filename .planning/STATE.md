@@ -10,21 +10,21 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 ## Current Position
 
-Phase: 17 of 20 (Universal Ledger Library)
-Tracking: bead epic `cliscrape-1s8` with children `cliscrape-1s8.1`, `cliscrape-1s8.2`, `cliscrape-1s8.3` (sequential)
-Status: Active — first child (`cliscrape-1s8.1`, define schemas) is the immediate ready-work target.
-Last Activity: 2026-05-01 - Migrated Phase 17-20 task tracking from `phases/NN-*/PLAN.md` directories to beads (`br`)
+Active milestone: v2.0 The Network Compiler
+Open epic: Universal Ledger Library (`cliscrape-1s8`) with three sequential children (`cliscrape-1s8.1` → `1s8.2` → `1s8.3`)
+Status: ready to work `cliscrape-1s8.1` (define common schemas)
+Last activity: 2026-05-01 — migrated active task tracking from GSD phases to beads; dropped Phase NN framing from active work.
 
-Progress: [████████░░] 80% milestone completion (completed phases: 16/20)
+Milestone progress: v2.0 epic-level — 5 of 6 closed (Semantic Drift, Vendor-Neutral State Mappings, Grammar Induction, FSM-Oracle, Semantic Constraint Logic). Universal Ledger remains.
 
 ## Operating Model (as of 2026-05-01)
 
-- **Beads (`br`)** is the operational task backlog. All Phase 17+ work is tracked there.
-- **`ROADMAP.md`** remains the milestone narrative for human readers.
-- **`BACKLOG.md`** is now a thin index pointing at bead epics.
-- **`phases/NN-*/PLAN.md` directories** are no longer created for new phases. Phases 1-11 (v1.0 + v1.5, complete) live under `archive/phases/`. Phase 16 stays under `phases/` until v2.0 closes.
+- **Beads (`br`)** is the operational task backlog. All active and future work lives there.
+- **Milestones** (v2.0, v3.0) are the human-readable grouping in `ROADMAP.md`.
+- **Phase numbering is retired** for active work. Phases 1-16 keep their numbers as historical reference under `archive/phases/` (and `phases/16-*` until v2.0 closes), but new work is named after the bead it lives in, not "Phase NN".
+- **`BACKLOG.md`** is a thin pointer index, not the source of truth.
 - To find what's next: `br ready` (top of the list = highest-priority unblocked).
-- To inspect a phase: `br show <epic-id>` and `br dep tree <epic-id> -d up`.
+- To inspect any epic: `br show <epic-id>` and `br dep tree <epic-id> -d up`.
 
 ## Performance Metrics
 
@@ -36,16 +36,17 @@ Progress: [████████░░] 80% milestone completion (completed p
 
 **By Milestone:**
 
-| Milestone | Phases | Plans | Status |
-|-----------|--------|-------|--------|
-| v1.0 MVP | 5 | 28/28 | Complete (2026-02-22) |
-| v1.5 Production Hardening | 6 | 12/12 | Complete (2026-03-19) |
-| v2.0 The Network Compiler | 6 | 8/10 | Phases 12-16 complete; 17 planned |
+| Milestone | Status |
+|-----------|--------|
+| v1.0 MVP | Complete (2026-02-22) |
+| v1.5 Production Hardening | Complete (2026-03-19); reconciliation tracked as `cliscrape-mes` |
+| v2.0 The Network Compiler | 5 of 6 epics closed; Universal Ledger (`cliscrape-1s8`) remains |
+| v3.0 Isomorphic Ecosystem | Planned: `cliscrape-quw` → `cliscrape-woo` → `cliscrape-lw0` |
 
 **Recent Trend:**
 - v1.0 shipped with 77 passing tests, 4.1M lines/sec throughput
-- v1.5 shipped with roadmap status marked complete across Phases 6-11
-- v2.0 foundation Phases 12-16 are complete; Phase 17 is the next active planning target
+- v1.5 shipped with the user and authoring guides
+- v2.0 foundation work is complete; the Universal Ledger Library is the only open milestone item
 - Trend: project focus has shifted from production hardening to semantic, policy-aware parsing and vendor-neutral state modeling
 
 **Recent Plan Metrics:**

@@ -2,99 +2,78 @@
 
 ## Milestones
 
-- ✅ **v1.0 MVP** - Phases 1-5 (shipped 2026-02-22)
-- ✅ **v1.5 Production Hardening** - Phases 6-11 (shipped 2026-03-19)
-- 🚧 **v2.0 The Network Compiler** - Phases 12-17 (in progress)
-- 📋 **v3.0 Isomorphic Ecosystem** - Phases 18+ (planned)
+- ✅ **v1.0 MVP** — shipped 2026-02-22
+- ✅ **v1.5 Production Hardening** — shipped 2026-03-19
+- 🚧 **v2.0 The Network Compiler** — in progress
+- 📋 **v3.0 Isomorphic Ecosystem** — planned
 
-## Phases
+> **Operating model (2026-05-01):** active work is tracked in beads (`br`), not
+> as `phases/NN-*/PLAN.md` directories. This roadmap remains the milestone
+> narrative; bead IDs link to executable backlog. Run `br ready` for actionable
+> work across the project, or `br dep tree <epic-id> -d up` to see what an epic
+> unblocks. Phase numbering survives only as historical reference for v1.0 +
+> v1.5 work under `archive/phases/`.
+
+## Completed Milestones
 
 <details>
-<summary>✅ v1.0 MVP (Phases 1-5) - SHIPPED 2026-02-22</summary>
+<summary>✅ v1.0 MVP (shipped 2026-02-22)</summary>
 
-- [x] Phase 1: Core Parsing Engine
-- [x] Phase 2: Legacy Compatibility & CLI
-- [x] Phase 3: Modern Ergonomic Templates
-- [x] Phase 4: TUI Debugger Foundation (Live Lab)
-- [x] Phase 5: TUI Advanced Debugging (State Tracer)
+Phases 1-5 (historical numbering): Core Parsing Engine · Legacy Compatibility & CLI · Modern Ergonomic Templates · TUI Debugger Foundation (Live Lab) · TUI Advanced Debugging (State Tracer).
+
+Artifacts in `archive/phases/01-*` through `archive/phases/05-*`.
 
 </details>
 
 <details>
-<summary>✅ v1.5 Production Hardening - SHIPPED 2026-03-19</summary>
+<summary>✅ v1.5 Production Hardening (shipped 2026-03-19)</summary>
 
-- [x] Phase 6: Template Library Foundation
-- [x] Phase 7: Compatibility Validation Suite
-- [x] Phase 8: TUI Integration
-- [x] Phase 9: Edge Case Hardening
-- [x] Phase 10: Production Logging
-- [x] Phase 11: Documentation & Authoring Guide
+Phases 6-11 (historical numbering): Template Library Foundation · Compatibility Validation Suite · TUI Integration · Edge Case Hardening · Production Logging · Documentation & Authoring Guide.
 
-> Note: user and authoring guides shipped. The original plan 03 catalog/doc-validation artifacts were deferred and are tracked as reconciliation work.
+Artifacts in `archive/phases/06-*` through `archive/phases/11-*`. Outstanding reconciliation work (catalog page + doc-validation harness) tracked as `cliscrape-mes`.
 
 </details>
 
-> **Operating model (2026-05-01):** v2.0 Phase 17 onward is tracked in beads
-> (`br`), not as `phases/NN-*/PLAN.md` directories. This roadmap remains the
-> milestone narrative; bead IDs link to executable backlog. Run
-> `br dep tree <epic-id> -d up` to see children, or `br ready` for actionable
-> work across the project.
+## 🚧 v2.0 The Network Compiler (In Progress)
 
-### 🚧 v2.0 The Network Compiler (In Progress)
+**Milestone goal:** move from simple parsing to structured state observation and vendor-neutral operational schemas.
 
-**Milestone Goal:** Move from simple parsing to structured state observation and vendor-neutral operational schemas.
+**Shipped (legacy phase numbering, archived):**
 
-- [x] **Phase 12: Semantic Drift Analysis** - Operational diffing between states (Complete)
-- [x] **Phase 13: Vendor-Neutral State Mappings** - Common schema mapping primitives (Complete; embedded template coverage tracked under Phase 17 epic)
-- [x] **Phase 14: Grammar Induction** - Statistical structural inference for templates (Complete)
-- [x] **Phase 15: The FSM-Oracle** - Best-effort generation and advisory round-trip checks (Complete; strict selected-template verification tracked by `cliscrape-nuy`)
-- [x] **Phase 16: Semantic Constraint Logic** - Policy-aware parsing with boundary assertions (implemented)
-- [ ] **Phase 17: The Universal Ledger Library** - Tracked as `cliscrape-1s8` (epic) with children `cliscrape-1s8.1` / `1s8.2` / `1s8.3`
+- [x] Semantic Drift Analysis (Phase 12) — operational diffing between states.
+- [x] Vendor-Neutral State Mappings (Phase 13) — common schema mapping primitives. Embedded template coverage continues under the Universal Ledger epic.
+- [x] Grammar Induction (Phase 14) — statistical structural inference for templates.
+- [x] FSM-Oracle (Phase 15) — best-effort generation and advisory round-trip checks. Strict mode tracked by `cliscrape-nuy`.
+- [x] Semantic Constraint Logic (Phase 16) — policy-aware parsing with boundary assertions. Artifacts under `phases/16-semantic-constraint-logic/`.
 
-### 📋 v3.0 Isomorphic Ecosystem (Planned)
+**Open (tracked in beads):**
 
-**Milestone Goal:** Use isomorphic FSM execution to power high-fidelity network simulation and generative testing.
+- [ ] **Universal Ledger Library** — `cliscrape-1s8` (epic) with children `cliscrape-1s8.1` (define schemas) → `cliscrape-1s8.2` (wire templates) → `cliscrape-1s8.3` (compliance tests). Closes the milestone.
 
-- [ ] **Phase 18: The Semantic Mock Server** - Tracked as `cliscrape-quw` (epic). Decompose when Phase 17 closes.
-- [ ] **Phase 19: State-of-the-World Manifests** - Tracked as `cliscrape-woo` (epic). Blocked by `cliscrape-quw`.
-- [ ] **Phase 20: SSH/CLI Protocol Integration** - Tracked as `cliscrape-lw0` (epic). Blocked by `cliscrape-quw` + `cliscrape-woo`.
+## 📋 v3.0 Isomorphic Ecosystem (Planned)
 
-## Phase Details
+**Milestone goal:** use isomorphic FSM execution to power high-fidelity network simulation and generative testing.
 
-### Phase 16: Semantic Constraint Logic
-**Goal**: The parser identifies "Impossible States" and policy violations during the parse phase.
-**Depends on**: Phase 3
-**Requirements**: POLICY-01, POLICY-02
-**Success Criteria**:
-  1. YAML templates support `constraints` (`min`, `max`, `choices`, `regex`).
-  2. The engine emits high-severity `tracing` events when a parsed value violates a constraint.
-  3. CLI supports `--strict-policy` to fail the parse if constraints are not met.
+- [ ] **Semantic Mock Server** — `cliscrape-quw` (epic). Blocked by `cliscrape-1s8`. Decompose into children once schemas land.
+- [ ] **State-of-the-World Manifests** — `cliscrape-woo` (epic). Blocked by `cliscrape-quw`.
+- [ ] **SSH/CLI Protocol Integration** — `cliscrape-lw0` (epic). Blocked by `cliscrape-quw` + `cliscrape-woo`.
 
-### Phase 17: The Universal Ledger Library
-**Tracked by**: `cliscrape-1s8` (epic). Acceptance criteria, scope, and decomposition
-live in the bead. Run `br show cliscrape-1s8` for the canonical spec.
-**Requirements**: LEDGER-01, LOG-02
-**Children**: `cliscrape-1s8.1` (define schemas) → `cliscrape-1s8.2` (wire templates) → `cliscrape-1s8.3` (compliance tests).
+## Open Beads at a Glance
 
-### Phase 18: The Semantic Mock Server
-**Tracked by**: `cliscrape-quw` (epic). Run `br show cliscrape-quw`.
-**Depends on**: Phase 17 schemas (via bead dependency) and Phase 15 oracle primitives.
-**Requirements**: MOCK-01, MOCK-02
+| Bead | Title | Milestone | Status |
+|------|-------|-----------|--------|
+| `cliscrape-1s8` | Universal Ledger Library (epic) | v2.0 | Active |
+| `cliscrape-1s8.1` | Define common schemas | v2.0 | Ready |
+| `cliscrape-1s8.2` | Wire `common_schema` mappings | v2.0 | Blocked |
+| `cliscrape-1s8.3` | Schema compliance test suite | v2.0 | Blocked |
+| `cliscrape-quw` | Semantic Mock Server (epic) | v3.0 | Blocked |
+| `cliscrape-woo` | State-of-the-World Manifests (epic) | v3.0 | Blocked |
+| `cliscrape-lw0` | SSH/CLI Protocol Integration (epic) | v3.0 | Blocked |
+| `cliscrape-mes` | v1.5 reconciliation: catalog + doc validation | v1.5 (debt) | P2 |
+| `cliscrape-nuy` | Strict FSM-Oracle verification | v2.0 (debt) | P2 |
 
-## Progress Tracking
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 12. Semantic Drift Analysis | v2.0 | 3/3 | Complete | 2026-03-19 |
-| 13. Vendor-Neutral State Mappings | v2.0 | 2/2 | Complete; template coverage open | 2026-03-19 |
-| 14. Grammar Induction | v2.0 | 2/2 | Complete | 2026-03-19 |
-| 15. The FSM-Oracle | v2.0 | 2/2 | Advisory complete; strict mode open | 2026-03-19 |
-| 16. Semantic Constraint Logic | v2.0 | 1/1 | Complete | 2026-03-20 |
-| 17. Universal Ledger Library | v2.0 | beads `cliscrape-1s8` (3 children) | Active | - |
-| 18. Semantic Mock Server | v3.0 | beads `cliscrape-quw` | Planned | - |
-| 19. State-of-the-World Manifests | v3.0 | beads `cliscrape-woo` | Planned | - |
-| 20. SSH/CLI Protocol Integration | v3.0 | beads `cliscrape-lw0` | Planned | - |
+For the full list, run `br list` or `br ready`.
 
 ---
 *Roadmap created: 2026-02-22*
-*Last updated: 2026-05-01 (migrated Phase 17-20 task tracking from GSD to beads)*
+*Last updated: 2026-05-01 (migrated to beads; phase numbering retired except as historical reference)*

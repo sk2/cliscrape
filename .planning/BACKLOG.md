@@ -1,15 +1,15 @@
-# GSD Backlog: The Network Compiler
+# Backlog Index: The Network Compiler
 
 > **Operating model (2026-05-01):** detailed task tracking lives in beads (`br`).
-> This file remains as a milestone-level pointer index. For ready-to-work items
-> across all phases, run `br ready`. For the dependency tree of any phase epic,
+> This file is a milestone-level pointer index, not the source of truth. For
+> ready-to-work items, run `br ready`. For the dependency tree of any epic,
 > run `br dep tree <epic-id> -d up`.
 
-## Active Backlog
+## Active Backlog (v2.0)
 
-### Phase 17: Universal Ledger Library
+### Universal Ledger Library — `cliscrape-1s8`
 
-Tracked as bead epic **`cliscrape-1s8`** with three sequential children:
+Closes v2.0. Three sequential children:
 
 | Bead | Slice | Depends on |
 |------|-------|------------|
@@ -21,19 +21,21 @@ Related: `br-71zd` (Template Ecosystem: Core Network Commands) consumes the sche
 
 Inspect: `br show cliscrape-1s8` · `br dep tree cliscrape-1s8 -d up`
 
-## Future Backlog
+## Future Backlog (v3.0)
 
-### Phase 18: Semantic Mock Server (`cliscrape-quw`)
+Each is a single epic bead. Decompose into child beads when its predecessor closes — avoids rework once upstream design is concrete.
 
-Single epic bead. Decompose into child beads when Phase 17 closes (avoids rework once schemas are concrete). Blocked by `cliscrape-1s8`.
+### Semantic Mock Server — `cliscrape-quw`
 
-### Phase 19: State-of-the-World Manifests (`cliscrape-woo`)
+Blocked by `cliscrape-1s8`. Interactive `cliscrape simulate` shell that synthesizes vendor-authentic CLI output from JSON state.
 
-Single epic bead. Blocked by `cliscrape-quw`.
+### State-of-the-World Manifests — `cliscrape-woo`
 
-### Phase 20: SSH/CLI Protocol Integration (`cliscrape-lw0`)
+Blocked by `cliscrape-quw`. Manifest format mapping device hostnames to commands and JSON state.
 
-Single epic bead. Blocked by `cliscrape-quw` and `cliscrape-woo`.
+### SSH/CLI Protocol Integration — `cliscrape-lw0`
+
+Blocked by `cliscrape-quw` + `cliscrape-woo`. Run the simulator as a persistent SSH daemon for end-to-end tooling integration.
 
 ---
 
