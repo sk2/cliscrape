@@ -16,6 +16,13 @@ One YAML file per schema. The current set:
 
 ## File format
 
+> **Machine-validated.** Files in this directory are loaded at compile time
+> by `src/engine/common_schemas.rs` (via `include_str!`) and parsed into
+> typed Rust structs. A malformed schema fails the build; a template that
+> references an unknown key, an ambiguous bare key, or a key whose declared
+> type doesn't match the field's `type:` fails to load with a precise error
+> (see `tests/common_schema_validation.rs` for the negative-path coverage).
+
 Each file is a YAML document with this structure:
 
 ```yaml

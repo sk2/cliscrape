@@ -243,7 +243,77 @@ impl ModernTemplateDoc {
             }
         }
 
+        self.validate_common_schema_references()?;
+
         Ok(())
+    }
+
+    fn validate_common_schema_references(&self) -> Result<(), ScraperError> {
+        use crate::engine::common_schemas::{KeyType, ResolveError, builtin_registry};
+
+        let registry = builtin_registry();
+        let claimed: &[String] = &[];
+        let mut errors: Vec<String> = Vec::new();
+
+        for (field_name, def) in &self.fields {
+            let Some(reference) = def.common_schema.as_deref() else {
+                continue;
+            };
+            match registry.resolve(reference, claimed) {
+                Ok((schema, key_name, key_def)) => {
+                    let field_ty = match def.r#type.unwrap_or(FieldTypeDef::String) {
+                        FieldTypeDef::Int => KeyType::Int,
+                        FieldTypeDef::String => KeyType::String,
+                    };
+                    if field_ty != key_def.ty {
+                        errors.push(format!(
+                            "field '{}' has type {:?} but '{}.{}' is declared as {:?} in the {} schema",
+                            field_name, field_ty, schema.name, key_name, key_def.ty, schema.name
+                        ));
+                    }
+                }
+                Err(ResolveError::UnknownSchema { schema, known }) => {
+                    errors.push(format!(
+                        "field '{}' references common_schema '{}' but no such schema is registered (known: {})",
+                        field_name,
+                        schema,
+                        known.join(", ")
+                    ));
+                }
+                Err(ResolveError::UnknownKey {
+                    schema,
+                    key,
+                    suggestions,
+                }) => {
+                    let scope = match schema {
+                        Some(s) => format!("schema '{}'", s),
+                        None => "any built-in schema".to_string(),
+                    };
+                    let mut msg = format!(
+                        "field '{}' references common_schema key '{}' which is not declared by {}",
+                        field_name, key, scope
+                    );
+                    if !suggestions.is_empty() {
+                        msg.push_str(&format!(". Did you mean: {}?", suggestions.join(", ")));
+                    }
+                    errors.push(msg);
+                }
+                Err(ResolveError::AmbiguousKey { key, schemas }) => {
+                    errors.push(format!(
+                        "field '{}' references common_schema key '{}' which is declared by multiple schemas ({}); qualify with 'schema.key' or add a top-level 'claims_schema:'",
+                        field_name,
+                        key,
+                        schemas.join(", ")
+                    ));
+                }
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(ScraperError::Template(errors.join("\n")))
+        }
     }
 
     fn lower(&self) -> Result<TemplateIR, ScraperError> {

@@ -1,3 +1,4 @@
+pub mod common_schemas;
 pub mod convert;
 pub mod coverage;
 pub mod debug;
