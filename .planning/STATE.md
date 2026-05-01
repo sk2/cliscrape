@@ -11,11 +11,20 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 17 of 20 (Universal Ledger Library)
-Plan: Not started
-Status: Ready for planning
-Last Activity: 2026-03-20 - Restored Phase 16 test fixtures and synced planning status to implementation
+Tracking: bead epic `cliscrape-1s8` with children `cliscrape-1s8.1`, `cliscrape-1s8.2`, `cliscrape-1s8.3` (sequential)
+Status: Active — first child (`cliscrape-1s8.1`, define schemas) is the immediate ready-work target.
+Last Activity: 2026-05-01 - Migrated Phase 17-20 task tracking from `phases/NN-*/PLAN.md` directories to beads (`br`)
 
 Progress: [████████░░] 80% milestone completion (completed phases: 16/20)
+
+## Operating Model (as of 2026-05-01)
+
+- **Beads (`br`)** is the operational task backlog. All Phase 17+ work is tracked there.
+- **`ROADMAP.md`** remains the milestone narrative for human readers.
+- **`BACKLOG.md`** is now a thin index pointing at bead epics.
+- **`phases/NN-*/PLAN.md` directories** are no longer created for new phases. Phases 1-11 (v1.0 + v1.5, complete) live under `archive/phases/`. Phase 16 stays under `phases/` until v2.0 closes.
+- To find what's next: `br ready` (top of the list = highest-priority unblocked).
+- To inspect a phase: `br show <epic-id>` and `br dep tree <epic-id> -d up`.
 
 ## Performance Metrics
 
@@ -76,18 +85,22 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- [ ] Run Live Lab TUI interactive verification (deferred from Phase 4 to milestone verification)
-- [ ] Run interactive converter smoke test (deferred from Phase 3 to milestone verification)
-- [x] Record Phase 11 plan 03 as deferred reconciliation work instead of silently complete
-- [x] Consolidate backlog into `.planning/BACKLOG.md` as the canonical planning backlog
+Tracked in beads. To list: `br ready` or `br list --json`.
+
+Recently converted (2026-05-01):
+- `cliscrape-vwo` (P3) — Live Lab TUI interactive smoke test (was: deferred from Phase 4)
+- `cliscrape-442` (P3) — Interactive converter smoke test (was: deferred from Phase 3)
+- `cliscrape-mes` (P2) — Phase 11 plan 03 reconciliation: template catalog + doc validation
 
 ### Blockers/Concerns
 
-- `v1.5-MILESTONE-AUDIT.md` is historical and should not be used as the active status source.
-- Phase 11 still has deferred reconciliation work for plan 03 artifacts that are not present in the codebase.
+None active. Historical entries:
+- `v1.5-MILESTONE-AUDIT.md` was moved to `archive/v1.5-MILESTONE-AUDIT.md` on 2026-05-01 (no longer surfaced as active status source).
+- Phase 11 reconciliation work is now tracked as bead `cliscrape-mes` rather than a free-floating concern.
 
 ## Session Continuity
 
-Last session: 2026-03-20 00:00Z
-Stopped at: Synced Phase 16 planning status with implemented code and restored constraint test fixtures
+Last session: 2026-05-01 00:00Z
+Stopped at: Migrated Phase 17-20 task tracking from GSD `phases/NN-*/PLAN.md` directories to beads. Phase 17 epic + 3 sequential children + Phase 18-20 epics with inter-phase deps. Converted 3 carry-over TODOs to beads (`cliscrape-vwo`, `cliscrape-442`, `cliscrape-mes`). Archived completed-milestone phase directories (Phases 1-11) and the v1.5 audit to `.planning/archive/`.
 Resume file: None
+Next ready work: `cliscrape-1s8.1` (Define common schemas)

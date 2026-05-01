@@ -1,53 +1,48 @@
 # GSD Backlog: The Network Compiler
 
-This backlog tracks the remaining roadmap-shaped work that is not yet complete.
+> **Operating model (2026-05-01):** detailed task tracking lives in beads (`br`).
+> This file remains as a milestone-level pointer index. For ready-to-work items
+> across all phases, run `br ready`. For the dependency tree of any phase epic,
+> run `br dep tree <epic-id> -d up`.
 
 ## Active Backlog
 
 ### Phase 17: Universal Ledger Library
-- Status: Planned
-- Milestone: v2.0 The Network Compiler
-- Goal: Deliver a plug-and-play experience where disparate vendors emit identical data structures.
-- Depends on: Phase 13
-- Requirements: `LEDGER-01`, `LOG-02`
 
-#### Backlog Items
-- [ ] Create `common_schemas/` and define standard schemas for `interface`, `bgp_neighbor`, `lldp_neighbor`, `version`, and `route`.
-- [ ] Update embedded YAML templates (`cisco_ios_*`, `arista_eos_*`, and peers) with `common_schema` mappings.
-- [ ] Add `tests/schema_compliance.rs` to validate fixture output against the declared common schema.
+Tracked as bead epic **`cliscrape-1s8`** with three sequential children:
+
+| Bead | Slice | Depends on |
+|------|-------|------------|
+| `cliscrape-1s8.1` | Define common schemas (`interface`, `bgp_neighbor`, `lldp_neighbor`, `version`, `route`) | — |
+| `cliscrape-1s8.2` | Wire `common_schema` mappings into embedded YAML templates | `cliscrape-1s8.1` |
+| `cliscrape-1s8.3` | Schema compliance test suite (`tests/schema_compliance.rs`) | `cliscrape-1s8.2` |
+
+Related: `br-71zd` (Template Ecosystem: Core Network Commands) consumes the schemas once defined.
+
+Inspect: `br show cliscrape-1s8` · `br dep tree cliscrape-1s8 -d up`
 
 ## Future Backlog
 
-### Phase 18: Semantic Mock Server
-- Status: Planned
-- Milestone: v3.0 Isomorphic Ecosystem
-- Goal: Simulate device behavior without physical hardware or VMs.
-- Depends on: Phase 15
-- Requirements: `MOCK-01`, `MOCK-02`
+### Phase 18: Semantic Mock Server (`cliscrape-quw`)
 
-#### Backlog Items
-- [ ] Implement `cliscrape simulate` as an interactive shell for device emulation.
-- [ ] Accept a device state file and synthesize command responses via isomorphic generation.
-- [ ] Preserve vendor-authentic output formatting so simulated responses match real devices closely.
+Single epic bead. Decompose into child beads when Phase 17 closes (avoids rework once schemas are concrete). Blocked by `cliscrape-1s8`.
 
-### Phase 19: State-of-the-World Manifests
-- Status: Planned
-- Milestone: v3.0 Isomorphic Ecosystem
-- Goal: Define the source-of-truth format for multi-device simulation state.
-- Depends on: Phase 18
+### Phase 19: State-of-the-World Manifests (`cliscrape-woo`)
 
-#### Backlog Items
-- [ ] Design a JSON/YAML manifest mapping device hostnames to commands and JSON state records.
-- [ ] Define how simulated devices select command variants and fixture state from the manifest.
-- [ ] Add example manifests for single-device and multi-device test environments.
+Single epic bead. Blocked by `cliscrape-quw`.
 
-### Phase 20: SSH/CLI Protocol Integration
-- Status: Planned
-- Milestone: v3.0 Isomorphic Ecosystem
-- Goal: Expose the simulator over real protocols for end-to-end tooling integration.
-- Depends on: Phase 18, Phase 19
+### Phase 20: SSH/CLI Protocol Integration (`cliscrape-lw0`)
 
-#### Backlog Items
-- [ ] Integrate a lightweight SSH server library such as `russh`.
-- [ ] Run `cliscrape simulate` as a persistent SSH daemon.
-- [ ] Validate that external tools can connect to the mock server as if it were a physical device.
+Single epic bead. Blocked by `cliscrape-quw` and `cliscrape-woo`.
+
+---
+
+## Adding to the Backlog
+
+Don't add bullet lists here. Create a bead instead:
+
+```bash
+br create "Title" -t task -p P1 --description "..." --parent <epic-id-if-applicable>
+br dep add <new-id> <blocker-id>      # if it depends on something
+br sync --flush-only                  # export to .beads/issues.jsonl for git
+```

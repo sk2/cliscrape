@@ -34,24 +34,30 @@
 
 </details>
 
+> **Operating model (2026-05-01):** v2.0 Phase 17 onward is tracked in beads
+> (`br`), not as `phases/NN-*/PLAN.md` directories. This roadmap remains the
+> milestone narrative; bead IDs link to executable backlog. Run
+> `br dep tree <epic-id> -d up` to see children, or `br ready` for actionable
+> work across the project.
+
 ### 🚧 v2.0 The Network Compiler (In Progress)
 
 **Milestone Goal:** Move from simple parsing to structured state observation and vendor-neutral operational schemas.
 
 - [x] **Phase 12: Semantic Drift Analysis** - Operational diffing between states (Complete)
-- [x] **Phase 13: Vendor-Neutral State Mappings** - Common schema mapping primitives (Complete; embedded template coverage tracked by `cliscrape-1s8`)
+- [x] **Phase 13: Vendor-Neutral State Mappings** - Common schema mapping primitives (Complete; embedded template coverage tracked under Phase 17 epic)
 - [x] **Phase 14: Grammar Induction** - Statistical structural inference for templates (Complete)
 - [x] **Phase 15: The FSM-Oracle** - Best-effort generation and advisory round-trip checks (Complete; strict selected-template verification tracked by `cliscrape-nuy`)
 - [x] **Phase 16: Semantic Constraint Logic** - Policy-aware parsing with boundary assertions (implemented)
-- [ ] **Phase 17: The Universal Ledger Library** - Standardized schemas for core network operations
+- [ ] **Phase 17: The Universal Ledger Library** - Tracked as `cliscrape-1s8` (epic) with children `cliscrape-1s8.1` / `1s8.2` / `1s8.3`
 
 ### 📋 v3.0 Isomorphic Ecosystem (Planned)
 
 **Milestone Goal:** Use isomorphic FSM execution to power high-fidelity network simulation and generative testing.
 
-- [ ] **Phase 18: The Semantic Mock Server** - Interactive CLI simulation from JSON state
-- [ ] **Phase 19: State-of-the-World Manifests** - Orchestrating multi-device mock environments
-- [ ] **Phase 20: SSH/CLI Protocol Integration** - High-fidelity device mocking for `deviceinteraction`
+- [ ] **Phase 18: The Semantic Mock Server** - Tracked as `cliscrape-quw` (epic). Decompose when Phase 17 closes.
+- [ ] **Phase 19: State-of-the-World Manifests** - Tracked as `cliscrape-woo` (epic). Blocked by `cliscrape-quw`.
+- [ ] **Phase 20: SSH/CLI Protocol Integration** - Tracked as `cliscrape-lw0` (epic). Blocked by `cliscrape-quw` + `cliscrape-woo`.
 
 ## Phase Details
 
@@ -65,23 +71,15 @@
   3. CLI supports `--strict-policy` to fail the parse if constraints are not met.
 
 ### Phase 17: The Universal Ledger Library
-**Goal**: A "Plug-and-Play" experience where disparate vendors emit identical data structures.
-**Depends on**: Phase 13
-**Tracked by**: `cliscrape-1s8`
+**Tracked by**: `cliscrape-1s8` (epic). Acceptance criteria, scope, and decomposition
+live in the bead. Run `br show cliscrape-1s8` for the canonical spec.
 **Requirements**: LEDGER-01, LOG-02
-**Success Criteria**:
-  1. Standard schemas defined for: `interface`, `bgp_neighbor`, `lldp_neighbor`, `version`, `route`.
-  2. All core embedded templates updated with `common_schema` mappings.
-  3. Validation tool ensures a template claiming a schema actually provides required keys.
+**Children**: `cliscrape-1s8.1` (define schemas) → `cliscrape-1s8.2` (wire templates) → `cliscrape-1s8.3` (compliance tests).
 
 ### Phase 18: The Semantic Mock Server
-**Goal**: Simulate device behavior without physical hardware or VMs.
-**Depends on**: Phase 15 (generation and oracle primitives)
+**Tracked by**: `cliscrape-quw` (epic). Run `br show cliscrape-quw`.
+**Depends on**: Phase 17 schemas (via bead dependency) and Phase 15 oracle primitives.
 **Requirements**: MOCK-01, MOCK-02
-**Success Criteria**:
-  1. `cliscrape simulate` command provides an interactive shell.
-  2. User inputs a command (e.g., `show version`), and the server synthesizes the CLI output from a provided JSON state file.
-  3. Response preserves operationally meaningful formatting for supported fixtures.
 
 ## Progress Tracking
 
@@ -92,11 +90,11 @@
 | 14. Grammar Induction | v2.0 | 2/2 | Complete | 2026-03-19 |
 | 15. The FSM-Oracle | v2.0 | 2/2 | Advisory complete; strict mode open | 2026-03-19 |
 | 16. Semantic Constraint Logic | v2.0 | 1/1 | Complete | 2026-03-20 |
-| 17. Universal Ledger Library | v2.0 | 0/3 | Planned | - |
-| 18. Semantic Mock Server | v3.0 | 0/3 | Planned | - |
-| 19. State-of-the-World Manifests | v3.0 | 0/3 | Planned | - |
-| 20. SSH/CLI Protocol Integration | v3.0 | 0/3 | Planned | - |
+| 17. Universal Ledger Library | v2.0 | beads `cliscrape-1s8` (3 children) | Active | - |
+| 18. Semantic Mock Server | v3.0 | beads `cliscrape-quw` | Planned | - |
+| 19. State-of-the-World Manifests | v3.0 | beads `cliscrape-woo` | Planned | - |
+| 20. SSH/CLI Protocol Integration | v3.0 | beads `cliscrape-lw0` | Planned | - |
 
 ---
 *Roadmap created: 2026-02-22*
-*Last updated: 2026-04-12*
+*Last updated: 2026-05-01 (migrated Phase 17-20 task tracking from GSD to beads)*
