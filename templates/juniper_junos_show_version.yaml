@@ -5,16 +5,21 @@ metadata:
   author: "cliscrape"
 
 version: 1
+claims_schema: version
 
 fields:
   hostname:
     type: string
+    common_schema: hostname
   model:
     type: string
+    common_schema: model
   junos_version:
     type: string
+    common_schema: version
   serial:
     type: string
+    common_schema: serial
 
 patterns:
   - regex: '^Hostname:\s+(?P<hostname>\S+)$'

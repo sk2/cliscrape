@@ -5,16 +5,25 @@ metadata:
   author: "cliscrape"
 
 version: 1
+claims_schema: version
 
 fields:
   version:
     type: string
+    common_schema: version
   model:
     type: string
+    common_schema: model
   serial:
     type: string
+    common_schema: serial
   uptime:
     type: string
+    common_schema: uptime
+  # Arista's `show version` body does not print hostname; the schema's
+  # `hostname` key is optional and intentionally not mapped here. Operators
+  # who need hostname should pair this with `show hostname` or capture it
+  # from the prompt line preceding the command.
 
 patterns:
   - regex: '^Arista (?P<model>\S+)$'

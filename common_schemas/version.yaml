@@ -13,10 +13,17 @@ applies_to:
 keys:
   hostname:
     type: string
-    required: true
+    required: false
     description: |
       Configured device hostname. The same string that appears in the
       device's CLI prompt.
+
+      Optional because some vendors (notably Arista EOS) do not print the
+      hostname in `show version` output — it appears in the prompt line
+      that typically precedes the command, but a template parsing only the
+      `show version` body cannot extract it. Templates that CAN capture
+      hostname (Cisco IOS, NX-OS, Juniper Junos) should map this key;
+      templates that cannot omit it.
 
   model:
     type: string

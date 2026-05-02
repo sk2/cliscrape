@@ -532,12 +532,15 @@ mod tests {
 
     #[test]
     fn version_schema_required_keys() {
+        // hostname was downgraded from required to optional during 1s8.2
+        // wiring: Arista EOS' show version does not print hostname.
         let reg = builtin_registry();
         let version = reg.get("version").unwrap();
         let required: Vec<&str> = version.required_keys().collect();
-        assert!(required.contains(&"hostname"));
         assert!(required.contains(&"model"));
         assert!(required.contains(&"version"));
+        assert!(!required.contains(&"hostname"));
+        assert!(version.keys.contains_key("hostname"));
     }
 
     #[test]

@@ -195,15 +195,21 @@ description; the matrix above is documentation for template authors.
 
 ## Summary
 
-* **One amendment applied:** `bgp_neighbor.state` description now requires
-  normalization to RFC 4271 names. The original "preserve as-is" wording
-  silently broke vendor neutrality.
+* **First amendment (1s8.5):** `bgp_neighbor.state` description now
+  requires normalization to RFC 4271 names. The original "preserve as-is"
+  wording silently broke vendor neutrality.
+* **Second amendment (1s8.2):** `version.hostname` downgraded from
+  required to optional. Arista EOS' `show version` body does not print
+  hostname (it appears in the prompt line preceding the command).
+  Templates parsing only the command output cannot extract hostname for
+  Arista; making it required would force `arista_eos_show_version` to
+  either give up the schema claim or fake the value.
 * **Two clarifications documented for template authors** but no schema
   changes: LLDP `capabilities` decoding (Cisco capability codes) and
   route `protocol` normalization across vendor letter codes.
-* **All five schemas hold up against real fixtures.** The required-key
-  set is universally available across the two-vendor minimum for each
-  schema. Optional keys vary, as designed.
+* **All five schemas hold up against real fixtures** after the two
+  amendments. Required keys are universally available; optional keys
+  vary across vendors as designed.
 
 This grounds `cliscrape-1s8.4` (typed loader) and `cliscrape-1s8.6`
 (claims_schema): the schemas are correct enough to embed and validate

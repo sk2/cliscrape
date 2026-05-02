@@ -5,20 +5,27 @@ metadata:
   author: "cliscrape"
 
 version: 1
+claims_schema: interface
 
 fields:
   interface:
     type: string
+    common_schema: name
   status:
     type: string
+    common_schema: admin_status
   protocol:
     type: string
+    common_schema: protocol_status
   description:
     type: string
+    common_schema: description
   mtu:
     type: int
+    common_schema: mtu
   bandwidth:
     type: int
+    common_schema: bandwidth_kbps
 
 states:
   Start:

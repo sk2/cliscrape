@@ -5,18 +5,24 @@ metadata:
   author: "cliscrape"
 
 version: 1
+claims_schema: version
 
 fields:
   version:
     type: string
+    common_schema: version
   uptime:
     type: string
+    common_schema: uptime
   hostname:
     type: string
+    common_schema: hostname
   serial:
     type: string
+    common_schema: serial
   model:
     type: string
+    common_schema: model
 
 patterns:
   - regex: '^(?P<hostname>\S+) uptime is (?P<uptime>.+)$'
