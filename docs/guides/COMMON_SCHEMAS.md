@@ -158,6 +158,20 @@ Today, the following keys carry format declarations:
 | `route` | `prefix` | `cidr` |
 | `route` | `next_hop` | `ip` |
 
+## CI gates
+
+Two test files enforce the contract on every CI run:
+
+- `tests/common_schema_validation.rs` — exercises template-load-time
+  validation (typo suggestions, type mismatches, ambiguity, claims_schema
+  required-key enforcement).
+- `tests/schema_compliance.rs` — discovers every embedded template that
+  declares `claims_schema:`, parses each matching fixture under
+  `tests/fixtures/<vendor>/<command>/`, projects to canonical keys, and
+  asserts every required key is present and no format declarations are
+  violated. Includes a synthetic negative-path test that proves the format
+  check catches bad data.
+
 ## Adding a new schema
 
 Schema design is high-leverage. Open a bead first.

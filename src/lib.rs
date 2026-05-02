@@ -19,6 +19,21 @@ pub struct TemplateWarning {
 }
 
 #[derive(Debug, Clone)]
+pub struct FormatViolation {
+    pub schema: String,
+    pub key: String,
+    pub field: String,
+    pub format: engine::common_schemas::KeyFormat,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct CommonProjection {
+    pub records: Vec<BTreeMap<String, serde_json::Value>>,
+    pub format_violations: Vec<FormatViolation>,
+}
+
+#[derive(Debug, Clone)]
 pub struct DetailedParseError {
     pub line_idx: usize,
     pub line_content: String,
@@ -109,6 +124,14 @@ impl FsmParser {
         Ok((Self { template }, warnings))
     }
 
+    /// Build a parser from a YAML modern-template string. Convenience
+    /// wrapper used primarily by tests.
+    pub fn from_yaml_str(yaml: &str) -> Result<Self, ScraperError> {
+        let ir = modern::load_yaml_str(yaml)?;
+        let template = Template::from_ir(ir)?;
+        Ok(Self { template })
+    }
+
     pub fn from_file_with_format<P: AsRef<Path>>(
         path: P,
         format: TemplateFormat,
@@ -154,6 +177,65 @@ impl FsmParser {
     /// in modern templates). Empty for legacy templates.
     pub fn claims_schema(&self) -> &[String] {
         &self.template.claims_schema
+    }
+
+    /// Project parsed records onto Universal Ledger canonical keys, using
+    /// each field's `common_schema:` annotation. Records that have no
+    /// annotated fields pass through unchanged.
+    ///
+    /// Returns the projected records plus any format violations observed
+    /// when keys carry `format:` declarations. The CLI uses this directly
+    /// for `--common` mode; tests use it to gate schema compliance.
+    pub fn project_common_schema(
+        &self,
+        records: Vec<BTreeMap<String, serde_json::Value>>,
+    ) -> CommonProjection {
+        let registry = engine::common_schemas::builtin_registry();
+        let claimed = self.claims_schema().to_vec();
+        let mut violations: Vec<FormatViolation> = Vec::new();
+
+        let projected = records
+            .into_iter()
+            .map(|rec| {
+                let mut out = BTreeMap::new();
+                for (k, v) in rec {
+                    let Some(val_def) = self.template.values.get(&k) else {
+                        out.insert(k, v);
+                        continue;
+                    };
+                    let Some(reference) = val_def.common_schema.as_deref() else {
+                        out.insert(k, v);
+                        continue;
+                    };
+                    match registry.resolve(reference, &claimed) {
+                        Ok((schema, key_name, key_def)) => {
+                            if let Some(format) = key_def.format {
+                                if let Err(reason) = format.validate(&v) {
+                                    violations.push(FormatViolation {
+                                        schema: schema.name.clone(),
+                                        key: key_name.to_string(),
+                                        field: k.clone(),
+                                        format,
+                                        reason,
+                                    });
+                                }
+                            }
+                            out.insert(key_name.to_string(), v);
+                        }
+                        Err(_) => {
+                            // Validation should have caught this at template-load.
+                            out.insert(reference.to_string(), v);
+                        }
+                    }
+                }
+                out
+            })
+            .collect();
+
+        CommonProjection {
+            records: projected,
+            format_violations: violations,
+        }
     }
 
     pub fn results_with_warnings(
