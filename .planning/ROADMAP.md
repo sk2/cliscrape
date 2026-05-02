@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 MVP** — shipped 2026-02-22
 - ✅ **v1.5 Production Hardening** — shipped 2026-03-19
-- 🚧 **v2.0 The Network Compiler** — in progress
+- ✅ **v2.0 The Network Compiler** — complete 2026-05-02
 - 📋 **v3.0 Isomorphic Ecosystem** — planned
 
 > **Operating model (2026-05-01):** active work is tracked in beads (`br`), not
@@ -34,21 +34,21 @@ Artifacts in `archive/phases/06-*` through `archive/phases/11-*`. Outstanding re
 
 </details>
 
-## 🚧 v2.0 The Network Compiler (In Progress)
+## ✅ v2.0 The Network Compiler (Complete 2026-05-02)
 
-**Milestone goal:** move from simple parsing to structured state observation and vendor-neutral operational schemas.
+**Milestone goal (achieved):** move from simple parsing to structured state observation and vendor-neutral operational schemas.
 
 **Shipped (legacy phase numbering, archived):**
 
 - [x] Semantic Drift Analysis (Phase 12) — operational diffing between states.
-- [x] Vendor-Neutral State Mappings (Phase 13) — common schema mapping primitives. Embedded template coverage continues under the Universal Ledger epic.
+- [x] Vendor-Neutral State Mappings (Phase 13) — common schema mapping primitives.
 - [x] Grammar Induction (Phase 14) — statistical structural inference for templates.
-- [x] FSM-Oracle (Phase 15) — best-effort generation and advisory round-trip checks. Strict mode tracked by `cliscrape-nuy`.
+- [x] FSM-Oracle (Phase 15) — best-effort generation and advisory round-trip checks. Strict mode tracked by `cliscrape-nuy` (debt).
 - [x] Semantic Constraint Logic (Phase 16) — policy-aware parsing with boundary assertions. Artifacts under `phases/16-semantic-constraint-logic/`.
 
-**Open (tracked in beads):**
+**Shipped via beads:**
 
-- [ ] **Universal Ledger Library** — `cliscrape-1s8` (epic) with seven children across three tiers: foundation (`1s8.1` ✅, `1s8.4`, `1s8.5`), contract (`1s8.6`, `1s8.7`), application (`1s8.2`, `1s8.3`). Closes the milestone.
+- [x] **Universal Ledger Library** (`cliscrape-1s8`, closed 2026-05-02) — 5 vendor-neutral schemas (`version`, `interface`, `bgp_neighbor`, `lldp_neighbor`, `route`) with typed registry, `claims_schema:` declaration, format validators (ipv4/ipv6/ip/mac/cidr/asn), 5 embedded templates wired, CI compliance gate. Schema design surfaced 2 amendments grounded in real fixtures. 189 tests across 18 binaries enforce the contract.
 
 ## 📋 v3.0 Isomorphic Ecosystem (Planned)
 
@@ -62,14 +62,10 @@ Artifacts in `archive/phases/06-*` through `archive/phases/11-*`. Outstanding re
 
 | Bead | Title | Milestone | Status |
 |------|-------|-----------|--------|
-| `cliscrape-1s8` | Universal Ledger Library (epic) | v2.0 | Active |
-| `cliscrape-1s8.1` | Define common schemas | v2.0 | ✅ Closed |
-| `cliscrape-1s8.4` | Typed schema loader + template validation | v2.0 | Ready |
-| `cliscrape-1s8.5` | Fixtures for bgp/lldp/route schemas | v2.0 | Ready |
-| `cliscrape-1s8.6` | `claims_schema:` template declaration | v2.0 | Blocked |
-| `cliscrape-1s8.7` | Format validators (ipv4/ipv6/mac/cidr/asn) | v2.0 | Blocked |
-| `cliscrape-1s8.2` | Wire embedded templates | v2.0 | Blocked |
-| `cliscrape-1s8.3` | Schema compliance test suite | v2.0 | Blocked |
+| `cliscrape-1s8` | Universal Ledger Library (epic) | v2.0 | ✅ Closed |
+| `cliscrape-quw` | Semantic Mock Server (epic) | v3.0 | Ready |
+| `cliscrape-woo` | State-of-the-World Manifests (epic) | v3.0 | Blocked |
+| `cliscrape-lw0` | SSH/CLI Protocol Integration (epic) | v3.0 | Blocked |
 | `cliscrape-quw` | Semantic Mock Server (epic) | v3.0 | Blocked |
 | `cliscrape-woo` | State-of-the-World Manifests (epic) | v3.0 | Blocked |
 | `cliscrape-lw0` | SSH/CLI Protocol Integration (epic) | v3.0 | Blocked |
