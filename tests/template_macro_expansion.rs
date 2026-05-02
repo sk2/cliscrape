@@ -40,6 +40,7 @@ fn test_template_from_ir_expands_macros_in_rule_regex() {
         values,
         states,
         macros: HashMap::new(),
+        claims_schema: Vec::new(),
     };
 
     let template = Template::from_ir(ir).unwrap();

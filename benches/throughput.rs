@@ -17,6 +17,8 @@ fn benchmark_throughput(c: &mut Criterion) {
             list: false,
             identity: false,
             ignore: false,
+            common_schema: None,
+            constraints: None,
             type_hint: None,
         },
     );
@@ -30,6 +32,8 @@ fn benchmark_throughput(c: &mut Criterion) {
             list: false,
             identity: false,
             ignore: false,
+            common_schema: None,
+            constraints: None,
             type_hint: None,
         },
     );
@@ -52,6 +56,7 @@ fn benchmark_throughput(c: &mut Criterion) {
         values,
         states,
         macros: HashMap::new(),
+        claims_schema: Vec::new(),
     };
 
     let template = Template::from_ir(ir).unwrap();

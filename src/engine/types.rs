@@ -53,11 +53,15 @@ pub struct State {
     pub rules: Vec<Rule>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct TemplateIR {
     pub values: HashMap<String, Value>,
     pub states: HashMap<String, State>,
     pub macros: HashMap<String, String>,
+    /// Universal Ledger schema names this template claims (from
+    /// `claims_schema:` in modern templates). Empty for legacy templates and
+    /// modern templates that don't declare claims.
+    pub claims_schema: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -69,8 +73,11 @@ pub struct CompiledRule {
     pub next_state: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Template {
     pub states: HashMap<String, Vec<CompiledRule>>,
     pub values: HashMap<String, Value>,
+    /// Universal Ledger schema names declared by this template, copied from
+    /// the source `TemplateIR`. Empty for legacy templates.
+    pub claims_schema: Vec<String>,
 }

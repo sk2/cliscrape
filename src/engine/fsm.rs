@@ -85,6 +85,7 @@ impl Template {
         Ok(Template {
             states: compiled_states,
             values: ir.values,
+            claims_schema: ir.claims_schema,
         })
     }
 
@@ -685,6 +686,7 @@ mod tests {
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         let template = Template::from_ir(ir).unwrap();
@@ -759,6 +761,7 @@ mod tests {
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         let template = Template::from_ir(ir).unwrap();
@@ -832,6 +835,7 @@ mod tests {
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         Template::from_ir(ir).unwrap()
@@ -899,6 +903,7 @@ mod tests {
             values: HashMap::new(),
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         let result = Template::from_ir(ir);
@@ -969,6 +974,7 @@ mod tests {
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         let template = Template::from_ir(ir).unwrap();
@@ -1017,6 +1023,7 @@ mod tests {
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         let template = Template::from_ir(ir).unwrap();
@@ -1087,6 +1094,7 @@ mod tests {
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         let template = Template::from_ir(ir).unwrap();
@@ -1172,6 +1180,7 @@ mod tests {
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         let template = Template::from_ir(ir).unwrap();
@@ -1220,6 +1229,7 @@ mod tests {
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         let template = Template::from_ir(ir).unwrap();
@@ -1267,6 +1277,7 @@ mod tests {
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         let template = Template::from_ir(ir).unwrap();
@@ -1318,6 +1329,7 @@ mod tests {
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         let template = Template::from_ir(ir).unwrap();
@@ -1382,6 +1394,7 @@ mod tests {
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         let template = Template::from_ir(ir).unwrap();
@@ -1432,6 +1445,7 @@ mod tests {
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         let template = Template::from_ir(ir).unwrap();
@@ -1481,6 +1495,7 @@ mod tests {
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         let template = Template::from_ir(ir).unwrap();
@@ -1534,6 +1549,7 @@ mod tests {
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         let template = Template::from_ir(ir).unwrap();
@@ -1604,6 +1620,7 @@ mod tests {
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
 
         let template = Template::from_ir(ir).unwrap();

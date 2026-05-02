@@ -49,6 +49,7 @@ impl TextFsmLoader {
                 values,
                 states,
                 macros: HashMap::new(),
+                claims_schema: Vec::new(),
             },
             warnings,
         ))

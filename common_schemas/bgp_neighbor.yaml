@@ -17,13 +17,16 @@ keys:
   neighbor:
     type: string
     required: true
+    format: ip
     description: |
       Peer IP address. IPv4 or IPv6 (e.g. "10.0.0.1", "2001:db8::1"). No
-      normalization beyond what the device prints.
+      normalization beyond what the device prints. Format-validated as
+      either IPv4 or IPv6.
 
   remote_as:
     type: int
     required: true
+    format: asn
     description: Peer's autonomous system number. 4-byte ASNs supported.
 
   state:
@@ -47,6 +50,7 @@ keys:
   local_as:
     type: int
     required: false
+    format: asn
     description: |
       Local ASN advertised to this peer. Optional because most `show bgp
       summary` outputs only mention local AS once at the top, not per neighbor.

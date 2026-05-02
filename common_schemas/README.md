@@ -38,9 +38,28 @@ keys:
   <key_name>:
     type: string | int          # engine-supported types only
     required: true | false
+    format: ipv4 | ipv6 | ip | mac | cidr | asn   # optional value-shape check
     description: |              # what the key means + value conventions
       ...
 ```
+
+### `format:` (optional)
+
+When declared, the engine validates the captured value at `--common`-projection
+time. Mismatches emit a `tracing::warn!(event = "format_violation")` event;
+under `--strict-policy` they fail the parse. Available formats:
+
+| Format | Required `type:` | Rule |
+|--------|------------------|------|
+| `ipv4` | `string` | RFC 791 dotted-quad |
+| `ipv6` | `string` | RFC 4291 |
+| `ip`   | `string` | either IPv4 or IPv6 |
+| `mac`  | `string` | lowercase `aa:bb:cc:dd:ee:ff` |
+| `cidr` | `string` | `<ipv4-or-ipv6>/<prefix-length>` |
+| `asn`  | `int`    | `0..=4294967295` (4-byte ASN range) |
+
+Vendor-specific formats (e.g. Cisco's `001c.2d3e.4f50` MAC) are NOT auto-normalized;
+templates must convert at parse time.
 
 ## Engine type system
 

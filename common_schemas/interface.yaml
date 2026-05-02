@@ -66,6 +66,7 @@ keys:
   mac_address:
     type: string
     required: false
+    format: mac
     description: |
       Hardware (MAC) address. Format: lowercase, colon-separated octets
       (e.g. "00:1c:2d:3e:4f:50"). Templates that capture vendor-formatted
@@ -74,10 +75,12 @@ keys:
   ipv4_address:
     type: string
     required: false
+    format: ipv4
     description: |
-      Configured IPv4 address. Format: dotted-quad, optionally with a CIDR
-      prefix length (e.g. "10.0.0.1" or "10.0.0.1/24"). Pick one form per
-      template and document the choice.
+      Configured IPv4 address as a dotted-quad string ("10.0.0.1"). Templates
+      that need to expose an interface address with prefix length should use
+      a separate field with `format: cidr` rather than packing both into one
+      string — the format validator rejects CIDR-shaped values for `ipv4`.
 
   duplex:
     type: string

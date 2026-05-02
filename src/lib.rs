@@ -150,6 +150,12 @@ impl FsmParser {
         &self.template.values
     }
 
+    /// Universal Ledger schemas this template claims (from `claims_schema:`
+    /// in modern templates). Empty for legacy templates.
+    pub fn claims_schema(&self) -> &[String] {
+        &self.template.claims_schema
+    }
+
     pub fn results_with_warnings(
         &self,
         input: &str,
@@ -310,6 +316,7 @@ patterns:
             values,
             states,
             macros: HashMap::new(),
+            claims_schema: Vec::new(),
         };
         let template = engine::Template::from_ir(ir).unwrap();
         let parser = FsmParser::new(template);

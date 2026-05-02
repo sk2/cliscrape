@@ -541,7 +541,13 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
 
             // Apply common schema mapping if requested
             if common {
+                use cliscrape::engine::common_schemas::{ResolveError, builtin_registry};
+
+                let registry = builtin_registry();
+                let claimed = parser.claims_schema().to_vec();
                 let values = parser.values();
+                let mut format_violations: u32 = 0;
+
                 all_results = all_results
                     .into_iter()
                     .map(|rec| {
@@ -549,7 +555,49 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
                         for (k, v) in rec {
                             if let Some(val_def) = values.get(&k) {
                                 if let Some(common_key) = &val_def.common_schema {
-                                    common_rec.insert(common_key.clone(), v);
+                                    // Resolve to the schema key so we can
+                                    // format-check the captured value.
+                                    match registry.resolve(common_key, &claimed) {
+                                        Ok((schema, key_name, key_def)) => {
+                                            if let Some(format) = key_def.format {
+                                                if let Err(reason) = format.validate(&v) {
+                                                    format_violations += 1;
+                                                    tracing::warn!(
+                                                        target: "cliscrape::cli",
+                                                        event = "format_violation",
+                                                        schema = %schema.name,
+                                                        key = %key_name,
+                                                        field = %k,
+                                                        format = ?format,
+                                                        message = %reason,
+                                                    );
+                                                }
+                                            }
+                                            common_rec.insert(key_name.to_string(), v);
+                                        }
+                                        Err(ResolveError::UnknownSchema { schema, .. }) => {
+                                            tracing::warn!(
+                                                target: "cliscrape::cli",
+                                                event = "common_schema_resolve_failed",
+                                                field = %k,
+                                                reason = %format!("unknown schema '{}'", schema)
+                                            );
+                                            common_rec.insert(common_key.clone(), v);
+                                        }
+                                        Err(ResolveError::UnknownKey { key, .. })
+                                        | Err(ResolveError::AmbiguousKey { key, .. }) => {
+                                            // Validation should have caught these at template-load
+                                            // time. If we reach here, fall back to bare-rename to
+                                            // avoid breaking output.
+                                            tracing::warn!(
+                                                target: "cliscrape::cli",
+                                                event = "common_schema_resolve_failed",
+                                                field = %k,
+                                                reason = %format!("could not resolve '{}'", key)
+                                            );
+                                            common_rec.insert(common_key.clone(), v);
+                                        }
+                                    }
                                     continue;
                                 }
                             }
@@ -558,6 +606,13 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
                         common_rec
                     })
                     .collect();
+
+                if parse_options.strict_policy && format_violations > 0 {
+                    anyhow::bail!(
+                        "{} format violation(s) failed strict policy",
+                        format_violations
+                    );
+                }
             }
 
             let output = output::serialize(&all_results, final_format)?;

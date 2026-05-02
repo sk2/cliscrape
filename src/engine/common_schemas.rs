@@ -37,11 +37,120 @@ pub enum KeyType {
     Int,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KeyFormat {
+    /// IPv4 dotted-quad address (e.g. "10.0.0.1").
+    Ipv4,
+    /// IPv6 address per RFC 4291 (e.g. "2001:db8::1").
+    Ipv6,
+    /// Either IPv4 or IPv6.
+    Ip,
+    /// Lowercase, colon-separated MAC (e.g. "00:1c:2d:3e:4f:50").
+    Mac,
+    /// CIDR-notation prefix (`<ip>/<len>`).
+    Cidr,
+    /// Autonomous System Number, 0..=4294967295 (4-byte ASN). Applied to
+    /// `int`-typed keys; checks numeric range only.
+    Asn,
+}
+
+impl KeyFormat {
+    /// Returns `Ok(())` if `value` matches the declared format; `Err(reason)`
+    /// otherwise. The error string is suitable for tracing/error output.
+    pub fn validate(self, value: &serde_json::Value) -> Result<(), String> {
+        use std::net::{Ipv4Addr, Ipv6Addr};
+        use std::str::FromStr;
+
+        match self {
+            KeyFormat::Ipv4 => {
+                let s = value
+                    .as_str()
+                    .ok_or_else(|| format!("expected string for ipv4, got {}", value))?;
+                Ipv4Addr::from_str(s)
+                    .map(|_| ())
+                    .map_err(|_| format!("'{}' is not a valid IPv4 address", s))
+            }
+            KeyFormat::Ipv6 => {
+                let s = value
+                    .as_str()
+                    .ok_or_else(|| format!("expected string for ipv6, got {}", value))?;
+                Ipv6Addr::from_str(s)
+                    .map(|_| ())
+                    .map_err(|_| format!("'{}' is not a valid IPv6 address", s))
+            }
+            KeyFormat::Ip => {
+                let s = value
+                    .as_str()
+                    .ok_or_else(|| format!("expected string for ip, got {}", value))?;
+                if Ipv4Addr::from_str(s).is_ok() || Ipv6Addr::from_str(s).is_ok() {
+                    Ok(())
+                } else {
+                    Err(format!("'{}' is not a valid IPv4 or IPv6 address", s))
+                }
+            }
+            KeyFormat::Mac => {
+                let s = value
+                    .as_str()
+                    .ok_or_else(|| format!("expected string for mac, got {}", value))?;
+                static MAC_RE: OnceLock<regex::Regex> = OnceLock::new();
+                let re = MAC_RE.get_or_init(|| {
+                    regex::Regex::new(r"^[0-9a-f]{2}(?::[0-9a-f]{2}){5}$").unwrap()
+                });
+                if re.is_match(s) {
+                    Ok(())
+                } else {
+                    Err(format!(
+                        "'{}' is not a valid MAC address (expected lowercase colon-separated, e.g. 00:1c:2d:3e:4f:50)",
+                        s
+                    ))
+                }
+            }
+            KeyFormat::Cidr => {
+                let s = value
+                    .as_str()
+                    .ok_or_else(|| format!("expected string for cidr, got {}", value))?;
+                let Some((addr, prefix)) = s.rsplit_once('/') else {
+                    return Err(format!("'{}' is not in CIDR notation (missing '/')", s));
+                };
+                let prefix_len: u32 = prefix
+                    .parse()
+                    .map_err(|_| format!("'{}' has invalid prefix length", s))?;
+                if Ipv4Addr::from_str(addr).is_ok() {
+                    if prefix_len > 32 {
+                        return Err(format!("'{}' has invalid IPv4 prefix length", s));
+                    }
+                } else if Ipv6Addr::from_str(addr).is_ok() {
+                    if prefix_len > 128 {
+                        return Err(format!("'{}' has invalid IPv6 prefix length", s));
+                    }
+                } else {
+                    return Err(format!("'{}' has invalid address part", s));
+                }
+                Ok(())
+            }
+            KeyFormat::Asn => match value {
+                serde_json::Value::Number(n) => {
+                    let v = n.as_u64().ok_or_else(|| {
+                        format!("ASN '{}' must be a non-negative integer", n)
+                    })?;
+                    if v <= u32::MAX as u64 {
+                        Ok(())
+                    } else {
+                        Err(format!("ASN {} exceeds 4-byte range", v))
+                    }
+                }
+                other => Err(format!("expected integer for asn, got {}", other)),
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyDef {
     pub ty: KeyType,
     pub required: bool,
     pub description: String,
+    pub format: Option<KeyFormat>,
 }
 
 #[derive(Debug, Clone)]
@@ -292,6 +401,8 @@ struct KeyDefYaml {
     required: bool,
     #[serde(default)]
     description: String,
+    #[serde(default)]
+    format: Option<String>,
 }
 
 impl TryFrom<SchemaYaml> for CommonSchema {
@@ -310,12 +421,50 @@ impl TryFrom<SchemaYaml> for CommonSchema {
                     ));
                 }
             };
+            let format = match def.format.as_deref() {
+                None => None,
+                Some("ipv4") => Some(KeyFormat::Ipv4),
+                Some("ipv6") => Some(KeyFormat::Ipv6),
+                Some("ip") => Some(KeyFormat::Ip),
+                Some("mac") => Some(KeyFormat::Mac),
+                Some("cidr") => Some(KeyFormat::Cidr),
+                Some("asn") => Some(KeyFormat::Asn),
+                Some(other) => {
+                    return Err(format!(
+                        "key '{}': unsupported format '{}' (expected ipv4, ipv6, ip, mac, cidr, or asn)",
+                        name, other
+                    ));
+                }
+            };
+            // ASN format requires int type, IP/MAC/CIDR require string.
+            match (format, ty) {
+                (Some(KeyFormat::Asn), KeyType::Int) | (Some(KeyFormat::Asn), _) => {
+                    if !matches!(ty, KeyType::Int) {
+                        return Err(format!(
+                            "key '{}': format 'asn' requires type 'int'",
+                            name
+                        ));
+                    }
+                }
+                (
+                    Some(KeyFormat::Ipv4 | KeyFormat::Ipv6 | KeyFormat::Ip | KeyFormat::Mac | KeyFormat::Cidr),
+                    KeyType::Int,
+                ) => {
+                    return Err(format!(
+                        "key '{}': format '{:?}' requires type 'string'",
+                        name,
+                        format.unwrap()
+                    ));
+                }
+                _ => {}
+            }
             keys.insert(
                 name,
                 KeyDef {
                     ty,
                     required: def.required,
                     description: def.description,
+                    format,
                 },
             );
         }
@@ -486,6 +635,189 @@ mod tests {
 
         let err = reg.resolve("vrf", &[]).unwrap_err();
         assert!(matches!(err, ResolveError::AmbiguousKey { .. }));
+    }
+
+    #[test]
+    fn format_ipv4_accepts_valid_rejects_invalid() {
+        assert!(
+            KeyFormat::Ipv4
+                .validate(&serde_json::json!("10.0.0.1"))
+                .is_ok()
+        );
+        assert!(
+            KeyFormat::Ipv4
+                .validate(&serde_json::json!("192.0.2.1"))
+                .is_ok()
+        );
+        assert!(
+            KeyFormat::Ipv4
+                .validate(&serde_json::json!("256.0.0.1"))
+                .is_err()
+        );
+        assert!(
+            KeyFormat::Ipv4
+                .validate(&serde_json::json!("Router1"))
+                .is_err()
+        );
+        assert!(
+            KeyFormat::Ipv4
+                .validate(&serde_json::json!("2001:db8::1"))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn format_ipv6_accepts_valid_rejects_invalid() {
+        assert!(
+            KeyFormat::Ipv6
+                .validate(&serde_json::json!("2001:db8::1"))
+                .is_ok()
+        );
+        assert!(
+            KeyFormat::Ipv6
+                .validate(&serde_json::json!("::1"))
+                .is_ok()
+        );
+        assert!(
+            KeyFormat::Ipv6
+                .validate(&serde_json::json!("10.0.0.1"))
+                .is_err()
+        );
+        assert!(KeyFormat::Ipv6.validate(&serde_json::json!("xyz")).is_err());
+    }
+
+    #[test]
+    fn format_ip_accepts_either_v4_or_v6() {
+        assert!(
+            KeyFormat::Ip
+                .validate(&serde_json::json!("10.0.0.1"))
+                .is_ok()
+        );
+        assert!(
+            KeyFormat::Ip
+                .validate(&serde_json::json!("2001:db8::1"))
+                .is_ok()
+        );
+        assert!(
+            KeyFormat::Ip
+                .validate(&serde_json::json!("Router1"))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn format_mac_requires_lowercase_colon_separated() {
+        assert!(
+            KeyFormat::Mac
+                .validate(&serde_json::json!("00:1c:2d:3e:4f:50"))
+                .is_ok()
+        );
+        // Uppercase rejected — schemas require lowercase.
+        assert!(
+            KeyFormat::Mac
+                .validate(&serde_json::json!("00:1C:2D:3E:4F:50"))
+                .is_err()
+        );
+        // Cisco-style dot-separated rejected.
+        assert!(
+            KeyFormat::Mac
+                .validate(&serde_json::json!("001c.2d3e.4f50"))
+                .is_err()
+        );
+        // Hyphen-separated rejected.
+        assert!(
+            KeyFormat::Mac
+                .validate(&serde_json::json!("00-1c-2d-3e-4f-50"))
+                .is_err()
+        );
+        // Too short.
+        assert!(
+            KeyFormat::Mac
+                .validate(&serde_json::json!("00:1c:2d:3e:4f"))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn format_cidr_accepts_v4_and_v6_with_valid_prefix_lengths() {
+        assert!(
+            KeyFormat::Cidr
+                .validate(&serde_json::json!("10.0.0.0/24"))
+                .is_ok()
+        );
+        assert!(
+            KeyFormat::Cidr
+                .validate(&serde_json::json!("2001:db8::/32"))
+                .is_ok()
+        );
+        assert!(
+            KeyFormat::Cidr
+                .validate(&serde_json::json!("10.0.0.0/33"))
+                .is_err()
+        );
+        assert!(
+            KeyFormat::Cidr
+                .validate(&serde_json::json!("10.0.0.0"))
+                .is_err()
+        );
+        assert!(
+            KeyFormat::Cidr
+                .validate(&serde_json::json!("xyz/24"))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn format_asn_accepts_valid_4byte_range() {
+        assert!(KeyFormat::Asn.validate(&serde_json::json!(64512)).is_ok());
+        assert!(
+            KeyFormat::Asn
+                .validate(&serde_json::json!(4_294_967_295u32))
+                .is_ok()
+        );
+        // Exceeds 4-byte range.
+        assert!(
+            KeyFormat::Asn
+                .validate(&serde_json::json!(5_000_000_000u64))
+                .is_err()
+        );
+        // Wrong type.
+        assert!(
+            KeyFormat::Asn
+                .validate(&serde_json::json!("65000"))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn shipped_schemas_have_format_declarations_where_documented() {
+        // Smoke test: the format: amendments to the shipped schemas should
+        // round-trip through the loader.
+        let reg = builtin_registry();
+        assert_eq!(
+            reg.get("interface").unwrap().keys["mac_address"].format,
+            Some(KeyFormat::Mac)
+        );
+        assert_eq!(
+            reg.get("interface").unwrap().keys["ipv4_address"].format,
+            Some(KeyFormat::Ipv4)
+        );
+        assert_eq!(
+            reg.get("bgp_neighbor").unwrap().keys["neighbor"].format,
+            Some(KeyFormat::Ip)
+        );
+        assert_eq!(
+            reg.get("bgp_neighbor").unwrap().keys["remote_as"].format,
+            Some(KeyFormat::Asn)
+        );
+        assert_eq!(
+            reg.get("route").unwrap().keys["prefix"].format,
+            Some(KeyFormat::Cidr)
+        );
+        assert_eq!(
+            reg.get("route").unwrap().keys["next_hop"].format,
+            Some(KeyFormat::Ip)
+        );
     }
 
     #[test]

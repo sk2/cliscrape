@@ -462,6 +462,11 @@ impl ModernTemplateDoc {
             values,
             states,
             macros: self.macros.clone(),
+            claims_schema: self
+                .claims_schema
+                .as_ref()
+                .map(|c| c.as_slice().to_vec())
+                .unwrap_or_default(),
         })
     }
 }

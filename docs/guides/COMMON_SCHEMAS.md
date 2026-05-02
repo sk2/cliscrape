@@ -139,6 +139,25 @@ When a template captures a value in a different format than the schema
 documents (e.g. Cisco `001c.2d3e.4f50` instead of `00:1c:2d:3e:4f:50`),
 the template should normalize at parse time, not the consumer.
 
+### Format validation
+
+Schema keys can declare an optional `format:` (one of `ipv4`, `ipv6`, `ip`,
+`mac`, `cidr`, `asn`). The engine validates the captured value at
+`--common`-projection time. Mismatches emit a `tracing::warn!` event with
+`event = "format_violation"`; under `--strict-policy` they fail the parse.
+
+Today, the following keys carry format declarations:
+
+| Schema | Key | Format |
+|--------|-----|--------|
+| `interface` | `mac_address` | `mac` |
+| `interface` | `ipv4_address` | `ipv4` |
+| `bgp_neighbor` | `neighbor` | `ip` |
+| `bgp_neighbor` | `remote_as` | `asn` |
+| `bgp_neighbor` | `local_as` | `asn` |
+| `route` | `prefix` | `cidr` |
+| `route` | `next_hop` | `ip` |
+
 ## Adding a new schema
 
 Schema design is high-leverage. Open a bead first.

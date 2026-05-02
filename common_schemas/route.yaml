@@ -18,6 +18,7 @@ keys:
   prefix:
     type: string
     required: true
+    format: cidr
     description: |
       Destination network in CIDR notation (e.g. "10.0.0.0/24",
       "2001:db8::/32"). Always include the prefix length, even for /32 host
@@ -35,10 +36,13 @@ keys:
   next_hop:
     type: string
     required: false
+    format: ip
     description: |
-      Next-hop IP address (e.g. "10.0.0.1"). Optional because connected
-      routes have no next-hop, and some BGP entries reference a recursive
-      next-hop string instead.
+      Next-hop IP address (e.g. "10.0.0.1" or "2001:db8::1"). Optional
+      because connected routes have no next-hop. Format-validated as either
+      IPv4 or IPv6; templates emitting a recursive-resolve string for
+      unresolved next-hops should use a separate raw field rather than
+      packing it into this one.
 
   interface:
     type: string
