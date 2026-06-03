@@ -347,6 +347,8 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
             common,
             verify,
             strict_policy,
+            capture,
+            capture_device,
         } => {
             let start_time = Instant::now();
             // Template resolution: path vs identifier
@@ -560,6 +562,29 @@ fn run_command(cli: Cli) -> anyhow::Result<()> {
                     );
                 }
                 all_results = projection.records;
+            }
+
+            // ADR-0002 capture: wrap each record in a TelemetryFrame envelope
+            // and write one JSON object per line. --capture requires --common
+            // because the envelope is vendor-neutral; raw parser output would
+            // bake vendor-specific keys into source.schema.
+            if let Some(ref capture_path) = capture {
+                if !common {
+                    anyhow::bail!(
+                        "--capture requires --common (Universal Ledger records). \
+                         Re-run with --common --capture {}",
+                        capture_path.display(),
+                    );
+                }
+                write_tvframe_capture(
+                    capture_path,
+                    &template_path,
+                    capture_device.as_deref(),
+                    &all_results,
+                )
+                .with_context(|| {
+                    format!("Failed to write capture to {}", capture_path.display())
+                })?;
             }
 
             let output = output::serialize(&all_results, final_format)?;
@@ -1017,4 +1042,118 @@ fn resolve_input_sources(
     }
 
     Ok(sources)
+}
+
+/// Write parsed Universal Ledger records as a `.tvframe.ndjson` capture per
+/// [telemetry-vis ADR-0002][adr]. The first line is a metadata record carrying
+/// the cliscrape command-line, template name, version, and optional device
+/// name; subsequent lines wrap one parsed record in a `TelemetryFrame`
+/// envelope with the original keys preserved under
+/// `attributes["cliscrape.<key>"]`.
+///
+/// [adr]: https://github.com/sk2/telemetry-vis/blob/main/docs/adr/ADR-0002-telemetry-frame-capture-format.md
+fn write_tvframe_capture(
+    path: &Path,
+    template_path: &Path,
+    device: Option<&str>,
+    records: &[std::collections::BTreeMap<String, serde_json::Value>],
+) -> anyhow::Result<()> {
+    use std::io::Write as _;
+
+    let mut file = std::fs::File::create(path)
+        .with_context(|| format!("create capture file {}", path.display()))?;
+
+    let now = rfc3339_now();
+    let template_name = template_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("<unknown>")
+        .to_string();
+    let command_line = std::env::args().collect::<Vec<_>>().join(" ");
+
+    // Metadata frame (first line; no observed_at).
+    let mut metadata = serde_json::Map::new();
+    metadata.insert(
+        "cliscrape.command".to_string(),
+        serde_json::Value::String(command_line),
+    );
+    metadata.insert(
+        "cliscrape.template".to_string(),
+        serde_json::Value::String(template_name.clone()),
+    );
+    metadata.insert(
+        "cliscrape.version".to_string(),
+        serde_json::Value::String(env!("CARGO_PKG_VERSION").to_string()),
+    );
+    if let Some(d) = device {
+        metadata.insert(
+            "cliscrape.device".to_string(),
+            serde_json::Value::String(d.to_string()),
+        );
+    }
+    let meta_frame = serde_json::json!({
+        "source": {
+            "name": "cliscrape",
+            "schema": "netauto/universal-ledger/v1.0",
+        },
+        "attributes": metadata,
+    });
+    writeln!(file, "{}", serde_json::to_string(&meta_frame)?)?;
+
+    // One TelemetryFrame per parsed Universal Ledger record. Records carry the
+    // canonical keys (device, interface, neighbor, remote_as, state, etc.) for
+    // their schema; we drop them into attributes with cliscrape.<key> prefix
+    // per ADR-0002 §Producer-specific extensions so v0 consumers can
+    // round-trip without inventing a new schema.
+    for record in records {
+        let mut attributes = serde_json::Map::new();
+        for (k, v) in record {
+            attributes.insert(format!("cliscrape.{k}"), v.clone());
+        }
+        if let Some(d) = device {
+            attributes
+                .entry("cliscrape.device".to_string())
+                .or_insert_with(|| serde_json::Value::String(d.to_string()));
+        }
+        let frame = serde_json::json!({
+            "source": {
+                "name": "cliscrape",
+                "schema": "netauto/universal-ledger/v1.0",
+            },
+            "observed_at": now,
+            "attributes": attributes,
+        });
+        writeln!(file, "{}", serde_json::to_string(&frame)?)?;
+    }
+
+    Ok(())
+}
+
+fn rfc3339_now() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let secs = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+
+    let days = secs / 86400;
+    let t = secs % 86400;
+    let (h, m, s) = (t / 3600, (t % 3600) / 60, t % 60);
+    let (year, month, day) = days_to_ymd(days as i64);
+    format!("{year:04}-{month:02}-{day:02}T{h:02}:{m:02}:{s:02}Z")
+}
+
+fn days_to_ymd(days_since_epoch: i64) -> (i32, u32, u32) {
+    // Howard Hinnant's calendar algorithm.
+    let z = days_since_epoch + 719468;
+    let era = if z >= 0 { z } else { z - 146096 } / 146097;
+    let doe = (z - era * 146097) as u64;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let y = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if m <= 2 { y + 1 } else { y };
+    (y as i32, m as u32, d as u32)
 }

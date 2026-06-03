@@ -2,6 +2,13 @@
 name = "cliscrape"
 version = "0.1.0"
 edition = "2024"
+description = "TextFSM-compatible CLI output parser with modern YAML/TOML templates, semantic diffing, and FSM round-trip generation"
+license = "MIT"
+repository = "https://github.com/sk2/cliscrape"
+homepage = "https://github.com/sk2/cliscrape"
+readme = "README.md"
+keywords = ["network", "cli", "parser", "textfsm", "automation"]
+categories = ["command-line-utilities", "parser-implementations"]
 
 [dependencies]
 anyhow = "1.0.101"
@@ -35,6 +42,7 @@ assert_cmd = "2.0"
 predicates = "3.1"
 insta = { version = "1", features = ["yaml", "json"] }
 walkdir = "2.5.0"
+tempfile = "3"
 
 [[bench]]
 name = "throughput"

@@ -82,6 +82,17 @@ pub enum Commands {
         /// Abort if any field constraint validation fails
         #[arg(long)]
         strict_policy: bool,
+
+        /// Write a `.tvframe.ndjson` capture (telemetry-vis ADR-0002) wrapping
+        /// each parsed record in a TelemetryFrame envelope. Requires `--common`
+        /// so the records are vendor-neutral Universal Ledger entries.
+        #[arg(long, value_name = "PATH")]
+        capture: Option<PathBuf>,
+
+        /// Device name attached to the capture metadata (cliscrape.device).
+        /// Only used when `--capture` is set.
+        #[arg(long, value_name = "DEVICE")]
+        capture_device: Option<String>,
     },
     /// Launch the TUI debugger
     Debug {
